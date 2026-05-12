@@ -1,0 +1,61 @@
+{
+  "framework": "nextjs",
+  "buildCommand": "next build",
+  "devCommand":   "next dev",
+  "installCommand": "npm install",
+  "functions": {
+    "app/api/generate/[toolId]/route.ts": {
+      "maxDuration": 60,
+      "memory":      1024
+    },
+    "app/api/generate/recycle/route.ts": {
+      "maxDuration": 45,
+      "memory":      512
+    },
+    "app/api/generate/competitor/route.ts": {
+      "maxDuration": 45,
+      "memory":      512
+    },
+    "app/api/ideas/route.ts": {
+      "maxDuration": 30,
+      "memory":      512
+    },
+    "app/api/cron/weekly-pulse/route.ts": {
+      "maxDuration": 300,
+      "memory":      1024
+    },
+    "app/api/cron/daily-ideas/route.ts": {
+      "maxDuration": 300,
+      "memory":      1024
+    }
+  },
+  "crons": [
+    {
+      "path":     "/api/cron/weekly-pulse",
+      "schedule": "0 6 * * 1"
+    },
+    {
+      "path":     "/api/cron/daily-ideas",
+      "schedule": "0 5 * * *"
+    }
+  ],
+  "headers": [
+    {
+      "source":  "/api/(.*)",
+      "headers": [
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "X-Frame-Options",        "value": "DENY" }
+      ]
+    }
+  ],
+  "redirects": [
+    {
+      "source":      "/",
+      "destination": "/waitlist",
+      "permanent":   false
+    }
+  ],
+  "env": {
+    "NEXT_PUBLIC_APP_URL": "@next_public_app_url"
+  }
+}
