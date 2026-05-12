@@ -47,5 +47,12 @@
         { "key": "X-Frame-Options",        "value": "DENY" }
       ]
     }
+  ],
+  "redirects": [
+    {
+      "source":      "/",
+      "destination": "/demo",
+      "permanent":   true
+    }
   ]
 }
