@@ -54,8 +54,5 @@
       "destination": "/waitlist",
       "permanent":   false
     }
-  ],
-  "env": {
-    "NEXT_PUBLIC_APP_URL": "@next_public_app_url"
-  }
+  ]
 }
