@@ -215,7 +215,7 @@ const nextConfig = {
     return [
       {
         source:      '/',
-        destination: '/demo',
+        destination: '/waitlist',
         permanent:   true,
         has: [{ type: 'header', key: 'x-cerebre-unauthenticated' }],
       },

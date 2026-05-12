@@ -51,7 +51,7 @@
   "redirects": [
     {
       "source":      "/",
-      "destination": "/demo",
+      "destination": "/waitlist",
       "permanent":   true
     }
   ]

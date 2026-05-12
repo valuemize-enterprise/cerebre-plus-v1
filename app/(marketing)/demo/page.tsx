@@ -389,13 +389,12 @@ export default function DemoPage() {
               <p className="mt-1 text-xs text-white/60">
                 Your generation uses your business name, your city, your WhatsApp number, and your industry — not a sample company.
               </p>
-              <a
-                href='https://waitlist-orcin-nu.vercel.app/#waitlist'
-                target='_blank'
+              <button
+                 onClick={() => router.push('/waitlist')}
                 className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-[#E09818] py-3 text-sm font-black text-[#0B1F3A] hover:opacity-90"
               >
                 Create yours → Join Cerebre Plus <ArrowRight className="h-4 w-4" />
-              </a>
+              </button>
             </div>
           </div>
 
