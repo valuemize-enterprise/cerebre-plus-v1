@@ -70,7 +70,7 @@ export default function SettingsPage() {
     const res = await fetch('/api/account/delete', { method: 'DELETE' })
     if (res.ok) {
       await supabase.auth.signOut()
-      router.push('/waitlist')
+      router.push('/demo')
     } else {
       toast({ type: 'error', title: 'Delete failed', description: 'Please contact support.' })
       setDeleting(false)
