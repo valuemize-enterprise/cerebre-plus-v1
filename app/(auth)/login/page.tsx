@@ -352,7 +352,7 @@ export default function LoginPage() {
   return (
     <div className="min-h-dvh flex">
       {/* Left panel */}
-      <div className="w-[45%] flex-shrink-0">
+      <div className="w-[45%] flex-shrink-0 hidden lg:flex">
         <LeftPanel />
       </div>
 

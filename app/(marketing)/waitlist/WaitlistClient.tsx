@@ -123,7 +123,7 @@ const STYLES = `
     border-bottom:1px solid rgba(255,255,255,.04);
     transition:border-color .3s, box-shadow .3s;
   }
-  .cp-nav.scrolled {
+  .cp-nav .scrolled {
     border-bottom-color:rgba(200,136,10,.18);
     box-shadow:0 4px 32px rgba(0,0,0,.4);
   }
@@ -778,9 +778,9 @@ const STYLES = `
   }
   .cp-faq-q:hover { color:#fff; }
   .cp-faq-icon { color:var(--gold-m); font-size:20px; transition:transform .3s; flex-shrink:0; line-height:1; }
-  .cp-faq-item.open .cp-faq-icon { transform:rotate(45deg); }
+  .cp-faq-item .open .cp-faq-icon { transform:rotate(45deg); }
   .cp-faq-a { max-height:0; overflow:hidden; transition:max-height .4s ease; padding:0 24px; }
-  .cp-faq-item.open .cp-faq-a { max-height:400px; padding:0 24px 20px; }
+  .cp-faq-item .open .cp-faq-a { max-height:400px; padding:0 24px 20px; }
   .cp-faq-a p { font-size:14px; color:rgba(205,217,236,.58); line-height:1.8; }
 
   /* ── Final CTA ── */
@@ -1775,7 +1775,7 @@ export default function WaitlistClient() {
 
 
       {/* ══════════ FAQ ══════════ */}
-      <section className="" id="faq">
+      <section className="s" id="faq" style={{marginTop:"40px", marginBottom:"40px"}}>
         <div className="cp-max-n">
           <div className="rv cp-center">
             <span className="cp-ey">Common Questions</span>

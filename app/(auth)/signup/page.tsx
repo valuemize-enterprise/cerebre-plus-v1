@@ -329,7 +329,7 @@ export default function SignupPage() {
   return (
     <div className="min-h-dvh flex">
       {/* Left panel */}
-      <div className="w-[45%] flex-shrink-0">
+      <div className="w-[45%] flex-shrink-0 hidden lg:flex">
         <SignupLeftPanel />
       </div>
 
@@ -536,7 +536,7 @@ export default function SignupPage() {
                         </span>
                         Creating your account…
                       </span>
-                    ) : '🚀 Create My Account'}
+                    ) : ' Create My Account'}
                   </button>
                 </form>
 
