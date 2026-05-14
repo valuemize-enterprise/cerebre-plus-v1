@@ -311,7 +311,7 @@ export default function WaitlistClient() {
             {/* CTAs */}
             <div className="hbtns">
               <GBtn ch="Secure Your Founding Spot — Free →" onClick={()=>goto('waitlist')} lg/>
-              <a href="https://www.cerebreplus.com/" target="_blank" rel="noopener noreferrer" style={{display:'inline-flex',alignItems:'center',justifyContent:'center',background:'#FFFFFF',color:C.void,fontWeight:800,fontSize:14,padding:'15px 32px',borderRadius:10}}>
+              <a href="https://www.cerebreplus.com/demo" target="_blank" rel="noopener noreferrer" style={{display:'inline-flex',alignItems:'center',justifyContent:'center',background:'#FFFFFF',color:C.void,fontWeight:800,fontSize:14,padding:'15px 32px',borderRadius:10}}>
                 See Cerebre Plus in Action →
               </a>
             </div>
