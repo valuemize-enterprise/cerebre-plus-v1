@@ -41,15 +41,15 @@ export default async function DashboardLayout({
   ])
 
   // Edge case: profile not created yet (handle_new_user trigger may be slow)
-  // if (!profile) redirect('/onboarding')
+  if (!profile) redirect('/onboarding')
 
   // ── 3. Onboarding guard ────────────────────────────────────
-  // if (!profile.onboarding_complete) {
-  //   // Allow access to /onboarding/* itself so user can complete the flow
-  //   // The middleware already handles this redirect for all other /dashboard/* paths,
-  //   // but we keep it here as a belt-and-suspenders for the layout level.
-  //   redirect('/onboarding')
-  // }
+  if (!profile.onboarding_complete) {
+    // Allow access to /onboarding/* itself so user can complete the flow
+    // The middleware already handles this redirect for all other /dashboard/* paths,
+    // but we keep it here as a belt-and-suspenders for the layout level.
+    redirect('/onboarding')
+  }
 
   // ── 4. Render shell ────────────────────────────────────────
   return (
