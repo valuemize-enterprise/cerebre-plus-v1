@@ -181,7 +181,7 @@ const nextConfig = {
           "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
           "font-src 'self' https://fonts.gstatic.com",
           "img-src 'self' data: blob: https: https://lh3.googleusercontent.com",
-          "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.anthropic.com https://api.upstash.io https://api.paystack.co",
+          "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.anthropic.com https://api.upstash.io https://api.paystack.co https://script.google.com",
           "frame-src https://checkout.paystack.com",
           "worker-src 'self' blob:",
         ].join('; '),
