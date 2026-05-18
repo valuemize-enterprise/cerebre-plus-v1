@@ -475,6 +475,15 @@ const Step1Welcome = ({
         <div className="w-16 h-16 rounded-2xl bg-cerebre-gold mx-auto flex items-center justify-center shadow-gold mb-3">
           <span className="text-cerebre-ink font-black text-xl font-mono">C+</span>
         </div>
+
+        {/* <div className="w-16 h-16 rounded-2xl mx-auto flex items-center justify-center shadow-gold mb-3 relative overflow-hidden">
+  <Image
+    src="/Cerebre_Plus_2.png"
+    alt="Cerebre Plus"
+    fill
+    className="object-cover"
+  />
+</div> */}
         <motion.p
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}

@@ -9,6 +9,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { createBrowserClient } from '@/lib/supabase/client'
+import Image from 'next/image'
 
 // ─────────────────────────────────────────────────────────────
 // VALIDATION
@@ -125,8 +126,8 @@ const LeftPanel = () => {
 
       {/* Logo */}
       <div className="relative z-10 flex items-center gap-3">
-        <div className="w-10 h-10 rounded-xl bg-cerebre-gold flex items-center justify-center">
-          <span className="text-cerebre-ink font-black text-sm font-mono">C+</span>
+        <div>
+           <Image src="/CMA Logo.png" alt="Cerebre Plus"  width={63} height={63} />
         </div>
         <div>
           <p className="font-bold text-cerebre-text text-base leading-tight">Cerebre Plus</p>

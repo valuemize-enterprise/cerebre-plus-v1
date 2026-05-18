@@ -8,15 +8,15 @@
 
 import React, { useState, useCallback, useEffect, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { motion, AnimatePresence }    from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import {
   CheckCircle2, Circle, AlertCircle, Upload,
   Save, Sparkles, ChevronRight, Info,
   Building2, Target, Palette, Globe, Phone,
 } from 'lucide-react'
-import { createBrowserClient }  from '@/lib/supabase/client'
-import { useUser }              from '@/lib/hooks/useUser'
-import { useToast }             from '@/components/ui/ModalToastSelect'
+import { createBrowserClient } from '@/lib/supabase/client'
+import { useUser } from '@/lib/hooks/useUser'
+import { useToast } from '@/components/ui/ModalToastSelect'
 
 const NAVY = '#0B1F3A'
 const GOLD = '#E09818'
@@ -26,13 +26,13 @@ const GOLD = '#E09818'
 // ─────────────────────────────────────────────────────────────
 
 const BRAND_VOICES = [
-  { value: 'professional',     label: 'Professional & authoritative' },
-  { value: 'warm_friendly',    label: 'Warm & friendly' },
-  { value: 'bold_direct',      label: 'Bold & direct' },
-  { value: 'educational',      label: 'Educational & informative' },
+  { value: 'professional', label: 'Professional & authoritative' },
+  { value: 'warm_friendly', label: 'Warm & friendly' },
+  { value: 'bold_direct', label: 'Bold & direct' },
+  { value: 'educational', label: 'Educational & informative' },
   { value: 'playful_energetic', label: 'Playful & energetic' },
-  { value: 'luxury_premium',   label: 'Luxury & premium' },
-  { value: 'community_local',  label: 'Community-focused & local' },
+  { value: 'luxury_premium', label: 'Luxury & premium' },
+  { value: 'community_local', label: 'Community-focused & local' },
 ]
 
 const NIGERIAN_CITIES = [
@@ -63,16 +63,16 @@ function FieldInput({
   label, value, onChange, onBlur,
   placeholder, type = 'text', maxLength, helpText, required, autoFocus,
 }: {
-  label:        string
-  value:        string
-  onChange:     (v: string) => void
-  onBlur?:      () => void
+  label: string
+  value: string
+  onChange: (v: string) => void
+  onBlur?: () => void
   placeholder?: string
-  type?:        string
-  maxLength?:   number
-  helpText?:    string
-  required?:    boolean
-  autoFocus?:   boolean
+  type?: string
+  maxLength?: number
+  helpText?: string
+  required?: boolean
+  autoFocus?: boolean
 }) {
   return (
     <div className="space-y-1.5">
@@ -108,15 +108,15 @@ function FieldInput({
 function FieldTextarea({
   label, value, onChange, onBlur, placeholder, rows = 3, maxLength, helpText, required,
 }: {
-  label:        string
-  value:        string
-  onChange:     (v: string) => void
-  onBlur?:      () => void
+  label: string
+  value: string
+  onChange: (v: string) => void
+  onBlur?: () => void
   placeholder?: string
-  rows?:        number
-  maxLength?:   number
-  helpText?:    string
-  required?:    boolean
+  rows?: number
+  maxLength?: number
+  helpText?: string
+  required?: boolean
 }) {
   return (
     <div className="space-y-1.5">
@@ -146,16 +146,16 @@ function FieldTextarea({
 type ProfileForm = Record<string, any>
 
 const SCORED_FIELDS: Array<{ key: keyof ProfileForm; weight: number; label: string }> = [
-  { key: 'business_name',    weight: 10, label: 'Business name' },
-  { key: 'industry',         weight: 10, label: 'Industry' },
-  { key: 'city',             weight: 8,  label: 'City' },
-  { key: 'description',      weight: 12, label: 'Business description' },
+  { key: 'business_name', weight: 10, label: 'Business name' },
+  { key: 'industry', weight: 10, label: 'Industry' },
+  { key: 'city', weight: 8, label: 'City' },
+  { key: 'description', weight: 12, label: 'Business description' },
   { key: 'unique_advantage', weight: 12, label: 'Unique advantage' },
-  { key: 'target_customer',  weight: 10, label: 'Target customer' },
-  { key: 'whatsapp',         weight: 10, label: 'WhatsApp number' },
-  { key: 'social_proof',     weight: 8,  label: 'Social proof' },
-  { key: 'brand_voice',      weight: 5,  label: 'Brand voice' },
-  { key: 'price_range',      weight: 5,  label: 'Price range' },
+  { key: 'target_customer', weight: 10, label: 'Target customer' },
+  { key: 'whatsapp', weight: 10, label: 'WhatsApp number' },
+  { key: 'social_proof', weight: 8, label: 'Social proof' },
+  { key: 'brand_voice', weight: 5, label: 'Brand voice' },
+  { key: 'price_range', weight: 5, label: 'Price range' },
   { key: 'years_in_business', weight: 5, label: 'Years in business' },
   { key: 'marketing_challenges', weight: 5, label: 'Marketing challenges' },
 ]
@@ -177,16 +177,16 @@ function calcCompleteness(form: ProfileForm): { score: number; missing: string[]
 // ─────────────────────────────────────────────────────────────
 
 export default function ProfilePage() {
-  const router      = useRouter()
-  const params      = useSearchParams()
-  const focusField  = params.get('focus')
+  const router = useRouter()
+  const params = useSearchParams()
+  const focusField = params.get('focus')
   const { profile: initialProfile } = useUser()
-  const { toast }   = useToast()
-  const supabase    = createBrowserClient()
+  const { toast } = useToast()
+  const supabase = createBrowserClient()
 
-  const [form, setForm]         = useState<ProfileForm>({})
-  const [saving, setSaving]     = useState(false)
-  const [saved,  setSaved]      = useState(false)
+  const [form, setForm] = useState<ProfileForm>({})
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
   const [logoUploading, setLogoUploading] = useState(false)
   const [activeSection, setActiveSection] = useState(0)
   const fileRef = useRef<HTMLInputElement>(null)
@@ -195,31 +195,31 @@ export default function ProfilePage() {
   useEffect(() => {
     if (initialProfile) {
       setForm({
-        business_name:     initialProfile.businessName || '',
-        industry:          initialProfile.industry      || '',
-        city:              initialProfile.city          || '',
-        country:           initialProfile.country       || 'Nigeria',
+        business_name: initialProfile.businessName || '',
+        industry: initialProfile.industry || '',
+        city: initialProfile.city || '',
+        country: initialProfile.country || 'Nigeria',
         years_in_business: initialProfile.yearsInBusiness?.toString() || '',
-        description:       initialProfile.description   || '',
-        unique_advantage:  initialProfile.uniqueAdvantage  || '',
-        target_customer:   initialProfile.targetCustomer   || '',
-        brand_voice:       initialProfile.brandVoice        || '',
+        description: initialProfile.description || '',
+        unique_advantage: initialProfile.uniqueAdvantage || '',
+        target_customer: initialProfile.targetCustomer || '',
+        brand_voice: initialProfile.brandVoice || '',
         language_preference: initialProfile.languagePreference || 'en-NG',
-        price_range:       initialProfile.priceRange    || '',
-        social_proof:      initialProfile.socialProof   || '',
-        logo_url:          initialProfile.logoUrl       || '',
-        brand_colour:      initialProfile.brandColour   || '#E09818',
-        whatsapp:          initialProfile.whatsapp       || '',
-        phone:             initialProfile.phone          || '',
-        email_contact:     initialProfile.emailContact  || '',
-        address:           initialProfile.address        || '',
-        business_hours:    initialProfile.businessHours || '',
-        instagram:         initialProfile.instagram      || '',
-        facebook:          initialProfile.facebook       || '',
-        linkedin:          initialProfile.linkedin       || '',
-        tiktok:            initialProfile.tiktok         || '',
+        price_range: initialProfile.priceRange || '',
+        social_proof: initialProfile.socialProof || '',
+        logo_url: initialProfile.logoUrl || '',
+        brand_colour: initialProfile.brandColour || '#E09818',
+        whatsapp: initialProfile.whatsapp || '',
+        phone: initialProfile.phone || '',
+        email_contact: initialProfile.emailContact || '',
+        address: initialProfile.address || '',
+        business_hours: initialProfile.businessHours || '',
+        instagram: initialProfile.instagram || '',
+        facebook: initialProfile.facebook || '',
+        linkedin: initialProfile.linkedin || '',
+        tiktok: initialProfile.tiktok || '',
         marketing_challenges: (initialProfile.marketingChallenges as string[]) || [],
-        primary_cta:       initialProfile.primaryCta   || '',
+        primary_cta: initialProfile.primaryCta || '',
       })
     }
   }, [initialProfile])
@@ -228,22 +228,32 @@ export default function ProfilePage() {
     setForm((prev) => ({ ...prev, [key]: value }))
   }, [])
 
-  const saveProfile = useCallback(async (partial?: Partial<ProfileForm>) => {
-    setSaving(true)
-    const toSave = { ...(partial || form) }
+const saveProfile = useCallback(async (partial?: Partial<ProfileForm>) => {
+  setSaving(true)
+  const toSave = { ...(partial || form) }
 
-    // Convert years to number
-    if (toSave.years_in_business) {
-      toSave.years_in_business = parseInt(toSave.years_in_business as string, 10) || null
-    }
+  // Convert years to number
+  if (toSave.years_in_business) {
+    toSave.years_in_business = parseInt(toSave.years_in_business as string, 10) || null
+  }
 
-    const { score } = calcCompleteness(form)
-    toSave.profile_completeness_score = score
+  // Convert empty strings to null for enum fields
+  if (!toSave.brand_voice) toSave.brand_voice = null
+  if (!toSave.price_range) toSave.price_range = null
+  if (!toSave.language_preference) toSave.language_preference = null
+  toSave.years_in_business = toSave.years_in_business 
+  ? parseInt(toSave.years_in_business as string, 10) || null 
+  : null
 
-    const { error } = await supabase
-      .from('profiles')
-      .update(toSave)
-      .eq('id', (initialProfile as any)?.id || '')
+  const { score } = calcCompleteness(form)
+  toSave.profile_completeness_score = score
+
+  const { error } = await supabase
+    .from('profiles')
+    .update(toSave)
+    .eq('id', (initialProfile as any)?.id || '')
+      // console.log('save result:', { error, id: (initialProfile as any)?.id, toSave })
+      // console.log('user_id:', (initialProfile as any)?.user_id)
 
     setSaving(false)
 
@@ -288,17 +298,26 @@ export default function ProfilePage() {
 
   const SECTIONS = [
     { icon: <Building2 className="h-4 w-4" />, label: 'Business' },
-    { icon: <Target className="h-4 w-4" />,    label: 'Marketing' },
-    { icon: <Palette className="h-4 w-4" />,   label: 'Brand' },
-    { icon: <Globe className="h-4 w-4" />,     label: 'Online' },
-    { icon: <Phone className="h-4 w-4" />,     label: 'Contact' },
+    { icon: <Target className="h-4 w-4" />, label: 'Marketing' },
+    { icon: <Palette className="h-4 w-4" />, label: 'Brand' },
+    { icon: <Globe className="h-4 w-4" />, label: 'Online' },
+    { icon: <Phone className="h-4 w-4" />, label: 'Contact' },
   ]
 
   const qualityLabel =
-    score < 40 ? { text: 'Basic',   colour: '#EF4444' } :
-    score < 70 ? { text: 'Good',    colour: '#F59E0B' } :
-    score < 90 ? { text: 'Great',   colour: '#10B881' } :
-                 { text: 'Expert',  colour: '#E09818' }
+    score < 40 ? { text: 'Basic', colour: '#EF4444' } :
+      score < 70 ? { text: 'Good', colour: '#F59E0B' } :
+        score < 90 ? { text: 'Great', colour: '#10B881' } :
+          { text: 'Expert', colour: '#E09818' }
+
+  const INDUSTRIES = [
+    'Fashion & Clothing', 'Food & Beverages', 'Beauty & Personal Care',
+    'Health & Wellness', 'Real Estate & Property', 'Education & Training',
+    'Technology & Software', 'Retail & E-commerce', 'Professional Services',
+    'Events & Entertainment', 'Logistics & Delivery', 'Finance & Fintech',
+    'Agriculture', 'Media & Content Creation', 'Hospitality & Travel',
+    'Manufacturing', 'Other'
+  ];
 
   return (
     <div className="min-h-screen pb-24 md:pb-10" style={{ background: NAVY }}>
@@ -315,11 +334,10 @@ export default function ProfilePage() {
           <button
             onClick={() => saveProfile()}
             disabled={saving}
-            className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-bold transition-all ${
-              saved
+            className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-bold transition-all ${saved
                 ? 'bg-emerald-500/15 border border-emerald-500/30 text-emerald-400'
                 : 'bg-[#E09818] text-[#0B1F3A] hover:opacity-90'
-            } disabled:opacity-60`}
+              } disabled:opacity-60`}
           >
             {saved
               ? <><CheckCircle2 className="h-4 w-4" /> Saved</>
@@ -383,11 +401,10 @@ export default function ProfilePage() {
             <button
               key={s.label}
               onClick={() => setActiveSection(i)}
-              className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg py-2.5 text-xs font-semibold transition-all ${
-                activeSection === i
+              className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg py-2.5 text-xs font-semibold transition-all ${activeSection === i
                   ? 'bg-[#E09818] text-[#0B1F3A]'
                   : 'text-white/40 hover:text-white/60'
-              }`}
+                }`}
             >
               {s.icon}
               <span className="hidden sm:inline">{s.label}</span>
@@ -431,13 +448,20 @@ export default function ProfilePage() {
               placeholder="e.g. Luxe Interiors Lagos"
               autoFocus={focusField === 'business_name'}
             />
-            <FieldInput
-              label="Industry / sector" required
-              value={form.industry as string || ''}
-              onChange={(v) => setField('industry', v)}
-              onBlur={autoSave}
-              placeholder="e.g. Interior Design, Catering, Real Estate, Fashion"
-            />
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-white/70">
+                Industry / sector <span className="text-[#E09818] text-xs">*</span>
+              </label>
+              <select
+                value={form.industry as string || ''}
+                onChange={(e) => setField('industry', e.target.value)}
+                onBlur={autoSave}
+                className="w-full rounded-xl border border-white/10 bg-[#0B1F3A] px-4 py-3 text-sm text-white focus:border-[#E09818]/50 focus:outline-none"
+              >
+                <option value="">Select industry</option>
+                {INDUSTRIES.map((i) => <option key={i} value={i}>{i}</option>)}
+              </select>
+            </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
@@ -525,11 +549,10 @@ export default function ProfilePage() {
                         const next = isOn ? challenges.filter((x) => x !== c) : [...challenges, c]
                         setField('marketing_challenges', next)
                       }}
-                      className={`flex items-center gap-2 rounded-xl border p-3 text-left text-sm transition-all ${
-                        isOn
+                      className={`flex items-center gap-2 rounded-xl border p-3 text-left text-sm transition-all ${isOn
                           ? 'border-[#E09818]/50 bg-[#E09818]/10 text-white'
                           : 'border-white/10 text-white/50 hover:border-white/20 hover:text-white/70'
-                      }`}
+                        }`}
                     >
                       {isOn
                         ? <CheckCircle2 className="h-4 w-4 text-[#E09818] shrink-0" />
@@ -578,11 +601,10 @@ export default function ProfilePage() {
                   <button
                     key={bv.value}
                     onClick={() => { setField('brand_voice', bv.value); setTimeout(autoSave, 100) }}
-                    className={`flex items-center justify-between rounded-xl border p-3 text-left text-sm transition-all ${
-                      form.brand_voice === bv.value
+                    className={`flex items-center justify-between rounded-xl border p-3 text-left text-sm transition-all ${form.brand_voice === bv.value
                         ? 'border-[#E09818]/50 bg-[#E09818]/10 text-white'
                         : 'border-white/10 text-white/50 hover:border-white/20'
-                    }`}
+                      }`}
                   >
                     {bv.label}
                     {form.brand_voice === bv.value && <CheckCircle2 className="h-4 w-4 text-[#E09818]" />}
@@ -636,9 +658,9 @@ export default function ProfilePage() {
           <motion.div key="online" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-5">
             {[
               { key: 'instagram', label: 'Instagram handle', placeholder: '@yourbusiness' },
-              { key: 'facebook',  label: 'Facebook page URL', placeholder: 'facebook.com/yourbusiness' },
-              { key: 'tiktok',    label: 'TikTok handle', placeholder: '@yourtiktok' },
-              { key: 'linkedin',  label: 'LinkedIn URL', placeholder: 'linkedin.com/company/yourbusiness' },
+              { key: 'facebook', label: 'Facebook page URL', placeholder: 'facebook.com/yourbusiness' },
+              { key: 'tiktok', label: 'TikTok handle', placeholder: '@yourtiktok' },
+              { key: 'linkedin', label: 'LinkedIn URL', placeholder: 'linkedin.com/company/yourbusiness' },
             ].map((f) => (
               <FieldInput
                 key={f.key}
