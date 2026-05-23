@@ -27,7 +27,7 @@ const PROTECTED_PREFIXES = [
   '/insights',
   '/settings',
   '/notifications',
-  // '/onboarding',
+  '/onboarding',
   '/help',
   '/feedback',
   '/share',
