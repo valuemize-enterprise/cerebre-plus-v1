@@ -1350,48 +1350,48 @@ const Step7MagicMoment = ({
     setPhase('generating')
     setError(null)
 
-     const CHALLENGE_TO_STRATEGY: Record<string, string> = {
-    awareness:    'build_online_presence',
-    leads:        'get_first_100_customers',
-    sales:        'double_monthly_revenue',
-    retention:    'increase_repeat_purchases',
-    launch:       'launch_new_product',
-    local:        'dominate_local_market',
-    organic:      'reduce_ad_spend_grow_organic',
-    whatsapp:     'build_whatsapp_email_list',
-    new_market:   'enter_new_city_market',
-    slow_period:  'recover_from_slow_period',
-  }
+    const CHALLENGE_TO_STRATEGY: Record<string, string> = {
+      awareness: 'build_online_presence',
+      leads: 'get_first_100_customers',
+      sales: 'double_monthly_revenue',
+      retention: 'increase_repeat_purchases',
+      launch: 'launch_new_product',
+      local: 'dominate_local_market',
+      organic: 'reduce_ad_spend_grow_organic',
+      whatsapp: 'build_whatsapp_email_list',
+      new_market: 'enter_new_city_market',
+      slow_period: 'recover_from_slow_period',
+    }
 
-  const PRICE_TO_BUDGET: Record<string, string> = {
-    'under_100k':    '0_50k',
-    '100k_500k':     '50_150k',
-    '500k_1m':       '150_500k',
-    '1m_5m':         '500k_1m',
-    '5m_plus':       '1m_plus',
-  }
+    const PRICE_TO_BUDGET: Record<string, string> = {
+      'under_100k': '0_50k',
+      '100k_500k': '50_150k',
+      '500k_1m': '150_500k',
+      '1m_5m': '500k_1m',
+      '5m_plus': '1m_plus',
+    }
 
     try {
       const response = await fetch(`/api/generate/${toolConfig.toolId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-            inputs: {
-          // Required fields
-          strategy_goal: CHALLENGE_TO_STRATEGY[primaryChallenge ?? 'awareness'] ?? 'build_online_presence',
-          current_situation: state.description?.trim() || `${state.businessName} is a ${state.industry} business based in ${state.city}, Nigeria.`,
-          monthly_budget: PRICE_TO_BUDGET[state.priceRange ?? ''] ?? '0_50k',
-          biggest_challenge: state.challenges.length
-            ? `Our biggest challenges include: ${state.challenges.join(', ')}. We need a clear strategy to overcome these and grow.`
-            : 'Growing brand awareness and acquiring new customers consistently in a competitive market.',
+          inputs: {
+            // Required fields
+            strategy_goal: CHALLENGE_TO_STRATEGY[primaryChallenge ?? 'awareness'] ?? 'build_online_presence',
+            current_situation: state.description?.trim() || `${state.businessName} is a ${state.industry} business based in ${state.city}, Nigeria.`,
+            monthly_budget: PRICE_TO_BUDGET[state.priceRange ?? ''] ?? '0_50k',
+            biggest_challenge: state.challenges.length
+              ? `Our biggest challenges include: ${state.challenges.join(', ')}. We need a clear strategy to overcome these and grow.`
+              : 'Growing brand awareness and acquiring new customers consistently in a competitive market.',
 
-          // Optional fields — pass what you have from onboarding
-          team_size:               'solo_founder',        // default
-          time_available_per_week: '5_10hrs',             // default
-          preferred_channels:      state.instagram || state.tiktok
-            ? (['instagram', 'tiktok', 'whatsapp'] as const).filter(Boolean)
-            : ['whatsapp', 'instagram'],
-        }, // Profile is auto-filled server-side
+            // Optional fields — pass what you have from onboarding
+            team_size: 'solo_founder',        // default
+            time_available_per_week: '5_10hrs',             // default
+            preferred_channels: state.instagram || state.tiktok
+              ? (['instagram', 'tiktok', 'whatsapp'] as const).filter(Boolean)
+              : ['whatsapp', 'instagram'],
+          }, // Profile is auto-filled server-side
           skipCoinDeduct: true,
           isOnboarding: true,
         }),
@@ -1631,7 +1631,7 @@ export default function OnboardingPage() {
   }
 
   const goNext = async () => {
-    
+
     await saveStep(step)
     setStep((s) => s + 1)
     window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -1653,25 +1653,35 @@ export default function OnboardingPage() {
     router.push('/dashboard')
     router.refresh()
   }
-    const handleGetReward = async () => {
-         await fetch('/api/coins/reward', {
+
+
+  const handleGetReward = async () => {
+    try {
+      const res = await fetch('/api/coins/reward', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ reason: 'onboarding_complete' }),
       })
-
+      const data = await res.json()
+      console.log('[onboarding reward]', data) // awarded: 100 or already_claimed
+    } catch (err) {
+      console.error('[onboarding reward] failed:', err)
+      // Don't block the redirect — reward failure shouldn't stop the user
     }
+  }
+
+
   const handleComplete = async () => {
     const { data: { user } } = await supabase.auth.getUser()
-    if (user) {
-      await supabase.from('profiles').update({
-        onboarding_complete: true,
-        magic_moment_completed: true,
-        onboarding_step: 'complete',
-      }).eq('id', user.id)
+    if (!user) return
+    await supabase.from('profiles').update({
+      onboarding_complete: true,
+      magic_moment_completed: true,
+      onboarding_step: 'complete',
+    }).eq('id', user.id)
 
-    await handleGetReward ()
-    }
+    await handleGetReward()
+
     router.push('/dashboard?welcome=1')
     router.refresh()
   }
