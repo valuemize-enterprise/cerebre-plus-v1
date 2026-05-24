@@ -7,6 +7,7 @@ const ALLOWED_REWARDS: Record<string, number> = {
   pwa_install:     20,
   profile_complete: 10,
   first_share:     5,
+  onboarding_complete: 100,
 }
 
 export async function POST(request: NextRequest) {
@@ -21,13 +22,16 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid reward reason' }, { status: 400 })
   }
 
-  // Check if this reward was already given (idempotent)
-  const { data: existing } = await supabase
+  // Check if already claimed
+  const { data: existing, error: checkError } = await supabase
     .from('coin_transactions')
     .select('id')
     .eq('user_id', user.id)
     .eq('type', `reward_${reason}`)
     .single()
+
+  // 👇 log this
+  console.log('[coin reward] existing check:', { existing, checkError })
 
   if (existing) {
     return NextResponse.json({ already_claimed: true })
@@ -41,9 +45,18 @@ export async function POST(request: NextRequest) {
     p_description: `Bonus for: ${reason.replace(/_/g, ' ')}`,
   })
 
+  // 👇 log the full error object
   if (error) {
-    console.error('[coin reward] error:', error)
-    return NextResponse.json({ error: 'Could not award coins' }, { status: 500 })
+    console.error('[coin reward] rpc error:', {
+      message: error.message,
+      details: error.details,
+      hint:    error.hint,
+      code:    error.code,
+    })
+    return NextResponse.json({ 
+      error: 'Could not award coins',
+      detail: error.message  // 👈 surface it in the response too
+    }, { status: 500 })
   }
 
   return NextResponse.json({ awarded: amount, reason })

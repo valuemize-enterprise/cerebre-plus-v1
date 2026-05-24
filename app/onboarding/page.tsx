@@ -14,8 +14,8 @@ import {
   Search, Upload, Palette, Loader2, Sparkles,
 } from 'lucide-react'
 import { useForm, Controller } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
+// import { zodResolver } from '@hookform/resolvers/zod'
+// import { z } from 'zod'
 import { createBrowserClient } from '@/lib/supabase/client'
 import {
   detectIndustryFromName,
@@ -45,13 +45,13 @@ import { OutputRenderer } from '@/components/tools/OutputRenderer'
 // ─────────────────────────────────────────────────────────────
 
 const CHALLENGES = [
-  { id: 'awareness',    icon: '🔇', text: 'Not enough people know my business' },
-  { id: 'conversion',   icon: '📉', text: 'People enquire but don\'t buy' },
-  { id: 'retention',    icon: '🔄', text: 'Customers buy once and don\'t come back' },
-  { id: 'roi',          icon: '💸', text: 'I\'m spending on marketing with no results' },
-  { id: 'time',         icon: '⏰', text: 'No time to create content consistently' },
-  { id: 'channels',     icon: '🎯', text: 'Don\'t know which channels to focus on' },
-  { id: 'competitors',  icon: '🏆', text: 'Competitors look more professional online' },
+  { id: 'awareness', icon: '🔇', text: 'Not enough people know my business' },
+  { id: 'conversion', icon: '📉', text: 'People enquire but don\'t buy' },
+  { id: 'retention', icon: '🔄', text: 'Customers buy once and don\'t come back' },
+  { id: 'roi', icon: '💸', text: 'I\'m spending on marketing with no results' },
+  { id: 'time', icon: '⏰', text: 'No time to create content consistently' },
+  { id: 'channels', icon: '🎯', text: 'Don\'t know which channels to focus on' },
+  { id: 'competitors', icon: '🏆', text: 'Competitors look more professional online' },
   { id: 'social_media', icon: '📱', text: 'I know I need social media but don\'t know what to post' },
 ] as const
 
@@ -111,59 +111,59 @@ const BRAND_VOICES = [
 // ─────────────────────────────────────────────────────────────
 
 const CHALLENGE_TO_TOOL: Record<ChallengeId, {
-  toolId:      string
-  toolName:    string
-  coinCost:    number
-  reasoning:   string
+  toolId: string
+  toolName: string
+  coinCost: number
+  reasoning: string
   loadingMsgs: string[]
   estimatedSecs: number
 }> = {
-  awareness:    {
+  awareness: {
     toolId: 'strategy-brain', toolName: 'StrategyBrain', coinCost: 0,
-    reasoning:   'Your biggest challenge is visibility. StrategyBrain will build you a complete 90-day plan for getting known in your market.',
-    loadingMsgs: ['Reading your business profile…','Analysing your market opportunity…','Building your 90-day visibility strategy…','Adding Naira-specific recommendations…','Finalising your personalised plan…'],
+    reasoning: 'Your biggest challenge is visibility. StrategyBrain will build you a complete 90-day plan for getting known in your market.',
+    loadingMsgs: ['Reading your business profile…', 'Analysing your market opportunity…', 'Building your 90-day visibility strategy…', 'Adding Naira-specific recommendations…', 'Finalising your personalised plan…'],
     estimatedSecs: 30,
   },
   social_media: {
     toolId: 'content-calendar', toolName: 'Content Calendar', coinCost: 0,
-    reasoning:   'You need a content system. Content Calendar will build your full 30-day posting plan across all your platforms.',
-    loadingMsgs: ['Reading your industry and audience…','Planning your content themes…','Scheduling around Nigerian salary cycle…','Building your 30-day calendar…','Adding platform-specific formats…'],
+    reasoning: 'You need a content system. Content Calendar will build your full 30-day posting plan across all your platforms.',
+    loadingMsgs: ['Reading your industry and audience…', 'Planning your content themes…', 'Scheduling around Nigerian salary cycle…', 'Building your 30-day calendar…', 'Adding platform-specific formats…'],
     estimatedSecs: 20,
   },
-  conversion:   {
+  conversion: {
     toolId: 'sales-script-writer', toolName: 'SalesScriptWriter', coinCost: 0,
-    reasoning:   'People are interested but not buying. SalesScriptWriter will write you a step-by-step script for turning enquiries into paying customers.',
-    loadingMsgs: ['Studying your offer and audience…','Building objection-handling branches…','Writing your closing sequence…','Adding Nigerian buyer psychology…','Finalising your sales script…'],
+    reasoning: 'People are interested but not buying. SalesScriptWriter will write you a step-by-step script for turning enquiries into paying customers.',
+    loadingMsgs: ['Studying your offer and audience…', 'Building objection-handling branches…', 'Writing your closing sequence…', 'Adding Nigerian buyer psychology…', 'Finalising your sales script…'],
     estimatedSecs: 22,
   },
-  time:         {
+  time: {
     toolId: 'caption-craft', toolName: 'CaptionCraft', coinCost: 0,
-    reasoning:   'Time is your constraint. CaptionCraft will generate a week\'s worth of ready-to-post captions in under a minute.',
-    loadingMsgs: ['Studying your brand voice…','Crafting scroll-stopping hooks…','Writing captions for your platform…','Adding hashtag strategy…','Including WhatsApp CTAs…'],
+    reasoning: 'Time is your constraint. CaptionCraft will generate a week\'s worth of ready-to-post captions in under a minute.',
+    loadingMsgs: ['Studying your brand voice…', 'Crafting scroll-stopping hooks…', 'Writing captions for your platform…', 'Adding hashtag strategy…', 'Including WhatsApp CTAs…'],
     estimatedSecs: 12,
   },
-  retention:    {
+  retention: {
     toolId: 'win-back-campaign', toolName: 'WinBackCampaign', coinCost: 0,
-    reasoning:   'Keeping customers is cheaper than finding new ones. WinBackCampaign will give you a complete re-engagement sequence.',
-    loadingMsgs: ['Analysing your customer retention challenge…','Building re-engagement strategy…','Writing your "we miss you" messages…','Adding urgency mechanisms…','Finalising your win-back sequence…'],
+    reasoning: 'Keeping customers is cheaper than finding new ones. WinBackCampaign will give you a complete re-engagement sequence.',
+    loadingMsgs: ['Analysing your customer retention challenge…', 'Building re-engagement strategy…', 'Writing your "we miss you" messages…', 'Adding urgency mechanisms…', 'Finalising your win-back sequence…'],
     estimatedSecs: 20,
   },
-  roi:          {
+  roi: {
     toolId: 'budget-optimizer', toolName: 'BudgetOptimizer', coinCost: 0,
-    reasoning:   'You need better returns from your marketing spend. BudgetOptimizer will show you exactly where to put every naira.',
-    loadingMsgs: ['Analysing your industry and market…','Calculating channel ROI for Nigerian businesses…','Building your optimal allocation plan…','Adding Naira-specific benchmarks…','Finalising your budget strategy…'],
+    reasoning: 'You need better returns from your marketing spend. BudgetOptimizer will show you exactly where to put every naira.',
+    loadingMsgs: ['Analysing your industry and market…', 'Calculating channel ROI for Nigerian businesses…', 'Building your optimal allocation plan…', 'Adding Naira-specific benchmarks…', 'Finalising your budget strategy…'],
     estimatedSecs: 25,
   },
-  channels:     {
+  channels: {
     toolId: 'audience-profiler', toolName: 'AudienceProfiler', coinCost: 0,
-    reasoning:   'Knowing your customer tells you which channels to use. AudienceProfiler builds your complete Ideal Customer Portrait.',
-    loadingMsgs: ['Studying your industry and city…','Building your Nigerian customer profile…','Mapping buying psychology…','Identifying FOBE patterns…','Completing your audience portrait…'],
+    reasoning: 'Knowing your customer tells you which channels to use. AudienceProfiler builds your complete Ideal Customer Portrait.',
+    loadingMsgs: ['Studying your industry and city…', 'Building your Nigerian customer profile…', 'Mapping buying psychology…', 'Identifying FOBE patterns…', 'Completing your audience portrait…'],
     estimatedSecs: 28,
   },
-  competitors:  {
+  competitors: {
     toolId: 'brand-positioner', toolName: 'BrandPositioner', coinCost: 0,
-    reasoning:   'Looking more professional starts with positioning. BrandPositioner crafts your unique market position statement.',
-    loadingMsgs: ['Analysing your competitive landscape…','Identifying your positioning territory…','Crafting your brand promise…','Writing your value proposition…','Finalising your brand positioning…'],
+    reasoning: 'Looking more professional starts with positioning. BrandPositioner crafts your unique market position statement.',
+    loadingMsgs: ['Analysing your competitive landscape…', 'Identifying your positioning territory…', 'Crafting your brand promise…', 'Writing your value proposition…', 'Finalising your brand positioning…'],
     estimatedSecs: 28,
   },
 }
@@ -178,16 +178,16 @@ const StepProgressBar = ({
   firstName,
 }: {
   currentStep: number
-  totalSteps:  number
-  firstName:   string
+  totalSteps: number
+  firstName: string
 }) => (
   <div className="fixed top-0 left-0 right-0 z-50 bg-cerebre-ink/95 backdrop-blur-sm border-b border-cerebre-border px-4 py-3">
     <div className="max-w-lg mx-auto">
       {/* Dots */}
       <div className="flex items-center gap-2 mb-2">
         {Array.from({ length: totalSteps }).map((_, i) => {
-          const step   = i + 1
-          const done   = step < currentStep
+          const step = i + 1
+          const done = step < currentStep
           const active = step === currentStep
 
           return (
@@ -200,8 +200,8 @@ const StepProgressBar = ({
                   'flex items-center justify-center rounded-full flex-shrink-0',
                   'transition-colors duration-300',
                   active ? 'w-5 h-5 bg-cerebre-gold border-2 border-cerebre-gold' :
-                  done   ? 'w-4 h-4 bg-cerebre-teal' :
-                  'w-4 h-4 bg-cerebre-border',
+                    done ? 'w-4 h-4 bg-cerebre-teal' :
+                      'w-4 h-4 bg-cerebre-border',
                 ].join(' ')}
               >
                 {done && <Check className="h-2.5 w-2.5 text-cerebre-ink" />}
@@ -238,7 +238,7 @@ const StepProgressBar = ({
 
 function useTypewriter(text: string, onComplete?: () => void) {
   const [displayed, setDisplayed] = React.useState('')
-  const [isTyping,  setIsTyping]  = React.useState(false)
+  const [isTyping, setIsTyping] = React.useState(false)
 
   const startTyping = React.useCallback((content: string) => {
     setDisplayed('')
@@ -270,8 +270,8 @@ const SuggestionCard = ({
   label = 'Use this suggestion',
 }: {
   suggestion: string
-  onAccept:   (text: string) => void
-  label?:     string
+  onAccept: (text: string) => void
+  label?: string
 }) => {
   if (!suggestion) return null
   return (
@@ -306,10 +306,10 @@ const IndustryDetectCard = ({
   onConfirm,
   onDismiss,
 }: {
-  reasoning:  string
-  industry:   string
-  onConfirm:  () => void
-  onDismiss:  () => void
+  reasoning: string
+  industry: string
+  onConfirm: () => void
+  onDismiss: () => void
 }) => (
   <motion.div
     initial={{ opacity: 0, y: 6, height: 0 }}
@@ -343,37 +343,37 @@ interface OnboardingState {
   firstName: string
 
   // Step 2
-  businessName:  string
-  industry:      IndustryCategory | ''
-  city:          string
-  cityResult:    LocationResult | null
+  businessName: string
+  industry: IndustryCategory | ''
+  city: string
+  cityResult: LocationResult | null
   yearsInBusiness: string
-  description:   string
+  description: string
 
   // Step 3
-  targetCustomer:  string
+  targetCustomer: string
   painPointSolved: string
   uniqueAdvantage: string
-  priceRange:      string
+  priceRange: string
 
   // Step 4
-  brandVoice:        string
+  brandVoice: string
   languagePreference: string
-  primaryCta:        string
+  primaryCta: string
 
   // Step 5
-  whatsapp:      string
-  phone:         string
-  emailContact:  string
-  address:       string
-  instagram:     string
-  facebook:      string
-  linkedin:      string
-  tiktok:        string
+  whatsapp: string
+  phone: string
+  emailContact: string
+  address: string
+  instagram: string
+  facebook: string
+  linkedin: string
+  tiktok: string
 
   // Step 6
-  logoUrl:      string
-  brandColour:  string
+  logoUrl: string
+  brandColour: string
 
   // Step 7 (challenge)
   challenges: ChallengeId[]
@@ -410,11 +410,11 @@ const StepNav = ({
   nextLoading = false,
   nextDisabled = false,
 }: {
-  step:         number
-  totalSteps:   number
-  onBack?:      () => void
-  onNext:       () => void
-  nextLabel?:   string
+  step: number
+  totalSteps: number
+  onBack?: () => void
+  onNext: () => void
+  nextLabel?: string
   nextLoading?: boolean
   nextDisabled?: boolean
 }) => (
@@ -454,8 +454,8 @@ const Step1Welcome = ({
   onSkip,
 }: {
   firstName: string
-  onNext:    () => void
-  onSkip:    () => void
+  onNext: () => void
+  onSkip: () => void
 }) => {
   const benefits = [
     { icon: '⚡', number: '40', text: 'AI marketing tools are ready for your business' },
@@ -564,19 +564,19 @@ const Step2Business = ({
   onNext,
   onBack,
 }: {
-  state:  OnboardingState
+  state: OnboardingState
   update: (key: keyof OnboardingState, value: any) => void
   onNext: () => void
   onBack: () => void
 }) => {
   // const [detecting,    setDetecting]    = React.useState(false)
-  const [detection,    setDetection]    = React.useState<{ industry: IndustryCategory; reasoning: string } | null>(null)
-  const [showDetect,   setShowDetect]   = React.useState(false)
-  const [cityQuery,    setCityQuery]    = React.useState(state.city)
-  const [cityResults,  setCityResults]  = React.useState<LocationResult[]>([])
+  const [detection, setDetection] = React.useState<{ industry: IndustryCategory; reasoning: string } | null>(null)
+  const [showDetect, setShowDetect] = React.useState(false)
+  const [cityQuery, setCityQuery] = React.useState(state.city)
+  const [cityResults, setCityResults] = React.useState<LocationResult[]>([])
   const [showCitySugg, setShowCitySugg] = React.useState(false)
-  const [descSuggestion, setDescSugg]  = React.useState('')
-  const {startTyping } = useTypewriter(state.description)
+  const [descSuggestion, setDescSugg] = React.useState('')
+  const { startTyping } = useTypewriter(state.description)
   const detectTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Auto-detect industry from business name with debounce
@@ -799,9 +799,9 @@ const Step3Customers = ({
   const industry = state.industry as IndustryCategory | null
   const priceRanges = industry ? getIndustryPriceRanges(industry) : []
 
-  const customerSugg    = getTargetCustomerSuggestion(industry, state.city)
-  const advantageSugg   = getUniqueAdvantageSuggestion(industry)
-  const painPointSugg   = getPainPointSuggestion(industry)
+  const customerSugg = getTargetCustomerSuggestion(industry, state.city)
+  const advantageSugg = getUniqueAdvantageSuggestion(industry)
+  const painPointSugg = getPainPointSuggestion(industry)
 
   const canProceed = state.targetCustomer.length >= 10 && state.uniqueAdvantage.length >= 5
 
@@ -887,9 +887,9 @@ const Step4BrandVoice = ({
   state, update, onNext, onBack,
 }: { state: OnboardingState; update: (k: keyof OnboardingState, v: any) => void; onNext: () => void; onBack: () => void }) => {
   const LANGUAGE_OPTIONS = [
-    { id: 'standard_english',   label: 'Standard English',   example: '"We provide premium solutions tailored to your business goals."' },
-    { id: 'nigerian_english',   label: 'Nigerian English',   example: '"We deliver top-notch service that will take your business to the next level!"' },
-    { id: 'mix_pidgin',         label: 'Mix with Pidgin',    example: '"Our service na the real deal — e go change your business completely."' },
+    { id: 'standard_english', label: 'Standard English', example: '"We provide premium solutions tailored to your business goals."' },
+    { id: 'nigerian_english', label: 'Nigerian English', example: '"We deliver top-notch service that will take your business to the next level!"' },
+    { id: 'mix_pidgin', label: 'Mix with Pidgin', example: '"Our service na the real deal — e go change your business completely."' },
   ]
 
   const CTA_OPTIONS = [
@@ -1062,9 +1062,9 @@ const Step5Contact = ({
         <div className="grid grid-cols-2 gap-2.5">
           {[
             { key: 'instagram', placeholder: '@yourhandle', icon: '📸' },
-            { key: 'facebook',  placeholder: 'Page name',  icon: '👥' },
-            { key: 'linkedin',  placeholder: 'Profile URL', icon: '💼' },
-            { key: 'tiktok',    placeholder: '@yourhandle', icon: '🎵' },
+            { key: 'facebook', placeholder: 'Page name', icon: '👥' },
+            { key: 'linkedin', placeholder: 'Profile URL', icon: '💼' },
+            { key: 'tiktok', placeholder: '@yourhandle', icon: '🎵' },
           ].map((s) => (
             <div key={s.key} className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm">{s.icon}</span>
@@ -1089,18 +1089,18 @@ const Step5Contact = ({
 const Step6Brand = ({
   state, update, onNext, onBack,
 }: { state: OnboardingState; update: (k: keyof OnboardingState, v: any) => void; onNext: () => void; onBack: () => void }) => {
-  const [uploading,  setUploading]  = React.useState(false)
-  const [dragOver,   setDragOver]   = React.useState(false)
-  const [noLogo,     setNoLogo]     = React.useState(false)
+  const [uploading, setUploading] = React.useState(false)
+  const [dragOver, setDragOver] = React.useState(false)
+  const [noLogo, setNoLogo] = React.useState(false)
   const fileInputRef = React.useRef<HTMLInputElement>(null)
 
   const extractColourFromImage = async (file: File): Promise<string | null> => {
     return new Promise((resolve) => {
-      const img    = new Image()
+      const img = new Image()
       const canvas = document.createElement('canvas')
-      const ctx    = canvas.getContext('2d')
+      const ctx = canvas.getContext('2d')
       img.onload = () => {
-        canvas.width  = 32
+        canvas.width = 32
         canvas.height = 32
         ctx?.drawImage(img, 0, 0, 32, 32)
         const data = ctx?.getImageData(0, 0, 32, 32).data
@@ -1108,8 +1108,8 @@ const Step6Brand = ({
         // Average colour of non-white pixels
         let r = 0, g = 0, b = 0, count = 0
         for (let i = 0; i < data.length; i += 4) {
-          if (data[i] > 240 && data[i+1] > 240 && data[i+2] > 240) continue
-          r += data[i]; g += data[i+1]; b += data[i+2]; count++
+          if (data[i] > 240 && data[i + 1] > 240 && data[i + 2] > 240) continue
+          r += data[i]; g += data[i + 1]; b += data[i + 2]; count++
         }
         if (count === 0) { resolve(null); return }
         const toHex = (n: number) => Math.round(n / count).toString(16).padStart(2, '0')
@@ -1136,7 +1136,7 @@ const Step6Brand = ({
         const { url } = await res.json()
         update('logoUrl', url)
       }
-    } catch {}
+    } catch { }
     setUploading(false)
   }
 
@@ -1268,8 +1268,8 @@ const ChallengeStep = ({
 }: {
   selected: ChallengeId[]
   onToggle: (id: ChallengeId) => void
-  onNext:   () => void
-  onBack:   () => void
+  onNext: () => void
+  onBack: () => void
 }) => (
   <div className="space-y-6">
     <div className="text-center">
@@ -1284,7 +1284,7 @@ const ChallengeStep = ({
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
       {CHALLENGES.map((c) => {
         const isSelected = selected.includes(c.id)
-        const atMax      = selected.length >= 3 && !isSelected
+        const atMax = selected.length >= 3 && !isSelected
 
         return (
           <motion.button
@@ -1333,31 +1333,67 @@ const Step7MagicMoment = ({
   businessName,
   onComplete,
 }: {
-  state:        OnboardingState
+  state: OnboardingState
   businessName: string
-  onComplete:   () => void
+  onComplete: () => void
 }) => {
   const primaryChallenge = state.challenges[0] as ChallengeId | undefined
   const toolConfig = primaryChallenge
     ? CHALLENGE_TO_TOOL[primaryChallenge]
     : CHALLENGE_TO_TOOL['awareness']
 
-  const [phase,   setPhase]   = React.useState<'intro' | 'generating' | 'complete'>('intro')
-  const [output,  setOutput]  = React.useState('')
-  const [error,   setError]   = React.useState<string | null>(null)
+  const [phase, setPhase] = React.useState<'intro' | 'generating' | 'complete'>('intro')
+  const [output, setOutput] = React.useState('')
+  const [error, setError] = React.useState<string | null>(null)
 
   const runGeneration = async () => {
     setPhase('generating')
     setError(null)
 
+     const CHALLENGE_TO_STRATEGY: Record<string, string> = {
+    awareness:    'build_online_presence',
+    leads:        'get_first_100_customers',
+    sales:        'double_monthly_revenue',
+    retention:    'increase_repeat_purchases',
+    launch:       'launch_new_product',
+    local:        'dominate_local_market',
+    organic:      'reduce_ad_spend_grow_organic',
+    whatsapp:     'build_whatsapp_email_list',
+    new_market:   'enter_new_city_market',
+    slow_period:  'recover_from_slow_period',
+  }
+
+  const PRICE_TO_BUDGET: Record<string, string> = {
+    'under_100k':    '0_50k',
+    '100k_500k':     '50_150k',
+    '500k_1m':       '150_500k',
+    '1m_5m':         '500k_1m',
+    '5m_plus':       '1m_plus',
+  }
+
     try {
       const response = await fetch(`/api/generate/${toolConfig.toolId}`, {
-        method:  'POST',
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({
-          inputs:         {},  // Profile is auto-filled server-side
+        body: JSON.stringify({
+            inputs: {
+          // Required fields
+          strategy_goal: CHALLENGE_TO_STRATEGY[primaryChallenge ?? 'awareness'] ?? 'build_online_presence',
+          current_situation: state.description?.trim() || `${state.businessName} is a ${state.industry} business based in ${state.city}, Nigeria.`,
+          monthly_budget: PRICE_TO_BUDGET[state.priceRange ?? ''] ?? '0_50k',
+          biggest_challenge: state.challenges.length
+            ? `Our biggest challenges include: ${state.challenges.join(', ')}. We need a clear strategy to overcome these and grow.`
+            : 'Growing brand awareness and acquiring new customers consistently in a competitive market.',
+
+          // Optional fields — pass what you have from onboarding
+          team_size:               'solo_founder',        // default
+          time_available_per_week: '5_10hrs',             // default
+          preferred_channels:      state.instagram || state.tiktok
+            ? (['instagram', 'tiktok', 'whatsapp'] as const).filter(Boolean)
+            : ['whatsapp', 'instagram'],
+        }, // Profile is auto-filled server-side
           skipCoinDeduct: true,
-          isOnboarding:   true,
+          isOnboarding: true,
         }),
       })
 
@@ -1365,9 +1401,9 @@ const Step7MagicMoment = ({
         throw new Error('Generation failed')
       }
 
-      const reader  = response.body.getReader()
+      const reader = response.body.getReader()
       const decoder = new TextDecoder()
-      let full      = ''
+      let full = ''
 
       while (true) {
         const { done, value } = await reader.read()
@@ -1383,9 +1419,9 @@ const Step7MagicMoment = ({
       const confetti = (await import('canvas-confetti')).default
       confetti({
         particleCount: 120,
-        spread:        80,
-        origin:        { y: 0.6 },
-        colors:        ['#E09818', '#F5C040', '#0CC4A0', '#FFFFFF'],
+        spread: 80,
+        origin: { y: 0.6 },
+        colors: ['#E09818', '#F5C040', '#0CC4A0', '#FFFFFF'],
       })
     } catch (e: any) {
       setError(e.message ?? 'Something went wrong. Please try again.')
@@ -1502,11 +1538,11 @@ const Step7MagicMoment = ({
 
 export default function OnboardingPage() {
   const supabase = createBrowserClient()
-  const router   = useRouter()
+  const router = useRouter()
 
-  const [step,   setStep]   = React.useState(1)
+  const [step, setStep] = React.useState(1)
   const [saving, setSaving] = React.useState(false)
-  const [state,  setState]  = React.useState<OnboardingState>(INITIAL_STATE)
+  const [state, setState] = React.useState<OnboardingState>(INITIAL_STATE)
 
   // Load user name on mount
   React.useEffect(() => {
@@ -1533,6 +1569,7 @@ export default function OnboardingPage() {
 
   // Save current step data to DB
   const saveStep = async (stepNum: number) => {
+    if (saving) return
     setSaving(true)
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { setSaving(false); return }
@@ -1541,48 +1578,48 @@ export default function OnboardingPage() {
 
     if (stepNum === 2) {
       Object.assign(dbPayload, {
-        business_name:    state.businessName,
-        industry:         state.industry,
-        city:             state.city,
-        country:          state.cityResult?.country ?? 'Nigeria',
+        business_name: state.businessName,
+        industry: state.industry,
+        city: state.city,
+        country: state.cityResult?.country ?? 'Nigeria',
         years_in_business: state.yearsInBusiness ? parseInt(state.yearsInBusiness.split('_')[0]) : null,
-        description:      state.description,
-        onboarding_step:  'step2_industry_audience',
+        description: state.description,
+        onboarding_step: 'step2_industry_audience',
       })
     } else if (stepNum === 3) {
       Object.assign(dbPayload, {
-        target_customer:  state.targetCustomer,
+        target_customer: state.targetCustomer,
         unique_advantage: state.uniqueAdvantage,
-        price_range:      state.priceRange,
-        onboarding_step:  'step3_social_contact',
+        price_range: state.priceRange,
+        onboarding_step: 'step3_social_contact',
       })
     } else if (stepNum === 4) {
       Object.assign(dbPayload, {
-        brand_voice:          state.brandVoice,
-        language_preference:  state.languagePreference,
-        primary_cta:          state.primaryCta,
-        onboarding_step:      'step4_brand_voice',
+        brand_voice: state.brandVoice,
+        language_preference: state.languagePreference,
+        primary_cta: state.primaryCta,
+        onboarding_step: 'step4_brand_voice',
       })
     } else if (stepNum === 5) {
       Object.assign(dbPayload, {
-        whatsapp:     state.whatsapp,
-        phone:        state.phone,
+        whatsapp: state.whatsapp,
+        phone: state.phone,
         email_contact: state.emailContact,
-        address:      state.address,
-        instagram:    state.instagram,
-        facebook:     state.facebook,
-        linkedin:     state.linkedin,
-        tiktok:       state.tiktok,
+        address: state.address,
+        instagram: state.instagram,
+        facebook: state.facebook,
+        linkedin: state.linkedin,
+        tiktok: state.tiktok,
       })
     } else if (stepNum === 6) {
       Object.assign(dbPayload, {
-        logo_url:    state.logoUrl,
+        logo_url: state.logoUrl,
         brand_colour: state.brandColour,
       })
     } else if (stepNum === 7) {
       Object.assign(dbPayload, {
         marketing_challenges: state.challenges,
-        onboarding_step:      'magic_moment_completed',
+        onboarding_step: 'magic_moment_completed',
       })
     }
 
@@ -1594,6 +1631,7 @@ export default function OnboardingPage() {
   }
 
   const goNext = async () => {
+    
     await saveStep(step)
     setStep((s) => s + 1)
     window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -1615,17 +1653,26 @@ export default function OnboardingPage() {
     router.push('/dashboard')
     router.refresh()
   }
+    const handleGetReward = async () => {
+         await fetch('/api/coins/reward', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason: 'onboarding_complete' }),
+      })
 
+    }
   const handleComplete = async () => {
     const { data: { user } } = await supabase.auth.getUser()
     if (user) {
       await supabase.from('profiles').update({
-        onboarding_complete:   true,
+        onboarding_complete: true,
         magic_moment_completed: true,
-        onboarding_step:       'complete',
+        onboarding_step: 'complete',
       }).eq('id', user.id)
+
+    await handleGetReward ()
     }
-    router.push('/dashboard')
+    router.push('/dashboard?welcome=1')
     router.refresh()
   }
 
@@ -1634,8 +1681,8 @@ export default function OnboardingPage() {
   // Steps 1-6 = steps, between 6-7 = challenge, step 7 = magic moment
   const progressStep =
     step <= 6 ? step :
-    step === 7 ? 6 :   // Challenge is still "between" 6 and 7
-    7
+      step === 7 ? 6 :   // Challenge is still "between" 6 and 7
+        7
 
   return (
     <div className="min-h-dvh bg-cerebre-ink">
