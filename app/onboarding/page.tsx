@@ -1655,23 +1655,9 @@ export default function OnboardingPage() {
   }
 
 
-  const handleGetReward = async () => {
-    try {
-      const res = await fetch('/api/coins/reward', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reason: 'onboarding_complete' }),
-      })
-      const data = await res.json()
-      console.log('[onboarding reward]', data) // awarded: 100 or already_claimed
-    } catch (err) {
-      console.error('[onboarding reward] failed:', err)
-      // Don't block the redirect — reward failure shouldn't stop the user
-    }
-  }
 
-
-  const handleComplete = async () => {
+   const handleComplete = async () => {
+    console.log('[handleComplete] started') 
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
     await supabase.from('profiles').update({
@@ -1684,7 +1670,37 @@ export default function OnboardingPage() {
 
     router.push('/dashboard?welcome=1')
     router.refresh()
+
+    console.log('[handleComplete] ended') 
   }
+
+
+ const handleGetReward = async () => {
+
+  console.log('[handleGetReward] started') 
+  try {
+    const res = await fetch('/api/coins/reward', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason: 'onboarding_complete' }),
+    })
+
+    console.log('[onboarding reward] status:', res.status) // check this first
+
+    if (!res.ok) {
+      const errorText = await res.text()
+      console.error('[onboarding reward] error response:', errorText)
+      return
+    }
+
+    const data = await res.json()
+    console.log('[onboarding reward]', data)
+  } catch (err) {
+    console.error('[onboarding reward] failed:', err)
+  }
+  console.log('[handleGetReward] ended') 
+}
+
 
   // Total visual steps for the progress bar (7, excluding the challenge interlude)
   const TOTAL_VISUAL_STEPS = 7
