@@ -39,6 +39,7 @@ import {
 } from '@/lib/onboarding/description-predictor'
 import { LoadingStages } from '@/components/ui/LoadingStages'
 import { OutputRenderer } from '@/components/tools/OutputRenderer'
+import Image from 'next/image'
 
 // ─────────────────────────────────────────────────────────────
 // MARKETING CHALLENGE OPTIONS
@@ -472,8 +473,14 @@ const Step1Welcome = ({
         transition={{ type: 'spring', damping: 20, stiffness: 200, delay: 0.1 }}
         className="mb-8"
       >
-        <div className="w-16 h-16 rounded-2xl bg-cerebre-gold mx-auto flex items-center justify-center shadow-gold mb-3">
-          <span className="text-cerebre-ink font-black text-xl font-mono">C+</span>
+        <div className="w-16 h-16 rounded-2xl bg-black mx-auto flex items-center justify-center shadow-gold mb-3">
+          <Image
+            src="/CMA Logo.png"
+            alt="Cerebre Plus"
+            width={40}
+            height={40}
+            className="object-contain"
+          />
         </div>
 
         {/* <div className="w-16 h-16 rounded-2xl mx-auto flex items-center justify-center shadow-gold mb-3 relative overflow-hidden">
@@ -1096,7 +1103,7 @@ const Step6Brand = ({
 
   const extractColourFromImage = async (file: File): Promise<string | null> => {
     return new Promise((resolve) => {
-      const img = new Image()
+      const img = new window.Image()
       const canvas = document.createElement('canvas')
       const ctx = canvas.getContext('2d')
       img.onload = () => {
@@ -1337,6 +1344,33 @@ const Step7MagicMoment = ({
   businessName: string
   onComplete: () => void
 }) => {
+
+  const handleGetReward = async () => {
+
+    console.log('[handleGetReward] started')
+    try {
+      const res = await fetch('/api/coins/reward', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason: 'onboarding_complete' }),
+      })
+
+      console.log('[onboarding reward] status:', res.status) // check this first
+
+      if (!res.ok) {
+        const errorText = await res.text()
+        console.error('[onboarding reward] error response:', errorText)
+        return
+      }
+
+      const data = await res.json()
+      console.log('[onboarding reward]', data)
+    } catch (err) {
+      console.error('[onboarding reward] failed:', err)
+    }
+    console.log('[handleGetReward] ended')
+  }
+
   const primaryChallenge = state.challenges[0] as ChallengeId | undefined
   const toolConfig = primaryChallenge
     ? CHALLENGE_TO_TOOL[primaryChallenge]
@@ -1372,6 +1406,7 @@ const Step7MagicMoment = ({
     }
 
     try {
+      await handleGetReward() // ✅ here — after stream done, before confetti
       const response = await fetch(`/api/generate/${toolConfig.toolId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1414,6 +1449,7 @@ const Step7MagicMoment = ({
       }
 
       setPhase('complete')
+
 
       // Confetti
       const confetti = (await import('canvas-confetti')).default
@@ -1655,9 +1691,7 @@ export default function OnboardingPage() {
   }
 
 
-
-   const handleComplete = async () => {
-    console.log('[handleComplete] started') 
+  const handleComplete = async () => {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
     await supabase.from('profiles').update({
@@ -1666,40 +1700,12 @@ export default function OnboardingPage() {
       onboarding_step: 'complete',
     }).eq('id', user.id)
 
-    await handleGetReward()
-
     router.push('/dashboard?welcome=1')
     router.refresh()
-
-    console.log('[handleComplete] ended') 
   }
 
 
- const handleGetReward = async () => {
 
-  console.log('[handleGetReward] started') 
-  try {
-    const res = await fetch('/api/coins/reward', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ reason: 'onboarding_complete' }),
-    })
-
-    console.log('[onboarding reward] status:', res.status) // check this first
-
-    if (!res.ok) {
-      const errorText = await res.text()
-      console.error('[onboarding reward] error response:', errorText)
-      return
-    }
-
-    const data = await res.json()
-    console.log('[onboarding reward]', data)
-  } catch (err) {
-    console.error('[onboarding reward] failed:', err)
-  }
-  console.log('[handleGetReward] ended') 
-}
 
 
   // Total visual steps for the progress bar (7, excluding the challenge interlude)
