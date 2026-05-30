@@ -53,6 +53,7 @@ export function useUser(): UseUserReturn {
   const [profile, setProfile] = React.useState<Profile | null>(null)
   const [loading, setLoading] = React.useState(true)
 
+
   const fetchProfile = React.useCallback(async (userId: string) => {
     const { data } = await supabase
       .from('profiles')

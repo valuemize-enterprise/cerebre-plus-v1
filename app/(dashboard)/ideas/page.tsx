@@ -259,7 +259,7 @@ export default function IdeasPage() {
               <h1 className="text-2xl font-black text-white">Content Ideas</h1>
             </div>
             <p className="mt-1 text-sm text-white/40">
-              5 daily ideas for {profile?.businessName || 'your business'} in {profile?.city || 'Nigeria'} —
+              5 daily ideas for {profile?.business_name || 'your business'} in {profile?.city || 'Nigeria'} —
               refreshed at 6AM WAT
             </p>
           </div>

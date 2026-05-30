@@ -181,6 +181,7 @@ export default function ProfilePage() {
   const params = useSearchParams()
   const focusField = params.get('focus')
   const { profile: initialProfile } = useUser()
+
   const { toast } = useToast()
   const supabase = createBrowserClient()
 
@@ -195,75 +196,83 @@ export default function ProfilePage() {
   useEffect(() => {
     if (initialProfile) {
       setForm({
-        business_name: initialProfile.businessName || '',
+        business_name: initialProfile.business_name || '',
         industry: initialProfile.industry || '',
         city: initialProfile.city || '',
         country: initialProfile.country || 'Nigeria',
-        years_in_business: initialProfile.yearsInBusiness?.toString() || '',
+        years_in_business: initialProfile.years_in_business?.toString() || '',
         description: initialProfile.description || '',
-        unique_advantage: initialProfile.uniqueAdvantage || '',
-        target_customer: initialProfile.targetCustomer || '',
-        brand_voice: initialProfile.brandVoice || '',
-        language_preference: initialProfile.languagePreference || 'en-NG',
-        price_range: initialProfile.priceRange || '',
-        social_proof: initialProfile.socialProof || '',
-        logo_url: initialProfile.logoUrl || '',
-        brand_colour: initialProfile.brandColour || '#E09818',
+        unique_advantage: initialProfile.unique_advantage || '',
+        target_customer: initialProfile.target_customer || '',
+        brand_voice: initialProfile.brand_voice || '',
+        language_preference: initialProfile.language_preference || 'en-NG',
+        price_range: initialProfile.price_range || '',
+        social_proof: initialProfile.social_proof || '',
+        logo_url: initialProfile.logo_url || '',
+        brand_colour: initialProfile.brand_colour || '#E09818',
         whatsapp: initialProfile.whatsapp || '',
         phone: initialProfile.phone || '',
-        email_contact: initialProfile.emailContact || '',
+        email_contact: initialProfile.email_contact || '',
         address: initialProfile.address || '',
-        business_hours: initialProfile.businessHours || '',
+        business_hours: initialProfile.business_hours || '',
         instagram: initialProfile.instagram || '',
         facebook: initialProfile.facebook || '',
         linkedin: initialProfile.linkedin || '',
         tiktok: initialProfile.tiktok || '',
-        marketing_challenges: (initialProfile.marketingChallenges as string[]) || [],
-        primary_cta: initialProfile.primaryCta || '',
+        marketing_challenges: (initialProfile.marketing_challenges as string[]) || [],
+        primary_cta: initialProfile.primary_cta || '',
       })
     }
   }, [initialProfile])
+
+
 
   const setField = useCallback((key: string, value: any) => {
     setForm((prev) => ({ ...prev, [key]: value }))
   }, [])
 
-const saveProfile = useCallback(async (partial?: Partial<ProfileForm>) => {
+ const saveProfile = useCallback(async (partial?: Partial<ProfileForm>) => {
+  // console.log('saveProfile called', { form, initialProfile, supabase: !!supabase }) // ← add this
   setSaving(true)
-  const toSave = { ...(partial || form) }
+  try {
+    const toSave = { ...(partial || form) }
 
-  // Convert years to number
-  if (toSave.years_in_business) {
-    toSave.years_in_business = parseInt(toSave.years_in_business as string, 10) || null
-  }
+    if (toSave.years_in_business) {
+      toSave.years_in_business = parseInt(toSave.years_in_business as string, 10) || null
+    }
 
-  // Convert empty strings to null for enum fields
-  if (!toSave.brand_voice) toSave.brand_voice = null
-  if (!toSave.price_range) toSave.price_range = null
-  if (!toSave.language_preference) toSave.language_preference = null
-  toSave.years_in_business = toSave.years_in_business 
-  ? parseInt(toSave.years_in_business as string, 10) || null 
-  : null
+    if (!toSave.brand_voice) toSave.brand_voice = null
+    if (!toSave.price_range) toSave.price_range = null
+    if (!toSave.language_preference) toSave.language_preference = null
+    toSave.years_in_business = toSave.years_in_business
+      ? parseInt(toSave.years_in_business as string, 10) || null
+      : null
 
-  const { score } = calcCompleteness(form)
-  toSave.profile_completeness_score = score
+    const { score } = calcCompleteness(form)
+    toSave.profile_completeness_score = score
 
-  const { error } = await supabase
-    .from('profiles')
-    .update(toSave)
-    .eq('id', (initialProfile as any)?.id || '')
+    const { error } = await supabase
+      .from('profiles')
+      .update(toSave)
+      .eq('id', (initialProfile as any)?.id || '')
+
       // console.log('save result:', { error, id: (initialProfile as any)?.id, toSave })
-      // console.log('user_id:', (initialProfile as any)?.user_id)
 
-    setSaving(false)
 
     if (error) {
       toast({ type: 'error', title: 'Save failed', description: error.message })
+      console.log('Error saving profile:', error)
     } else {
       setSaved(true)
       setTimeout(() => setSaved(false), 2500)
     }
-  }, [form, supabase, initialProfile, toast])
+  } catch (err) {
+    console.error('saveProfile threw:', err)
+    toast({ type: 'error', title: 'Save failed', description: 'Unexpected error' })
+  } finally {
+    setSaving(false) // ✅ always runs
+  }
+}, [form, supabase, initialProfile, toast])
 
   const autoSave = useCallback(async () => {
     if (!(initialProfile as any)?.id) return
@@ -293,6 +302,8 @@ const saveProfile = useCallback(async (partial?: Partial<ProfileForm>) => {
     }
     setLogoUploading(false)
   }
+
+
 
   const { score, missing } = calcCompleteness(form)
 
@@ -335,8 +346,8 @@ const saveProfile = useCallback(async (partial?: Partial<ProfileForm>) => {
             onClick={() => saveProfile()}
             disabled={saving}
             className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-bold transition-all ${saved
-                ? 'bg-emerald-500/15 border border-emerald-500/30 text-emerald-400'
-                : 'bg-[#E09818] text-[#0B1F3A] hover:opacity-90'
+              ? 'bg-emerald-500/15 border border-emerald-500/30 text-emerald-400'
+              : 'bg-[#E09818] text-[#0B1F3A] hover:opacity-90'
               } disabled:opacity-60`}
           >
             {saved
@@ -402,8 +413,8 @@ const saveProfile = useCallback(async (partial?: Partial<ProfileForm>) => {
               key={s.label}
               onClick={() => setActiveSection(i)}
               className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg py-2.5 text-xs font-semibold transition-all ${activeSection === i
-                  ? 'bg-[#E09818] text-[#0B1F3A]'
-                  : 'text-white/40 hover:text-white/60'
+                ? 'bg-[#E09818] text-[#0B1F3A]'
+                : 'text-white/40 hover:text-white/60'
                 }`}
             >
               {s.icon}
@@ -550,8 +561,8 @@ const saveProfile = useCallback(async (partial?: Partial<ProfileForm>) => {
                         setField('marketing_challenges', next)
                       }}
                       className={`flex items-center gap-2 rounded-xl border p-3 text-left text-sm transition-all ${isOn
-                          ? 'border-[#E09818]/50 bg-[#E09818]/10 text-white'
-                          : 'border-white/10 text-white/50 hover:border-white/20 hover:text-white/70'
+                        ? 'border-[#E09818]/50 bg-[#E09818]/10 text-white'
+                        : 'border-white/10 text-white/50 hover:border-white/20 hover:text-white/70'
                         }`}
                     >
                       {isOn
@@ -602,8 +613,8 @@ const saveProfile = useCallback(async (partial?: Partial<ProfileForm>) => {
                     key={bv.value}
                     onClick={() => { setField('brand_voice', bv.value); setTimeout(autoSave, 100) }}
                     className={`flex items-center justify-between rounded-xl border p-3 text-left text-sm transition-all ${form.brand_voice === bv.value
-                        ? 'border-[#E09818]/50 bg-[#E09818]/10 text-white'
-                        : 'border-white/10 text-white/50 hover:border-white/20'
+                      ? 'border-[#E09818]/50 bg-[#E09818]/10 text-white'
+                      : 'border-white/10 text-white/50 hover:border-white/20'
                       }`}
                   >
                     {bv.label}

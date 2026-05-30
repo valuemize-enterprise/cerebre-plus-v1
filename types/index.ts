@@ -139,48 +139,48 @@ export interface Profile {
   // Identity
   id:                         string    // UUID — matches auth.users.id
   email:                      string
-  fullName?:                  string
-  avatarUrl?:                 string
+  full_name?:                  string
+  avatar_url?:                 string
 
   // Business core
-  businessName?:              string
+  business_name?:              string
   industry?:                  string
-  industryCustom?:            string
+  industry_custom?:            string
   city?:                      string
   state?:                     string
   country:                    string
-  yearsInBusiness?:           number
+  years_in_business?:           number
   description?:               string
-  uniqueAdvantage?:           string
-  targetCustomer?:            string
+  unique_advantage?:           string
+  target_customer?:            string
 
   // Brand voice & personality
-  brandVoice?:                BrandVoice
-  languagePreference:         string
-  primaryCta?:                string
+  brand_voice?:                BrandVoice
+  language_preference:         string
+  primary_cta?:                string
 
   // Pricing
-  priceRange?:                string
-  priceLow?:                  number
-  priceHigh?:                 number
+  price_range?:                string
+  price_low?:                  number
+  price_high?:                 number
 
   // Social proof
-  socialProof?:               string
-  clientCount?:               number
-  yearsCombined?:             number
+  social_proof?:               string
+  client_count?:               number
+  years_combined?:             number
 
   // Media
-  logoUrl?:                   string
-  brandColour:                string
-  brandColourSecondary?:      string
+  logo_url?:                   string
+  brand_colour:                string
+  brand_colour_secondary?:      string
 
   // Contact
   whatsapp?:                  string
   phone?:                     string
-  emailContact?:              string
+  email_contact?:              string
   address?:                   string
-  businessHours?:             string
-  websiteUrl?:                string
+  business_hours?:             string
+  website_url?:                string
 
   // Social handles
   instagram?:                 string
@@ -191,32 +191,32 @@ export interface Profile {
   youtube?:                   string
 
   // Marketing intelligence
-  marketingChallenges:        string[]
-  topProducts:                string[]
+  marketing_challenges:        string[]
+  top_products:                string[]
   competitors:                string[]
-  targetLocations:            string[]
+  target_locations:            string[]
 
   // Profile quality
   profileCompletenessScore:   number    // 0-100
 
   // Onboarding
-  onboardingComplete:         boolean
-  onboardingStep:             OnboardingStep
-  magicMomentCompleted:       boolean
-  magicMomentToolId?:         string
+  onboarding_complete:         boolean
+  onboarding_step:             OnboardingStep
+  magic_moment_completed:       boolean
+  magic_moment_tool_id?:         string
 
   // Plan & billing
-  planTier:                   PlanTier
-  referredBy?:                string    // UUID of referrer
+  plan_tier:                   PlanTier
+  referred_by?:                string    // UUID of referrer
 
   // Timestamps
-  createdAt:                  string
-  updatedAt:                  string
+  created_at:                  string
+  updated_at:                  string
 }
 
 export type ProfileUpdatePayload = Partial<Omit<Profile,
-  'id' | 'email' | 'planTier' | 'createdAt' | 'updatedAt' |
-  'profileCompletenessScore' | 'onboardingComplete'
+  'id' | 'email' | 'plan_tier' | 'created_at' | 'updated_at' |
+  'profileCompletenessScore' | 'onboarding_complete'
 >>
 
 // ── Subscription ──────────────────────────────────────────────

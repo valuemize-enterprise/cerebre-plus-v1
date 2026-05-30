@@ -65,12 +65,12 @@ export default function CompetitorPage() {
         weaknesses,
         yourEdge,
         profile: {
-          business_name: profile?.businessName,
+          business_name: profile?.business_name,
           industry:      profile?.industry,
           city:          profile?.city,
-          unique_advantage: profile?.uniqueAdvantage,
-          target_customer:  profile?.targetCustomer,
-          social_proof:  profile?.socialProof,
+          unique_advantage: profile?.unique_advantage,
+          target_customer:  profile?.target_customer,
+          social_proof:  profile?.social_proof,
         },
       },
     })
