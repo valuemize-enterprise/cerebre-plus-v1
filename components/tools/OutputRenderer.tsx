@@ -17,18 +17,18 @@ import { Button } from '@/components/ui/Button'
 // ─────────────────────────────────────────────────────────────
 
 export interface OutputRendererProps {
-  content:          string
-  isStreaming?:     boolean
-  toolName?:        string
-  toolId?:          string
-  generationId?:    string
-  coinCost?:        number
-  isSaved?:         boolean
-  onSave?:          () => void | Promise<void>
-  onRegenerate?:    () => void | Promise<void>
-  onExportPDF?:     () => void | Promise<void>
-  onExportDocx?:    () => void | Promise<void>
-  className?:       string
+  content: string
+  isStreaming?: boolean
+  toolName?: string
+  toolId?: string
+  generationId?: string
+  coinCost?: number
+  isSaved?: boolean
+  onSave?: () => void | Promise<void>
+  onRegenerate?: () => void | Promise<void>
+  onExportPDF?: () => void | Promise<void>
+  onExportDocx?: () => void | Promise<void>
+  className?: string
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -51,7 +51,7 @@ const StreamCursor = () => (
 const CerebreTip = ({ text }: { text: string }) => (
   <motion.div
     initial={{ opacity: 0, y: 12, scale: 0.97 }}
-    animate={{ opacity: 1, y: 0,  scale: 1 }}
+    animate={{ opacity: 1, y: 0, scale: 1 }}
     transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1], delay: 0.2 }}
     className={twMerge(
       'mt-6 p-4 rounded-card',
@@ -332,7 +332,7 @@ const WhatsAppShareButton = ({
   content,
   toolName,
 }: {
-  content:  string
+  content: string
   toolName?: string
 }) => {
   const handleShare = () => {
@@ -373,13 +373,13 @@ const ActionBar = ({
   onExportPDF,
   onExportDocx,
 }: {
-  content:       string
-  toolName?:     string
-  coinCost?:     number
-  isSaved?:      boolean
-  onSave?:       () => void | Promise<void>
+  content: string
+  toolName?: string
+  coinCost?: number
+  isSaved?: boolean
+  onSave?: () => void | Promise<void>
   onRegenerate?: () => void | Promise<void>
-  onExportPDF?:  () => void | Promise<void>
+  onExportPDF?: () => void | Promise<void>
   onExportDocx?: () => void | Promise<void>
 }) => {
   const [savePending, setSavePending] = React.useState(false)
@@ -485,12 +485,12 @@ const ActionBar = ({
 // STREAMING TEXT (word-by-word reveal)
 // ─────────────────────────────────────────────────────────────
 
-const StreamingText = ({ content }: { content: string }) => (
-  <div className="prose-cerebre whitespace-pre-wrap text-[15px] leading-[1.8] text-cerebre-text">
-    {content}
-    <StreamCursor />
-  </div>
-)
+// const StreamingText = ({ content }: { content: string }) => (
+//   <div className="prose-cerebre whitespace-pre-wrap text-[15px] leading-[1.8] text-cerebre-text">
+//     {content}
+//     <StreamCursor />
+//   </div>
+// )
 
 // ─────────────────────────────────────────────────────────────
 // MAIN OUTPUT RENDERER
@@ -498,7 +498,7 @@ const StreamingText = ({ content }: { content: string }) => (
 
 export const OutputRenderer = ({
   content,
-  isStreaming  = false,
+  isStreaming = false,
   toolName,
   coinCost,
   isSaved,
@@ -558,32 +558,23 @@ export const OutputRenderer = ({
         )}
       >
         <AnimatePresence mode="wait">
-          {isStreaming ? (
-            <motion.div
-              key="streaming"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
+          <motion.div
+            key={isStreaming ? 'streaming' : 'complete'}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            className="prose-cerebre"
+          >
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
+              rehypePlugins={[rehypeHighlight]}
+              components={createMarkdownComponents(handleSectionRef)}
             >
-              <StreamingText content={content} />
-            </motion.div>
-          ) : (
-            <motion.div
-              key="complete"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.3 }}
-              className="prose-cerebre"
-            >
-              <ReactMarkdown
-                remarkPlugins={[remarkGfm]}
-                rehypePlugins={[rehypeHighlight]}
-                components={createMarkdownComponents(handleSectionRef)}
-              >
-                {content}
-              </ReactMarkdown>
-            </motion.div>
-          )}
+              {content}
+            </ReactMarkdown>
+            {isStreaming && <StreamCursor />}
+          </motion.div>
         </AnimatePresence>
       </div>
 

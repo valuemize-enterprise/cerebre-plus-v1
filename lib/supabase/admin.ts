@@ -100,7 +100,7 @@ export async function adminCreateNotification(
       action_label: actionLabel ?? null,
     },
 
-    read: false,
+    is_read: false,
   })
 }
 

@@ -17,6 +17,7 @@ import {
 import { createBrowserClient } from '@/lib/supabase/client'
 import { useUser } from '@/lib/hooks/useUser'
 import { useToast } from '@/components/ui/ModalToastSelect'
+import { INDUSTRY_CATEGORIES } from '@/lib/onboarding/business-intelligence'
 
 const NAVY = '#0B1F3A'
 const GOLD = '#E09818'
@@ -470,7 +471,9 @@ export default function ProfilePage() {
                 className="w-full rounded-xl border border-white/10 bg-[#0B1F3A] px-4 py-3 text-sm text-white focus:border-[#E09818]/50 focus:outline-none"
               >
                 <option value="">Select industry</option>
-                {INDUSTRIES.map((i) => <option key={i} value={i}>{i}</option>)}
+                {INDUSTRY_CATEGORIES.map((cat) => (
+                              <option key={cat} value={cat}>{cat}</option>
+                            ))}
               </select>
             </div>
 

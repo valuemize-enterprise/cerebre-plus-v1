@@ -134,7 +134,7 @@ export async function GET(request: NextRequest) {
   const { data: profile } = await supabase
     .from('profiles')
     .select('*')
-    .eq('user_id', userId)
+    .eq('id', userId)
     .single()
 
   if (!profile) {

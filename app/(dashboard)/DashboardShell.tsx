@@ -226,7 +226,7 @@ const CelebrationOverlay = ({
 // so balance updates from webhooks are reflected instantly.
 // ─────────────────────────────────────────────────────────────
 
-function useRealtimeCoinSync(
+export function useRealtimeCoinSync(
   userId:     string,
   setBalance: (n: number) => void,
 ) {

@@ -39,11 +39,11 @@ export default async function AdminPage() {
     { data: recentUsers },
   ] = await Promise.all([
     supabase.from('profiles').select('user_id', { count: 'exact', head: true }),
-    supabase.from('generations').select('id', { count: 'exact', head: true }).gte('created_at', todayStart).eq('status', 'complete'),
-    supabase.from('generations').select('user_id', { count: 'exact', head: true }).gte('created_at', weekStart).eq('status', 'complete'),
-    supabase.from('generations').select('user_id', { count: 'exact', head: true }).gte('created_at', monthStart).eq('status', 'complete'),
+    supabase.from('generations').select('id', { count: 'exact', head: true }).gte('created_at', todayStart).eq('status', 'completed'),
+    supabase.from('generations').select('user_id', { count: 'exact', head: true }).gte('created_at', weekStart).eq('status', 'completed'),
+    supabase.from('generations').select('user_id', { count: 'exact', head: true }).gte('created_at', monthStart).eq('status', 'completed'),
     supabase.from('subscriptions').select('plan_tier').eq('status', 'active'),
-    supabase.from('generations').select('tool_name').gte('created_at', weekStart).eq('status', 'complete').limit(1000),
+    supabase.from('generations').select('tool_name').gte('created_at', weekStart).eq('status', 'completed').limit(1000),
     supabase.from('waitlist').select('user_id', { count: 'exact', head: true }),
     supabase.from('profiles').select('user_id, business_name, city, industry, created_at, profile_completeness_score').order('created_at', { ascending: false }).limit(20),
   ])

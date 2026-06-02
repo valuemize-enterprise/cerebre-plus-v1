@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
     .from('generations')
     .select('user_id')
     .gt('created_at', new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString())
-    .eq('status', 'complete')
+    .eq('status', 'completed')
 
   const userIds = [...new Set((activeUsers || []).map((g) => g.user_id))].slice(0, 100) // Process 100/day max
 

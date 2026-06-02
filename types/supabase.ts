@@ -134,14 +134,14 @@ export interface Database {
           user_id: string;
           type: string;
           payload: Json;
-          read: boolean;
+          is_read: boolean;
           created_at: string;
         };
         Insert: Omit<
           Database["public"]["Tables"]["notifications"]["Row"],
           "id" | "created_at"
         >;
-        Update: { read?: boolean };
+        Update: { is_read?: boolean };
       };
       saved_library: {
         Row: {

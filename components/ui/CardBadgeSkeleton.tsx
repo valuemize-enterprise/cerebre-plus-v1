@@ -403,7 +403,7 @@ export const CoinDisplay = ({
     return (
       <span
         className={twMerge(
-          'inline-flex items-center gap-1 text-sm font-semibold',
+          'inline-flex items-center  gap-1 text-sm font-semibold',
           balanceColour,
           clickable && 'cursor-pointer hover:opacity-80 transition-opacity',
           className,
@@ -421,7 +421,7 @@ export const CoinDisplay = ({
       <motion.button
         onClick={handleClick}
         className={twMerge(
-          'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full',
+          'inline-flex items-center justify-center gap-1.5 px-2.5 py-1 rounded-full',
           'bg-cerebre-gold-dim border border-cerebre-gold/25',
           'transition-all duration-200 hover:border-cerebre-gold/50',
           isLow && 'border-amber-400/40 bg-amber-400/10 animate-pulse-gold',
@@ -432,7 +432,7 @@ export const CoinDisplay = ({
         whileTap={{ scale: 0.97 }}
         aria-label={tooltipText}
       >
-        <span className="text-sm" aria-hidden>🪙</span>
+        <span className="text-sm " aria-hidden>🪙</span>
         <span className={twMerge('text-xs font-semibold tabular-nums', balanceColour)}>
           {balance.toLocaleString()}
         </span>
@@ -445,7 +445,7 @@ export const CoinDisplay = ({
       <motion.button
         onClick={handleClick}
         className={twMerge(
-          'flex items-center gap-2 px-3 py-2 rounded-card',
+          'flex items-center  gap-2 px-3 py-2 rounded-card',
           'bg-cerebre-surface border border-cerebre-border',
           'transition-all duration-200 hover:border-cerebre-gold/35',
           isLow && 'border-amber-400/40',
@@ -465,7 +465,7 @@ export const CoinDisplay = ({
             {isLow ? '⚠ Low coins' : 'coins available'}
           </p>
         </div>
-        {clickable && <TrendingUp className="h-3.5 w-3.5 text-cerebre-muted ml-1" />}
+        {clickable && <TrendingUp className="h-3.5 w-3.5 ml-auto text-cerebre-muted" />}
       </motion.button>
     )
   }

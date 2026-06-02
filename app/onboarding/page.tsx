@@ -644,6 +644,16 @@ const Step2Business = ({
 
   const canProceed = state.businessName && state.industry && state.city && state.description.length >= 20
 
+
+  const INDUSTRIES = [
+    'Fashion & Clothing', 'Food & Beverages', 'Beauty & Personal Care',
+    'Health & Wellness', 'Real Estate & Property', 'Education & Training',
+    'Technology & Software', 'Retail & E-commerce', 'Professional Services',
+    'Events & Entertainment', 'Logistics & Delivery', 'Finance & Fintech',
+    'Agriculture', 'Media & Content Creation', 'Hospitality & Travel',
+    'Manufacturing', 'Other'
+  ];
+
   return (
     <div className="space-y-5">
       <div>
@@ -684,6 +694,7 @@ const Step2Business = ({
             className={`${inputClass} pr-9 appearance-none`}
           >
             <option value="">Select your industry…</option>
+            <option value="">Select industry</option>
             {INDUSTRY_CATEGORIES.map((cat) => (
               <option key={cat} value={cat}>{cat}</option>
             ))}
@@ -766,9 +777,7 @@ const Step2Business = ({
           <label className="text-sm font-medium text-cerebre-text" htmlFor="desc">
             Business description *
           </label>
-          <span className={`text-xs tabular-nums ${state.description.length > 240 ? 'text-cerebre-coral' : 'text-cerebre-muted'}`}>
-            {state.description.length}/250
-          </span>
+
         </div>
         <textarea
           id="desc"
@@ -1214,7 +1223,7 @@ const Step6Brand = ({
           )}
 
           <button type="button" onClick={() => setNoLogo(true)}
-            className="mt-2 text-xs text-cerebre-muted hover:text-cerebre-text transition-colors">
+            className="mt-2 text-sm text-cerebre-gold hover:text-cerebre-gold-light transition-colors">
             I don't have a logo yet →
           </button>
         </div>
@@ -1346,16 +1355,12 @@ const Step7MagicMoment = ({
 }) => {
 
   const handleGetReward = async () => {
-
-    console.log('[handleGetReward] started')
     try {
       const res = await fetch('/api/coins/reward', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ reason: 'onboarding_complete' }),
-      })
-
-      console.log('[onboarding reward] status:', res.status) // check this first
+      })// check this first
 
       if (!res.ok) {
         const errorText = await res.text()
@@ -1364,11 +1369,9 @@ const Step7MagicMoment = ({
       }
 
       const data = await res.json()
-      console.log('[onboarding reward]', data)
     } catch (err) {
       console.error('[onboarding reward] failed:', err)
     }
-    console.log('[handleGetReward] ended')
   }
 
   const primaryChallenge = state.challenges[0] as ChallengeId | undefined
@@ -1384,50 +1387,159 @@ const Step7MagicMoment = ({
     setPhase('generating')
     setError(null)
 
-    const CHALLENGE_TO_STRATEGY: Record<string, string> = {
-      awareness: 'build_online_presence',
-      leads: 'get_first_100_customers',
-      sales: 'double_monthly_revenue',
-      retention: 'increase_repeat_purchases',
-      launch: 'launch_new_product',
-      local: 'dominate_local_market',
-      organic: 'reduce_ad_spend_grow_organic',
-      whatsapp: 'build_whatsapp_email_list',
-      new_market: 'enter_new_city_market',
-      slow_period: 'recover_from_slow_period',
-    }
+    const buildOnboardingInputs = (toolId: string, state: OnboardingState, primaryChallenge?: ChallengeId) => {
+      const CHALLENGE_TO_STRATEGY: Record<string, string> = {
+        awareness: 'build_online_presence',
+        leads: 'get_first_100_customers',
+        sales: 'double_monthly_revenue',
+        retention: 'increase_repeat_purchases',
+        launch: 'launch_new_product',
+        local: 'dominate_local_market',
+        organic: 'reduce_ad_spend_grow_organic',
+        whatsapp: 'build_whatsapp_email_list',
+        new_market: 'enter_new_city_market',
+        slow_period: 'recover_from_slow_period',
+      }
 
-    const PRICE_TO_BUDGET: Record<string, string> = {
-      'under_100k': '0_50k',
-      '100k_500k': '50_150k',
-      '500k_1m': '150_500k',
-      '1m_5m': '500k_1m',
-      '5m_plus': '1m_plus',
-    }
+      const PRICE_TO_BUDGET: Record<string, string> = {
+        under_100k: '0_50k',
+        '100k_500k': '50_150k',
+        '500k_1m': '150_500k',
+        '1m_5m': '500k_1m',
+        '5m_plus': '1m_plus',
+      }
 
-    try {
-      await handleGetReward() // ✅ here — after stream done, before confetti
-      const response = await fetch(`/api/generate/${toolConfig.toolId}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          inputs: {
-            // Required fields
+      const description = state.description?.trim() || `${state.businessName} is a ${state.industry} business based in ${state.city}, Nigeria.`
+      const preferredChannels = state.instagram || state.tiktok
+        ? (['instagram', 'tiktok', 'whatsapp'] as const).filter(Boolean)
+        : ['whatsapp', 'instagram']
+
+      switch (toolId) {
+        case 'strategy-brain':
+          return {
             strategy_goal: CHALLENGE_TO_STRATEGY[primaryChallenge ?? 'awareness'] ?? 'build_online_presence',
-            current_situation: state.description?.trim() || `${state.businessName} is a ${state.industry} business based in ${state.city}, Nigeria.`,
+            current_situation: description,
             monthly_budget: PRICE_TO_BUDGET[state.priceRange ?? ''] ?? '0_50k',
             biggest_challenge: state.challenges.length
               ? `Our biggest challenges include: ${state.challenges.join(', ')}. We need a clear strategy to overcome these and grow.`
               : 'Growing brand awareness and acquiring new customers consistently in a competitive market.',
+            team_size: 'solo_founder',
+            time_available_per_week: '5_10hrs',
+            preferred_channels: preferredChannels,
+          }
 
-            // Optional fields — pass what you have from onboarding
-            team_size: 'solo_founder',        // default
-            time_available_per_week: '5_10hrs',             // default
-            preferred_channels: state.instagram || state.tiktok
-              ? (['instagram', 'tiktok', 'whatsapp'] as const).filter(Boolean)
-              : ['whatsapp', 'instagram'],
-          }, // Profile is auto-filled server-side
-          skipCoinDeduct: true,
+        case 'caption-craft':
+          return {
+            platform: ['instagram', 'facebook', 'tiktok'],
+            post_topic: `Marketing for ${state.businessName} in ${state.city}`,
+            post_type: 'engagement_question',
+            tone_override: 'use_brand_voice',
+            hashtag_strategy: 'include_full_set',
+            cta_preference: 'whatsapp_cta',
+            num_variations: '3',
+            caption_length: 'medium',
+            target_emotion: 'confidence',
+          }
+
+        case 'content-calendar':
+          return {
+            calendar_duration: '30',
+            platforms: ['instagram', 'facebook', 'whatsapp'],
+            posts_per_week: '5',
+            content_goals: ['awareness', 'engagement', 'leads'],
+            upcoming_promotions: '',
+            upcoming_events: '',
+            products_to_feature: '',
+            salary_cycle_awareness: true,
+            include_content_ideas: true,
+            include_caption_hooks: true,
+            include_repurpose_guide: false,
+          }
+
+        case 'sales-script-writer':
+          return {
+            script_type: 'whatsapp_conversation',
+            product_service: `${state.businessName} ${state.industry} service`,
+            lead_temperature: 'warm',
+            top_objection: 'price_too_high',
+            desired_outcome: 'book_appointment',
+            typical_sale_value: state.priceRange || undefined,
+            awoof_comparison: '',
+            previous_interaction: '',
+            include_all_five_objections: true,
+            include_all_four_closes: true,
+            include_voice_note_script: false,
+          }
+
+        case 'win-back-campaign':
+          return {
+            inactive_period: '30_days',
+            reason_for_inactivity: 'forgot_about_us',
+            win_back_offer: 'special discount for returning customers',
+            win_back_channel: 'whatsapp',
+            messages_in_sequence: '3',
+            what_changed_or_improved: '',
+            customer_segment: 'all_inactive_customers',
+            win_back_deadline: '',
+            include_akin_winback_formula: true,
+            include_reactivation_offer: true,
+            include_final_goodbye_message: true,
+          }
+
+        case 'budget-optimizer':
+          return {
+            total_monthly_budget: state.priceRange || '0_50k',
+            business_goal: 'drive_sales',
+            current_channels: ['whatsapp', 'instagram'],
+            past_ad_performance: '',
+            business_stage: 'early_stage_0_1yr',
+            target_customer_online_behaviour: 'moderate_online_daily_use',
+            seasonal_factor: '',
+            competitor_spend: '',
+            cost_per_lead_target: '',
+          }
+
+        case 'audience-profiler':
+          return {
+            current_customer_description: state.targetCustomer || 'local small business customers',
+            product_being_sold: state.description || 'products and services',
+            problems_you_solve: state.painPointSolved || 'help businesses get more customers',
+            target_city: 'lagos',
+            income_bracket: 'not_sure',
+            age_range: '25_35',
+            gender_focus: 'balanced_mixed',
+            depth: 'standard',
+            include_anti_profile: true,
+            include_messaging_matrix: true,
+            include_trust_touchpoints: true,
+          }
+
+        case 'brand-positioner':
+          return {
+            positioning_challenge: 'differentiate_from_competition',
+            competition_description: 'Other local businesses offering similar services',
+            your_differentiators: state.uniqueAdvantage || 'better value and trust',
+            positioning_geography: 'national_nigeria',
+            include_tagline_options: true,
+            include_brand_story: true,
+            include_competitive_map: true,
+            include_messaging_hierarchy: true,
+          }
+
+        default:
+          return {}
+      }
+    }
+
+
+    const inputs = buildOnboardingInputs(toolConfig.toolId, state, primaryChallenge)
+
+    try {
+      const response = await fetch(`/api/generate/${toolConfig.toolId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          inputs, // Profile is auto-filled server-side
           isOnboarding: true,
         }),
       })
@@ -1443,13 +1555,25 @@ const Step7MagicMoment = ({
       while (true) {
         const { done, value } = await reader.read()
         if (done) break
+
         const chunk = decoder.decode(value, { stream: true })
-        full += chunk
+        const lines = chunk.split('\n')
+
+        for (const line of lines) {
+          if (line.startsWith('0:"')) {
+            const text = line.slice(3, -1)
+              .replace(/\\n/g, '\n')
+              .replace(/\\"/g, '"')
+              .replace(/\\\\/g, '\\')
+            full += text
+          }
+        }
+
         setOutput(full)
       }
 
+      await handleGetReward()
       setPhase('complete')
-
 
       // Confetti
       const confetti = (await import('canvas-confetti')).default

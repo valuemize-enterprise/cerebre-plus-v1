@@ -89,7 +89,7 @@ export async function GET(request: NextRequest) {
     .from('generations')
     .select('user_id')
     .gt('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
-    .eq('status', 'complete')
+    .eq('status', 'completed')
 
   const userIds = [...new Set((activeUsers || []).map((g) => g.user_id))]
 
@@ -103,14 +103,14 @@ export async function GET(request: NextRequest) {
         .from('generations')
         .select('tool_id, tool_name, coin_cost')
         .eq('user_id', userId)
-        .eq('status', 'complete')
+        .eq('status', 'completed')
         .gte('created_at', weekStart)
 
       const { data: lastWeek } = await supabase
         .from('generations')
         .select('coin_cost')
         .eq('user_id', userId)
-        .eq('status', 'complete')
+        .eq('status', 'completed')
         .gte('created_at', prevStart)
         .lt('created_at', weekStart)
 
@@ -170,7 +170,7 @@ export async function GET(request: NextRequest) {
             lawOfWeek:    lawOfWeek.name,
           },
         },
-        read:    false,
+        is_read:    false,
       })
 
       processed++

@@ -21,6 +21,7 @@ import {
 
 import type { ToolDefinition, ToolFormField } from '@/lib/tools/registry'
 import { getNextTools } from '@/lib/tools/registry'
+import { SmartSuggest } from '@/components/tools/SmartSuggest'
 import { OutputRenderer } from '@/components/tools/OutputRenderer'
 import { LoadingStages } from '@/components/ui/LoadingStages'
 // import { ToolCard }        from '@/components/tools/ToolCard'
@@ -35,6 +36,11 @@ import { useToast } from '@/components/ui/ModalToastSelect'
 const NAVY = '#0B1F3A'
 const GOLD = '#E09818'
 const PRIMARY_FIELDS = 4  // Show this many before the "more context" toggle
+
+
+// Field types that benefit from AI suggestions
+const SUGGESTABLE_TYPES = new Set(['text', 'textarea', 'number'])
+const shouldSuggest = (type: string) => SUGGESTABLE_TYPES.has(type)
 
 // ─────────────────────────────────────────────────────────────
 // TYPES
@@ -454,6 +460,17 @@ export default function ToolPage({ tool, coinBalance, prefill, onCoinDeducted }:
               value={form[field.key] ?? (field.type === 'multiselect' ? [] : field.type === 'toggle' ? false : '')}
               onChange={handleFormChange}
             />
+            {/* ── SmartSuggest ── */}
+            {shouldSuggest(field.type) && (
+              <SmartSuggest
+                toolId={tool.id}
+                toolName={tool.name}
+                fieldKey={field.key}
+                fieldLabel={field.label}
+                formState={form as Record<string, any>}
+                onSelect={(value) => handleFormChange(field.key, value)}
+              />
+            )}
           </div>
         ))}
 
@@ -496,6 +513,17 @@ export default function ToolPage({ tool, coinBalance, prefill, onCoinDeducted }:
                           value={form[field.key] ?? (field.type === 'multiselect' ? [] : field.type === 'toggle' ? false : '')}
                           onChange={handleFormChange}
                         />
+                        {/* ── SmartSuggest ── */}
+                        {shouldSuggest(field.type) && (
+                          <SmartSuggest
+                            toolId={tool.id}
+                            toolName={tool.name}
+                            fieldKey={field.key}
+                            fieldLabel={field.label}
+                            formState={form as Record<string, any>}
+                            onSelect={(value) => handleFormChange(field.key, value)}
+                          />
+                        )}
                       </div>
                     ))}
                   </div>
@@ -654,7 +682,7 @@ export default function ToolPage({ tool, coinBalance, prefill, onCoinDeducted }:
             isStreaming={isLoading}
             toolId={tool.id}
             generationId={generationId ?? undefined}
-            // whatsappEnabled={tool.whatsappEnabled}
+          // whatsappEnabled={tool.whatsappEnabled}
           />
         </div>
       )}

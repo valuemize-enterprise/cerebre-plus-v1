@@ -5,7 +5,7 @@
 // ═══════════════════════════════════════════════════════════════
 import { redirect } from 'next/navigation'
 import type { Metadata } from 'next'
-import { getServerUser, getServerProfile, getServerCoinBalance }
+import { createServerClient, getServerUser, getServerProfile, getServerCoinBalance }
   from '@/lib/supabase/server'
 import { DashboardShell } from './DashboardShell'
 
@@ -39,6 +39,30 @@ export default async function DashboardLayout({
     getServerProfile(user.id),
     getServerCoinBalance(user.id),
   ])
+
+  const supabase = await createServerClient()
+  const { data: subscription } = await supabase
+    .from('subscriptions')
+    .select('plan_tier, free_expires_at')
+    .eq('user_id', user.id)
+    .single()
+
+  const { headers } = await import('next/headers')
+  const headersList = headers()
+  const pathname = headersList.get('x-invoke-path') || ''
+
+  // subscription may be typed as an error union; narrow with safe access via any
+  const planTier = (subscription as any)?.plan_tier
+  const freeExpiresAt = (subscription as any)?.free_expires_at
+
+  if (
+    planTier === 'free' &&
+    isFreePlanExpired(freeExpiresAt) &&
+    !pathname.includes('/billing') &&
+    !pathname.includes('/settings')
+  ) {
+    redirect('/billing?reason=trial_expired')
+  }
 
   // Edge case: profile not created yet (handle_new_user trigger may be slow)
   if (!profile) redirect('/onboarding')
@@ -78,4 +102,9 @@ function getRenewsInDays(lastAllocatedAt: string | null | undefined): number {
   nextDate.setDate(nextDate.getDate() + 30)
   const diff = Math.ceil((nextDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
   return Math.max(0, diff)
+}
+
+function isFreePlanExpired(freeExpiresAt: string | null | undefined): boolean {
+  if (!freeExpiresAt) return false
+  return new Date(freeExpiresAt).getTime() < Date.now()
 }

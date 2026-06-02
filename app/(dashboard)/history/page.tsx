@@ -14,7 +14,7 @@ import {
 } from 'lucide-react'
 import { createBrowserClient } from '@/lib/supabase/client'
 import { getTool, CATEGORY_LABELS, type ToolCategory } from '@/lib/tools/registry'
-import { useUser }  from '@/lib/hooks/useUser'
+import { useUser } from '@/lib/hooks/useUser'
 import { useToast } from '@/components/ui/ModalToastSelect'
 
 const NAVY = '#0B1F3A'
@@ -22,13 +22,13 @@ const GOLD = '#E09818'
 const PER_PAGE = 20
 
 type Generation = {
-  id:         string
-  tool_id:    string
-  tool_name:  string
-  output:     string
+  id: string
+  tool_id: string
+  tool_name: string
+  output_content: string
   created_at: string
-  coin_cost:  number
-  status:     string
+  coins_deducted: number
+  status: string
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -36,32 +36,32 @@ type Generation = {
 // ─────────────────────────────────────────────────────────────
 
 function GenerationRow({ gen, isExpanded, onToggle }: {
-  gen:        Generation
+  gen: Generation
   isExpanded: boolean
-  onToggle:   () => void
+  onToggle: () => void
 }) {
   const { toast } = useToast()
-  const [copied,  setCopied]  = useState(false)
+  const [copied, setCopied] = useState(false)
   const router = useRouter()
 
-  const tool    = getTool(gen.tool_id)
-  const preview = gen.output.replace(/#{1,6}\s/g, '').replace(/\*+/g, '').slice(0, 80)
-  const date    = new Date(gen.created_at).toLocaleDateString('en-NG', {
+  const tool = getTool(gen.tool_id)
+  const preview = gen.output_content.replace(/#{1,6}\s/g, '').replace(/\*+/g, '').slice(0, 80)
+  const date = new Date(gen.created_at).toLocaleDateString('en-NG', {
     day: 'numeric', month: 'short', year: 'numeric',
   })
-  const time    = new Date(gen.created_at).toLocaleTimeString('en-NG', {
+  const time = new Date(gen.created_at).toLocaleTimeString('en-NG', {
     hour: '2-digit', minute: '2-digit', timeZone: 'Africa/Lagos',
   })
 
   const copy = async () => {
-    await navigator.clipboard.writeText(gen.output)
+    await navigator.clipboard.writeText(gen.output_content)
     setCopied(true)
     toast({ type: 'success', title: 'Copied!', description: 'Output copied to clipboard' })
     setTimeout(() => setCopied(false), 2000)
   }
 
   const shareWhatsApp = () => {
-    const text = encodeURIComponent(gen.output.slice(0, 2000))
+    const text = encodeURIComponent(gen.output_content.slice(0, 2000))
     window.open(`https://wa.me/?text=${text}`, '_blank')
   }
 
@@ -83,7 +83,7 @@ function GenerationRow({ gen, isExpanded, onToggle }: {
             <span className="text-white/20">·</span>
             <span className="text-xs text-white/40">{date} at {time} WAT</span>
             <div className="flex items-center gap-0.5 rounded-full bg-[#E09818]/10 px-1.5 py-0.5 text-xs text-[#E09818]">
-              <Coins className="h-2.5 w-2.5" />{gen.coin_cost}
+              <Coins className="h-2.5 w-2.5" />{gen.coins_deducted}
             </div>
           </div>
           <p className="mt-0.5 text-sm text-white/50 truncate">{preview}…</p>
@@ -93,11 +93,10 @@ function GenerationRow({ gen, isExpanded, onToggle }: {
           {/* Quick actions */}
           <button
             onClick={(e) => { e.stopPropagation(); copy() }}
-            className={`rounded-lg border px-2 py-1 text-xs transition-all ${
-              copied
-                ? 'border-emerald-500/50 bg-emerald-500/15 text-emerald-400'
-                : 'border-white/10 text-white/40 hover:text-white/70'
-            }`}
+            className={`rounded-lg border px-2 py-1 text-xs transition-all ${copied
+              ? 'border-emerald-500/50 bg-emerald-500/15 text-emerald-400'
+              : 'border-white/10 text-white/40 hover:text-white/70'
+              }`}
           >
             {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
           </button>
@@ -124,7 +123,7 @@ function GenerationRow({ gen, isExpanded, onToggle }: {
             <div className="border-t border-white/10 px-4 pb-4 pt-4">
               <div className="prose prose-invert prose-sm max-w-none">
                 <pre className="whitespace-pre-wrap rounded-xl bg-white/5 p-4 text-xs text-white/70 font-sans leading-relaxed overflow-x-auto max-h-96 overflow-y-auto">
-                  {gen.output}
+                  {gen.output_content}
                 </pre>
               </div>
 
@@ -156,18 +155,18 @@ function GenerationRow({ gen, isExpanded, onToggle }: {
 
 export default function HistoryPage() {
   const { profile } = useUser()
-  const { toast }   = useToast()
+  const { toast } = useToast()
   const searchParams = useSearchParams()
-  const focusId     = searchParams.get('id')
+  const focusId = searchParams.get('id')
 
-  const [generations,   setGenerations]   = useState<Generation[]>([])
-  const [loading,       setLoading]       = useState(true)
-  const [query,         setQuery]         = useState('')
+  const [generations, setGenerations] = useState<Generation[]>([])
+  const [loading, setLoading] = useState(true)
+  const [query, setQuery] = useState('')
   const [categoryFilter, setCategoryFilter] = useState<ToolCategory | 'all'>('all')
-  const [expandedId,    setExpandedId]    = useState<string | null>(focusId)
-  const [page,          setPage]          = useState(0)
-  const [hasMore,       setHasMore]       = useState(true)
-  const [totalCoins,    setTotalCoins]    = useState(0)
+  const [expandedId, setExpandedId] = useState<string | null>(focusId)
+  const [page, setPage] = useState(0)
+  const [hasMore, setHasMore] = useState(true)
+  const [totalCoins, setTotalCoins] = useState(0)
 
   const supabase = createBrowserClient()
 
@@ -177,28 +176,37 @@ export default function HistoryPage() {
 
     let q = supabase
       .from('generations')
-      .select('id, tool_id, tool_name, output, created_at, coin_cost, status')
-      .eq('status', 'complete')
+      .select('id, tool_id, tool_name, output_content, created_at, coins_deducted, status')
+      .eq('status', 'completed')
       .order('created_at', { ascending: false })
       .range(offset, offset + PER_PAGE - 1)
 
     if (query) {
-      q = q.ilike('output', `%${query}%`)
+      q = q.ilike('output_content', `%${query}%`)
     }
 
     const { data, error } = await q
 
     if (error) {
-      toast({ type: 'error', title: 'Failed to load history', description: error.message })
+      // Handle specific Postgres enum error with a friendlier message
+      // if (error.message === 'invalid input value for enum generation_status: "completed"') {
+      //   toast({
+      //     type: 'error',
+      //     title: 'Failed to load history',
+      //     description: 'no completed generations found.',
+      //   })
+      // } else {
+        toast({ type: 'error', title: 'Failed to load history', description: error.message })
+      // }
     } else {
-      const list = (data || []) as Generation[]
+      const list = (data as unknown || []) as Generation[]
       if (reset) {
         setGenerations(list)
       } else {
         setGenerations((prev) => [...prev, ...list])
       }
       setHasMore(list.length === PER_PAGE)
-      setTotalCoins(list.reduce((sum, g) => sum + (g.coin_cost || 0), 0))
+      setTotalCoins(list.reduce((sum, g) => sum + (g.coins_deducted || 0), 0))
     }
     setLoading(false)
   }, [query, page])

@@ -6,7 +6,7 @@
 // ═══════════════════════════════════════════════════════════════
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react'
-import { useRouter }       from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Search, X, Coins, Clock, TrendingUp, ArrowUpDown, Star, Sparkles } from 'lucide-react'
 
@@ -14,7 +14,9 @@ import {
   TOOL_REGISTRY, CATEGORY_LABELS, CATEGORY_ICONS,
   type ToolDefinition, type ToolCategory,
 } from '@/lib/tools/registry'
-import { useUser }   from '@/lib/hooks/useUser'
+import { useUser } from '@/lib/hooks/useUser'
+
+import { createBrowserClient } from '@/lib/supabase/client'
 
 // ─────────────────────────────────────────────────────────────
 // CONSTANTS
@@ -28,10 +30,10 @@ const STARTER_TOOL_IDS = ['copy-brain', 'caption-craft', 'whatsapp-campaign-buil
 type SortMode = 'popular' | 'cost_asc' | 'recent' | 'new'
 
 const SORT_OPTIONS: { value: SortMode; label: string }[] = [
-  { value: 'popular',  label: 'Popular' },
+  { value: 'popular', label: 'Popular' },
   { value: 'cost_asc', label: 'Lowest cost' },
-  { value: 'recent',   label: 'Recently used' },
-  { value: 'new',      label: 'Newest' },
+  { value: 'recent', label: 'Recently used' },
+  { value: 'new', label: 'Newest' },
 ]
 
 // Popularity rank (hard-coded until analytics data available)
@@ -52,10 +54,10 @@ function ToolCard({
   isRecentlyUsed,
   onClick,
 }: {
-  tool:           ToolDefinition
-  canAfford:      boolean
+  tool: ToolDefinition
+  canAfford: boolean
   isRecentlyUsed: boolean
-  onClick:        () => void
+  onClick: () => void
 }) {
   return (
     <motion.button
@@ -121,13 +123,14 @@ function ToolCard({
 export default function ToolsPage() {
   const router = useRouter()
   const { profile } = useUser()
+  const supabase = createBrowserClient()
 
-  const [query,        setQuery]        = useState('')
+  const [query, setQuery] = useState('')
   const [activeCategory, setActiveCategory] = useState<ToolCategory | 'all'>('all')
-  const [sortMode,     setSortMode]     = useState<SortMode>('popular')
-  const [recentIds,    setRecentIds]    = useState<string[]>([])
-  const [genCount,     setGenCount]     = useState(0)
-  const [coinBalance,  setCoinBalance]  = useState(0)
+  const [sortMode, setSortMode] = useState<SortMode>('popular')
+  const [recentIds, setRecentIds] = useState<string[]>([])
+  const [genCount, setGenCount] = useState(0)
+  const [coinBalance, setCoinBalance] = useState(0)
 
   // Load recent tools and generation count from localStorage
   useEffect(() => {
@@ -139,13 +142,51 @@ export default function ToolsPage() {
     } catch { /* ignore */ }
   }, [])
 
+  const fetchCoinBalance = async () => {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+
+    const { data, error } = await supabase
+      .from('coin_balances')
+      .select('balance')
+      .eq('user_id', user.id)
+      .single()
+
+    if (error) {
+      console.error('[coin balance]', error.message)
+      return
+    }
+
+    setCoinBalance(data?.balance ?? 0)
+  }
+
+  useEffect(() => {
+    fetchCoinBalance()
+  }, [])
+
+
+  useEffect(() => {
+  fetchCoinBalance()
+
+  const channel = supabase
+    .channel('coin_balance')
+    .on(
+      'postgres_changes',
+      { event: 'UPDATE', schema: 'public', table: 'coin_balances', filter: `user_id=eq.${profile?.id}` },
+      (payload) => setCoinBalance(payload.new.balance)
+    )
+    .subscribe()
+
+  return () => { supabase.removeChannel(channel) }
+}, [profile?.id])
+
   // Categories
   const categories: Array<{ id: ToolCategory | 'all'; label: string; icon: string; count: number }> = useMemo(() => [
-    { id: 'all',          label: 'All', icon: '🔮', count: TOOL_REGISTRY.length },
+    { id: 'all', label: 'All', icon: '🔮', count: TOOL_REGISTRY.length },
     ...Object.entries(CATEGORY_LABELS).map(([id, label]) => ({
-      id:    id as ToolCategory,
+      id: id as ToolCategory,
       label,
-      icon:  CATEGORY_ICONS[id as ToolCategory],
+      icon: CATEGORY_ICONS[id as ToolCategory],
       count: TOOL_REGISTRY.filter((t) => t.category === id).length,
     })),
   ], [])
@@ -183,10 +224,10 @@ export default function ToolsPage() {
     return tools
   }, [query, activeCategory, sortMode, recentIds])
 
-  const recentTools   = TOOL_REGISTRY.filter((t) => recentIds.includes(t.id))
-  const starterTools  = TOOL_REGISTRY.filter((t) => STARTER_TOOL_IDS.includes(t.id))
-  const showStarter   = genCount < 5
-  const showRecent    = recentTools.length > 0
+  const recentTools = TOOL_REGISTRY.filter((t) => recentIds.includes(t.id))
+  const starterTools = TOOL_REGISTRY.filter((t) => STARTER_TOOL_IDS.includes(t.id))
+  const showStarter = genCount < 5
+  const showRecent = recentTools.length > 0
 
   return (
     <div className="min-h-screen pb-24 md:pb-8" style={{ background: NAVY }}>
@@ -224,11 +265,10 @@ export default function ToolsPage() {
               <button
                 key={cat.id}
                 onClick={() => setActiveCategory(cat.id)}
-                className={`flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-all ${
-                  activeCategory === cat.id
+                className={`flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-all ${activeCategory === cat.id
                     ? 'bg-[#E09818] text-[#0B1F3A]'
                     : 'border border-white/10 text-white/50 hover:border-white/20 hover:text-white/70'
-                }`}
+                  }`}
               >
                 <span>{cat.icon}</span>
                 <span>{cat.label}</span>
@@ -247,11 +287,10 @@ export default function ToolsPage() {
                 <button
                   key={opt.value}
                   onClick={() => setSortMode(opt.value)}
-                  className={`text-xs px-2.5 py-1 rounded-lg transition-all ${
-                    sortMode === opt.value
+                  className={`text-xs px-2.5 py-1 rounded-lg transition-all ${sortMode === opt.value
                       ? 'bg-white/10 text-white font-semibold'
                       : 'text-white/40 hover:text-white/60'
-                  }`}
+                    }`}
                 >
                   {opt.label}
                 </button>

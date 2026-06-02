@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
     user_id: 'system',
     type:    `paystack_${event.event}`,
     payload: event.data,
-    read:    true,
+    is_read:    true,
   })
 } catch (_) {}// Non-blocking
 
@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
             user_id: userId,
             type:    'coins_added',
             payload: { coins: topUpCoins, reference },
-            read:    false,
+            is_read:    false,
           })
         } else if (planId) {
           // New subscription — update plan
@@ -96,7 +96,7 @@ export async function POST(request: NextRequest) {
             user_id: userId,
             type:    'subscription_renewed',
             payload: { planId, coins, reference },
-            read:    false,
+            is_read:    false,
           })
         }
         break
@@ -126,7 +126,7 @@ export async function POST(request: NextRequest) {
             user_id: userId,
             type:    'payment_failed',
             payload: { reference: event.data.reference },
-            read:    false,
+            is_read:    false,
           })
         }
         break

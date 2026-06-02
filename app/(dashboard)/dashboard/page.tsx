@@ -37,7 +37,7 @@ export default async function DashboardPage() {
       .from('generations')
       .select('id, tool_id, tool_name, output, created_at, coin_cost, status')
       .eq('user_id', user.id)
-      .eq('status', 'complete')
+      .eq('status', 'completed')
       .order('created_at', { ascending: false })
       .limit(5),
     supabase

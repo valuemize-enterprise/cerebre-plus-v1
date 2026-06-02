@@ -13,6 +13,7 @@ import {
 } from 'lucide-react'
 import { twMerge } from 'tailwind-merge'
 import { Badge, planBadgeVariant, CoinDisplay } from '../../components/ui/CardBadgeSkeleton'
+import Image from 'next/image'
 
 // ─────────────────────────────────────────────────────────────
 // NAV ITEM DEFINITIONS
@@ -31,7 +32,7 @@ const NAV_ITEMS: NavItemDef[] = [
   { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, section: 'main' },
   { label: 'Tools', href: '/tools', icon: Zap, section: 'main' },
   { label: 'History', href: '/history', icon: Clock, section: 'main' },
-  { label: 'library', href:'/library?tab=saved', icon: Library, section: 'main' },
+  { label: 'library', href: '/library?tab=saved', icon: Library, section: 'main' },
 
   // ── Marketing ───────────────────────────────────────────────
   { label: 'Ideas', href: '/ideas', icon: Sparkles, section: 'marketing', badge: 'Daily' },
@@ -203,9 +204,16 @@ export const Sidebar = ({
               transition={{ duration: 0.2 }}
               className="flex items-center gap-2.5"
             >
-              <div className="w-7 h-7 rounded-lg bg-cerebre-gold flex items-center justify-center flex-shrink-0">
-                <span className="text-cerebre-ink font-black text-xs font-mono">C+</span>
+              <div className="w-10 h-18 rounded-lg flex items-center justify-center flex-shrink-0">
+                <Image
+                  src="/CMA Logo.png"
+                  alt="Cerebre Plus"
+                  width={40}
+                  height={40}
+                  className="object-contain"
+                />
               </div>
+
               <div>
                 <p className="text-sm font-bold text-cerebre-text leading-none">Cerebre Plus</p>
                 <p className="text-[10px] text-cerebre-muted leading-none mt-0.5">by Cerebre Media Africa</p>
@@ -218,9 +226,15 @@ export const Sidebar = ({
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
-              className="w-7 h-7 rounded-lg bg-cerebre-gold flex items-center justify-center"
+              className="w-10 h-18 rounded-lg flex items-center justify-center flex-shrink-0"
             >
-              <span className="text-cerebre-ink font-black text-xs font-mono">C+</span>
+              <Image
+                src="/CMA Logo.png"
+                alt="Cerebre Plus"
+                width={40}
+                height={40}
+                className="object-contain"
+              />
             </motion.div>
           )}
         </AnimatePresence>
@@ -319,10 +333,10 @@ export const Sidebar = ({
 // ─────────────────────────────────────────────────────────────
 
 const MOBILE_TABS = [
-  { label: 'Home',       href: '/dashboard', icon: LayoutDashboard },
-  { label: 'Tools',      href: '/tools',     icon: Zap },
-  { label: 'Ideas',      href: '/ideas',     icon: Sparkles },
-  { label: 'You',        href: '/profile',   icon: User },
+  { label: 'Home', href: '/dashboard', icon: LayoutDashboard },
+  { label: 'Tools', href: '/tools', icon: Zap },
+  { label: 'Ideas', href: '/ideas', icon: Sparkles },
+  { label: 'You', href: '/profile', icon: User },
 ]
 
 export interface MobileNavProps {

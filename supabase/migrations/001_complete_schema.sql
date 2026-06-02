@@ -1329,6 +1329,8 @@ END;
 $$;
 
 
+
+
 -- ── get_user_referral_code() ─────────────────────────────────
 -- Returns the user's referral code (creates one if missing)
 
@@ -1581,3 +1583,166 @@ EXCEPTION WHEN OTHERS THEN
   RETURN FALSE;
 END;
 $$;
+
+
+
+ALTER TYPE IF EXISTS plan_tier_enum ADD VALUE IF NOT EXISTS 'starter_annual';
+ALTER TYPE IF EXISTS plan_tier_enum ADD VALUE IF NOT EXISTS 'growth_annual';
+
+-- Simpler approach: subscriptions.plan_tier is TEXT in most setups.
+-- Ensure the column exists and can hold our values:
+ALTER TABLE public.subscriptions
+  ALTER COLUMN plan_tier TYPE TEXT;
+
+-- ── 2. Add columns to subscriptions ───────────────────────────
+ALTER TABLE public.subscriptions
+  ADD COLUMN IF NOT EXISTS billing_cycle     TEXT    DEFAULT 'annual',
+  ADD COLUMN IF NOT EXISTS started_at        TIMESTAMPTZ DEFAULT NOW(),
+  ADD COLUMN IF NOT EXISTS free_expires_at   TIMESTAMPTZ,          -- only for free plan
+  ADD COLUMN IF NOT EXISTS rollover_coins    INTEGER DEFAULT 0;     -- carried from previous period
+
+-- ── 3. Migrate existing free-plan records to have expiry ───────
+-- Sets free_expires_at = created_at + 30 days for any existing free rows
+UPDATE public.subscriptions
+SET free_expires_at = created_at + INTERVAL '30 days'
+WHERE plan_tier = 'free'
+  AND free_expires_at IS NULL;
+
+-- ── 4. Function: provision_free_plan ──────────────────────────
+-- Called when a new user signs up. Creates a 30-day free subscription.
+CREATE OR REPLACE FUNCTION public.provision_free_plan(p_user_id UUID)
+RETURNS VOID
+LANGUAGE plpgsql SECURITY DEFINER AS $$
+BEGIN
+  INSERT INTO public.subscriptions (
+    user_id, plan_tier, status, billing_cycle,
+    started_at, free_expires_at,
+    current_period_start, current_period_end
+  )
+  VALUES (
+    p_user_id, 'free', 'active', 'one-time',
+    NOW(), NOW() + INTERVAL '30 days',
+    NOW(), NOW() + INTERVAL '30 days'
+  )
+  ON CONFLICT (user_id) DO NOTHING;
+
+  -- Grant 70 free coins
+  PERFORM public.credit_coins(
+    p_user_id, 70, 'signup_bonus',
+    'Free plan — 70 coins for 30 days'
+  );
+END;
+$$;
+
+-- ── 5. Function: activate_annual_plan ─────────────────────────
+-- Called after a successful Paystack payment for Starter or Growth.
+CREATE OR REPLACE FUNCTION public.activate_annual_plan(
+  p_user_id   UUID,
+  p_plan_id   TEXT,
+  p_coins     INTEGER,
+  p_reference TEXT
+)
+RETURNS VOID
+LANGUAGE plpgsql SECURITY DEFINER AS $$
+DECLARE
+  v_rollover INTEGER := 0;
+  v_existing_balance INTEGER := 0;
+  v_rollover_cap INTEGER;
+BEGIN
+  -- Determine rollover cap by plan
+  v_rollover_cap := CASE p_plan_id WHEN 'growth' THEN 200 ELSE 0 END;
+
+  -- If upgrading from Growth → Growth renewal, carry over unused coins (capped)
+  IF v_rollover_cap > 0 THEN
+    SELECT COALESCE(balance, 0) INTO v_existing_balance
+    FROM public.coin_balances WHERE user_id = p_user_id;
+    v_rollover := LEAST(v_existing_balance, v_rollover_cap);
+  END IF;
+
+  -- Upsert subscription
+  INSERT INTO public.subscriptions (
+    user_id, plan_tier, status, billing_cycle,
+    started_at,
+    current_period_start, current_period_end,
+    rollover_coins
+  )
+  VALUES (
+    p_user_id, p_plan_id, 'active', 'annual',
+    NOW(), NOW(), NOW() + INTERVAL '1 year',
+    v_rollover
+  )
+  ON CONFLICT (user_id) DO UPDATE
+    SET plan_tier            = EXCLUDED.plan_tier,
+        status               = 'active',
+        billing_cycle        = 'annual',
+        started_at           = NOW(),
+        current_period_start = NOW(),
+        current_period_end   = NOW() + INTERVAL '1 year',
+        rollover_coins       = EXCLUDED.rollover_coins,
+        free_expires_at      = NULL;  -- clear free expiry on upgrade
+
+  -- Reset coin balance to new allocation + rollover
+  -- (zero out old balance first, then credit)
+  UPDATE public.coin_balances SET balance = v_rollover WHERE user_id = p_user_id;
+  INSERT INTO public.coin_balances (user_id, balance)
+  VALUES (p_user_id, v_rollover)
+  ON CONFLICT (user_id) DO UPDATE SET balance = EXCLUDED.balance;
+
+  -- Credit the new annual coins
+  PERFORM public.credit_coins(
+    p_user_id, p_coins, 'allocation',
+    p_plan_id || ' annual plan — ' || p_reference
+  );
+END;
+$$;
+
+-- ── 6. Function: expire_free_plans (run via cron) ─────────────
+-- Marks free plans as expired after 30 days.
+CREATE OR REPLACE FUNCTION public.expire_free_plans()
+RETURNS INTEGER
+LANGUAGE plpgsql SECURITY DEFINER AS $$
+DECLARE
+  v_count INTEGER;
+BEGIN
+  UPDATE public.subscriptions
+  SET status = 'expired'
+  WHERE plan_tier    = 'free'
+    AND status       = 'active'
+    AND free_expires_at < NOW();
+
+  GET DIAGNOSTICS v_count = ROW_COUNT;
+
+  -- Zero out coins for expired free users
+  UPDATE public.coin_balances cb
+  SET balance = 0
+  FROM public.subscriptions s
+  WHERE s.user_id   = cb.user_id
+    AND s.plan_tier = 'free'
+    AND s.status    = 'expired';
+
+  RETURN v_count;
+END;
+$$;
+
+-- ── 7. Cron job to expire free plans daily ─────────────────────
+-- Uses pg_cron if available (Supabase supports this).
+-- If not available, the app's daily cron endpoint calls expire_free_plans().
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'pg_cron') THEN
+    PERFORM cron.schedule(
+      'expire-free-plans',
+      '0 1 * * *',  -- 1AM UTC daily
+      $$SELECT public.expire_free_plans()$$
+    );
+  END IF;
+EXCEPTION WHEN OTHERS THEN
+  NULL; -- pg_cron not available, app cron handles this
+END $$;
+
+-- ── 8. RLS: allow users to read their own subscription ─────────
+DROP POLICY IF EXISTS "users_read_own_subscription" ON public.subscriptions;
+CREATE POLICY "users_read_own_subscription"
+  ON public.subscriptions FOR SELECT
+  USING (auth.uid() = user_id);
+

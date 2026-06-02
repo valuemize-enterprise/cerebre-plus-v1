@@ -42,7 +42,7 @@ const NAVY  = '#0B1F3A'
 const GOLD  = '#E09818'
 
 const PLAN_COIN_LIMITS: Record<string, number> = {
-  free:       30,
+  free:       70,
   starter:    200,
   growth:     600,
   premium:    1500,
@@ -134,7 +134,7 @@ function CoinWidget({
   daysToRenewal: number | null
   onTopUp:       () => void
 }) {
-  const limit     = PLAN_COIN_LIMITS[planTier] || 30
+  const limit     = PLAN_COIN_LIMITS[planTier] || 70
   const isUnlimited = planTier === 'enterprise'
   const pct       = isUnlimited ? 100 : Math.min(100, Math.round((balance / limit) * 100))
   const isCritical = !isUnlimited && balance <= 20

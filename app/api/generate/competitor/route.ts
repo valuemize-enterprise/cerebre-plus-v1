@@ -117,21 +117,19 @@ Generate a structured competitive intelligence report:
       user_id: user.id,
       tool_id: "competitor-snoop",
       tool_name: "Competitor Intelligence",
-
-      inputs: {
+      tool_category: "competitor",
+      input_data: {
         competitors,
         strengths,
         weaknesses,
         yourEdge,
       },
-
       status: "streaming",
-      coin_cost: isEnterprise ? 0 : TOOL_COST,
-
-      output: null,
-      tokens_used: null,
-      completed_at: null,
-    })
+      coins_deducted: isEnterprise ? 0 : TOOL_COST,
+      output_content: null,
+      output_metadata: {},
+      token_count: null,
+    } as any)
     .select("id")
     .single();
 
@@ -139,6 +137,9 @@ Generate a structured competitive intelligence report:
   const stream = new ReadableStream({
     async start(controller) {
       try {
+        const startedAt = Date.now();
+        let totalTokens = 0;
+
         const response = await anthropic.messages.create({
           model: "claude-sonnet-4-5",
           max_tokens: 2000,
@@ -157,6 +158,9 @@ Generate a structured competitive intelligence report:
               encoder.encode(`0:${JSON.stringify(event.delta.text)}\n`),
             );
           }
+          if (event.type === "message_delta") {
+            totalTokens = event.usage?.output_tokens ?? totalTokens;
+          }
           if (event.type === "message_stop") {
             if (!isEnterprise) {
               await supabase.rpc("deduct_coins", {
@@ -170,10 +174,15 @@ Generate a structured competitive intelligence report:
               await supabase
                 .from("generations")
                 .update({
-                  output: fullText,
-                  status: "complete",
-                  completed_at: new Date().toISOString(),
-                })
+                  output_content: fullText,
+                  status: "completed",
+                  coins_deducted: isEnterprise ? 0 : TOOL_COST,
+                  token_count: totalTokens,
+                  is_saved: true,
+                  saved_at: new Date().toISOString(),
+                  generation_time_ms: Date.now() - startedAt,
+                  updated_at: new Date().toISOString(),
+                } as any)
                 .eq("id", genRow.id);
             }
             controller.enqueue(encoder.encode(`d:{"finishReason":"stop"}\n`));

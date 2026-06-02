@@ -175,7 +175,18 @@ export async function POST(
 
   if (!profile) return errResponse(ERR.PROFILE_MISSING);
 
-  // ── 4. Check plan & coin balance ─────────────────────────
+  // ── 4. Parse request body first so onboarding can bypass coin checks ───
+  let body: Record<string, unknown>;
+  try {
+    body = await request.json();
+  } catch {
+    return errResponse(ERR.VALIDATION_FAILED, "Invalid request body");
+  }
+
+  const inputs = (body.inputs as Record<string, unknown>) ?? {};
+  const isOnboarding = Boolean(body.isOnboarding);
+
+  // ── 5. Check plan & coin balance ─────────────────────────
   const { data: subscription } = await supabase
     .from("subscriptions")
     .select("plan_tier, status")
@@ -185,9 +196,10 @@ export async function POST(
   const planTier = subscription?.plan_tier || "free";
   const isEnterprise = planTier === "enterprise";
   const coinCost = tool.coinCost;
+  const skipCoins = isEnterprise || isOnboarding;
 
   let balance = 0;
-  if (!isEnterprise) {
+  if (!skipCoins) {
     const { data: coinData } = await supabase
       .from("coin_balances")
       .select("balance")
@@ -204,7 +216,7 @@ export async function POST(
     }
   }
 
-  // ── 5. Rate limit (10 req/min/user) ─────────────────────
+  // ── 6. Rate limit (10 req/min/user) ─────────────────────
   const { success: ratePassed, remaining } = await ratelimit.limit(userId);
   if (!ratePassed) {
     return errResponse(
@@ -213,18 +225,7 @@ export async function POST(
     );
   }
 
-  // ── 6. Parse & validate inputs ───────────────────────────
-  let body: Record<string, unknown>;
-  try {
-    body = await request.json();
-  } catch {
-    return errResponse(ERR.VALIDATION_FAILED, "Invalid request body");
-  }
-
-  const inputs = (body.inputs as Record<string, unknown>) ?? {};
-  const isOnboarding = Boolean(body.isOnboarding);
-  const skipCoins = isEnterprise || isOnboarding;
-
+  // ── 7. Validate inputs ───────────────────────────────────
   const validated = validateInputs(toolId, inputs);
   if (!validated.success) {
     return errResponse(ERR.VALIDATION_FAILED, validated.errors.join(" | "));
@@ -254,30 +255,35 @@ export async function POST(
   let didComplete = false;
 
   // Pre-insert generation row in pending state (for recovery if stream dies)
-  const { data: genRow } = await supabase
+  const { data: genRow, error: genInsertError } = await supabase
     .from("generations")
     .insert({
       user_id: userId,
       tool_id: toolId,
       tool_name: tool.name,
-      inputs: validated.data,
+      tool_category: tool.category,
+      input_data: validated.data,
       status: "streaming",
-      coin_cost: skipCoins ? 0 : coinCost,
-
-      output: null,
-      tokens_used: null,
-      completed_at: null,
-    })
+      coins_deducted: 0,
+      output_content: null,
+      output_metadata: {},
+      token_count: null,
+    } as any)
     .select("id")
     .single();
 
-  generationId = genRow?.id ?? null;
+  if (genInsertError || !genRow) {
+    return errResponse(ERR.GENERATION_FAILED, "Failed to create generation record");
+  }
+
+  generationId = genRow.id;
 
   const encoder = new TextEncoder();
 
   const stream = new ReadableStream({
     async start(controller) {
       try {
+        const startedAt = Date.now();
         const response = await anthropic.messages.create({
           model: "claude-sonnet-4-5",
           max_tokens: 8192,
@@ -287,8 +293,11 @@ export async function POST(
         });
 
         let fullText = "";
+        let lastEventType: string | null = null;
 
         for await (const event of response) {
+          lastEventType = event.type;
+
           if (
             event.type === "content_block_delta" &&
             event.delta.type === "text_delta"
@@ -326,15 +335,23 @@ export async function POST(
 
             // ── 10. Save complete generation ──────────────
             if (generationId) {
-              await supabase
+              const { error: updateError } = await supabase
                 .from("generations")
                 .update({
-                  output: fullText,
-                  status: "complete",
-                  tokens_used: totalTokens,
-                  completed_at: new Date().toISOString(),
-                })
+                  output_content: fullText,
+                  status: "completed",
+                  coins_deducted: skipCoins ? 0 : coinCost,
+                  token_count: totalTokens,
+                  is_saved: true,
+                  saved_at: new Date().toISOString(),
+                  generation_time_ms: Date.now() - startedAt,
+                  updated_at: new Date().toISOString(),
+                } as any)
                 .eq("id", generationId);
+
+              if (updateError) {
+                console.error("[generate] failed to save complete generation:", updateError);
+              }
             }
 
             // ── 11. Check milestones ───────────────────────
@@ -354,17 +371,42 @@ export async function POST(
             });
 
             // Send the finish signal
-            controller.enqueue(encoder.encode(`d:{"finishReason":"stop"}\n`));
+            controller.enqueue(
+              encoder.encode(
+                `d:${JSON.stringify({ finishReason: "stop", usage: { promptTokens: 0, completionTokens: totalTokens } })}\n`,
+              ),
+            );
           }
+        }
+
+        if (!didComplete && generationId) {
+          console.error(
+            "[generate] stream closed before message_stop event",
+            { generationId, lastEventType, totalTokens },
+          );
+
+          await supabase
+            .from("generations")
+            .update({
+              status: "failed",
+              error_message: `Stream closed before message_stop event (lastEventType=${lastEventType})`,
+              output_content: fullText,
+              token_count: totalTokens,
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", generationId);
         }
       } catch (err: any) {
         console.error("[generate] streaming error:", err);
-
         // Mark generation as failed
         if (generationId) {
           await supabase
             .from("generations")
-            .update({ status: "failed" })
+            .update({
+              status: "failed",
+              error_message: err.message ?? "Unknown error",
+              updated_at: new Date().toISOString(),
+            })
             .eq("id", generationId);
         }
 
@@ -382,7 +424,7 @@ export async function POST(
     },
   });
 
-  // Return the stream in Vercel AI SDK format
+  // Return the stram in Vercel AI SDK format
   return new Response(stream, {
     headers: {
       "Content-Type": "text/plain; charset=utf-8",
@@ -414,7 +456,7 @@ async function checkMilestones(userId: string, supabase: any) {
       user_id: userId,
       type: "milestone",
       payload: { generations: count },
-      read: false,
+      is_read: false,
     });
   }
 }

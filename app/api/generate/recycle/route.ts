@@ -249,25 +249,26 @@ const { data: recycleRow } = await supabase
     user_id: userId,
     tool_id: `recycle_${transformId}`,
     tool_name: transform.label,
-
-    inputs: {
+    tool_category: 'recycle',
+    input_data: {
       transformId,
       source_generation_id: generationId,
     },
-
     status: 'streaming',
-    coin_cost: RECYCLE_COST,
-
-    output: null,
-    tokens_used: null,
-    completed_at: null,
-  })
+    coins_deducted: isEnterprise ? 0 : RECYCLE_COST,
+    output_content: null,
+    output_metadata: {},
+    token_count: null,
+  } as any)
   .select('id')
   .single()
 
   const stream = new ReadableStream({
     async start(controller) {
       try {
+        const startedAt = Date.now();
+        let totalTokens = 0;
+
         const response = await anthropic.messages.create({
           model:      'claude-sonnet-4-5',
           max_tokens: 3000,
@@ -282,6 +283,9 @@ const { data: recycleRow } = await supabase
             fullText += event.delta.text
             controller.enqueue(encoder.encode(`0:${JSON.stringify(event.delta.text)}\n`))
           }
+          if (event.type === 'message_delta') {
+            totalTokens = event.usage?.output_tokens ?? totalTokens
+          }
           if (event.type === 'message_stop') {
             // Deduct coins
             if (!isEnterprise) {
@@ -295,8 +299,15 @@ const { data: recycleRow } = await supabase
             // Save
             if (recycleRow?.id) {
               await supabase.from('generations').update({
-                output: fullText, status: 'complete', completed_at: new Date().toISOString(),
-              }).eq('id', recycleRow.id)
+                output_content: fullText,
+                status: 'completed',
+                coins_deducted: isEnterprise ? 0 : RECYCLE_COST,
+                token_count: totalTokens,
+                is_saved: true,
+                saved_at: new Date().toISOString(),
+                generation_time_ms: Date.now() - startedAt,
+                updated_at: new Date().toISOString(),
+              } as any).eq('id', recycleRow.id)
             }
             controller.enqueue(encoder.encode(`d:{"finishReason":"stop"}\n`))
           }
