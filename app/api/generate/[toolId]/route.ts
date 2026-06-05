@@ -20,6 +20,8 @@ import { getToolPrompt31to40 } from "@/lib/ai/tool-prompts-31-40";
 import { validateToolInputs } from "@/lib/validations/tool-schemas";
 import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
+import { sendEmail } from "@/lib/email";
+import { getPlan } from "@/lib/coins/economy";
 
 // Mixpanel — fire-and-forget via HTTP (no SDK import needed, avoids mixpanel-browser vs mixpanel confusion)
 async function trackEvent(event: string, props: Record<string, unknown>) {
@@ -273,7 +275,10 @@ export async function POST(
     .single();
 
   if (genInsertError || !genRow) {
-    return errResponse(ERR.GENERATION_FAILED, "Failed to create generation record");
+    return errResponse(
+      ERR.GENERATION_FAILED,
+      "Failed to create generation record",
+    );
   }
 
   generationId = genRow.id;
@@ -331,6 +336,23 @@ export async function POST(
                 // Refund if deduction RPC fails (shouldn't happen — RPC uses FOR UPDATE lock)
                 console.error("[generate] coin deduction failed:", deductError);
               }
+
+              // ── 9b. Low coins email ───────────────────────────
+              const newBalance = balance - coinCost;
+              const plan = getPlan(planTier);
+              const threshold = Math.floor(plan.coins * 0.2);
+
+              if (newBalance > 0 && newBalance <= threshold) {
+                await sendEmail({
+                  to: user.email!,
+                  template: "low_coins",
+                  data: {
+                    firstName: profile.business_name,
+                    balance: newBalance,
+                    planName: plan.name,
+                  },
+                }).catch(() => {});
+              }
             }
 
             // ── 10. Save complete generation ──────────────
@@ -350,7 +372,29 @@ export async function POST(
                 .eq("id", generationId);
 
               if (updateError) {
-                console.error("[generate] failed to save complete generation:", updateError);
+                console.error(
+                  "[generate] failed to save complete generation:",
+                  updateError,
+                );
+              }
+            }
+            // ── 10b. First generation email ───────────────────
+            if (!skipCoins) {
+              const { count } = await supabase
+                .from("coin_transactions")
+                .select("*", { count: "exact", head: true })
+                .eq("user_id", userId)
+                .eq("type", "deduction");
+
+              if (count === 1) {
+                await sendEmail({
+                  to: user.email!,
+                  template: "first_generation",
+                  data: {
+                    firstName: profile.business_name,
+                    toolName: tool.name,
+                  },
+                }).catch(() => {});
               }
             }
 
@@ -380,10 +424,11 @@ export async function POST(
         }
 
         if (!didComplete && generationId) {
-          console.error(
-            "[generate] stream closed before message_stop event",
-            { generationId, lastEventType, totalTokens },
-          );
+          console.error("[generate] stream closed before message_stop event", {
+            generationId,
+            lastEventType,
+            totalTokens,
+          });
 
           await supabase
             .from("generations")
@@ -456,7 +501,7 @@ async function checkMilestones(userId: string, supabase: any) {
       user_id: userId,
       type: "milestone",
       payload: { generations: count },
-      is_read: false,
+      isread: false,
     });
   }
 }

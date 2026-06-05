@@ -150,6 +150,24 @@ export async function middleware(request: NextRequest) {
   trackPageView(user?.id ?? null, pathname, request)
 
   // ── 3. Admin route guard ───────────────────────────────────
+  // ── Admin console protection ──────────────────────────
+  if (pathname.startsWith('/cerebre-admin') && !pathname.startsWith('/cerebre-admin/login')) {
+    const cookieHeader = request.headers.get('cookie') || ''
+    const hasSession = cookieHeader.includes('admin_session=')
+    if (!hasSession) {
+      return NextResponse.redirect(new URL('/cerebre-admin/login', request.url))
+    }
+    // Full session validation happens in the layout and API routes
+  }
+
+  // ── Block admin API without session cookie ────────────
+  if (pathname.startsWith('/api/admin') && !pathname.startsWith('/api/admin/auth')) {
+    const cookieHeader = request.headers.get('cookie') || ''
+    if (!cookieHeader.includes('admin_session=')) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+  }
+
   if (matchesAny(pathname, ADMIN_PREFIXES)) {
     if (!user) {
       const url = request.nextUrl.clone()
@@ -206,14 +224,5 @@ export async function middleware(request: NextRequest) {
 // ─────────────────────────────────────────────────────────────
 
 export const config = {
-  matcher: [
-    /*
-     * Match all request paths EXCEPT:
-     * - _next/static (static files)
-     * - _next/image (image optimisation)
-     * - favicon.ico
-     * - public directory files
-     */
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|woff|woff2|ttf|eot|mp4|mp3|pdf)$).*)',
-  ],
+  matcher: ['/cerebre-admin/:path*', '/api/admin/:path*'],
 }
