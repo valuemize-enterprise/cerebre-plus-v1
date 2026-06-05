@@ -40,6 +40,11 @@ import {
 import { LoadingStages } from '@/components/ui/LoadingStages'
 import { OutputRenderer } from '@/components/tools/OutputRenderer'
 import Image from 'next/image'
+import { FaFacebook } from "react-icons/fa";
+import { FaTiktok } from "react-icons/fa";
+import { FaLinkedin } from "react-icons/fa";
+import { FaSquareInstagram } from "react-icons/fa6";
+import { BsTwitterX } from "react-icons/bs";
 
 // ─────────────────────────────────────────────────────────────
 // MARKETING CHALLENGE OPTIONS
@@ -1077,19 +1082,25 @@ const Step5Contact = ({
         <p className={labelClass}>Social media handles <span className="text-cerebre-muted font-normal">(optional)</span></p>
         <div className="grid grid-cols-2 gap-2.5">
           {[
-            { key: 'instagram', placeholder: '@yourhandle', icon: '📸' },
-            { key: 'facebook', placeholder: 'Page name', icon: '👥' },
-            { key: 'linkedin', placeholder: 'Profile URL', icon: '💼' },
-            { key: 'tiktok', placeholder: '@yourhandle', icon: '🎵' },
-          ].map((s) => (
-            <div key={s.key} className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm">{s.icon}</span>
-              <input type="text" value={(state as any)[s.key]}
-                onChange={(e) => update(s.key as keyof OnboardingState, e.target.value)}
-                placeholder={s.placeholder}
-                className={`${inputClass} pl-9 text-xs`} />
-            </div>
-          ))}
+            { key: 'instagram', placeholder: '@yourhandle', icon: FaSquareInstagram },
+            { key: 'facebook', placeholder: 'Page name', icon: FaFacebook },
+            { key: 'linkedin', placeholder: 'Profile URL', icon: FaLinkedin },
+            { key: 'tiktok', placeholder: '@yourhandle', icon: FaTiktok },
+            { key: 'X (twitter)', placeholder: '@yourhandle', icon: BsTwitterX },
+          ].map((s) => {
+            const Icon = s.icon
+            return (
+              <div key={s.key} className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm">
+                  {typeof Icon === 'string' ? Icon : <Icon />}
+                </span>
+                <input type="text" value={(state as any)[s.key]}
+                  onChange={(e) => update(s.key as keyof OnboardingState, e.target.value)}
+                  placeholder={s.placeholder}
+                  className={`${inputClass} pl-9 text-xs`} />
+              </div>
+            )
+          })}
         </div>
       </div>
 
@@ -1223,7 +1234,7 @@ const Step6Brand = ({
           )}
 
           <button type="button" onClick={() => setNoLogo(true)}
-            className="mt-2 text-sm text-cerebre-gold hover:text-cerebre-gold-light transition-colors">
+            className="mt-2 text-sm shimmer2 px-4 text-white hover:text-cerebre-gold-light transition-colors">
             I don't have a logo yet →
           </button>
         </div>
@@ -1560,13 +1571,7 @@ const Step7MagicMoment = ({
         const lines = chunk.split('\n')
 
         for (const line of lines) {
-          if (line.startsWith('0:"')) {
-            const text = line.slice(3, -1)
-              .replace(/\\n/g, '\n')
-              .replace(/\\"/g, '"')
-              .replace(/\\\\/g, '\\')
-            full += text
-          }
+            full += line
         }
 
         setOutput(full)
@@ -1675,6 +1680,7 @@ const Step7MagicMoment = ({
             content={output}
             isStreaming={false}
             toolName={toolConfig.toolName}
+             toolId={toolConfig.toolId} 
           />
 
           <div className="mt-8 text-center">

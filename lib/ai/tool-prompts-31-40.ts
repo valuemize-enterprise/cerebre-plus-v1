@@ -1156,15 +1156,15 @@ ${inputs.include_negative_keywords ? `
 
 ---
 
-## IMPLEMENTATION ROADMAP — 90 DAYS TO KEYWORD DOMINANCE
+## IMPLEMENTATION ROADMAP — 30 DAYS TO KEYWORD DOMINANCE
 
-**Month 1 — Foundation:**
+**Week 1 — Foundation:**
 [Target 5 high-intent keywords — create 5 pages/articles — build NAP consistency for local]
 
-**Month 2 — Authority Building:**
+**Week 2 & 3 — Authority Building:**
 [Create pillar page + 3 supporting articles — get backlinks from Nigerian directories]
 
-**Month 3 — Expansion:**
+**Month 4 — Expansion:**
 [Target Tier 3 local keywords — create neighbourhood-specific content — build Google Maps reviews with keyword mentions]
 
 **Quick win this week:**

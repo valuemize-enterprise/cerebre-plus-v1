@@ -19,78 +19,87 @@
   /* ── Cerebre Design Tokens ──────────────────────────────── */
   :root {
     /* Brand colours */
-    --cerebre-void:       #06080E;
-    --cerebre-ink:        #0B1F3A;
-    --cerebre-navy:       #0E1828;
-    --cerebre-surface:    #122038;
-    --cerebre-border:     #1A3058;
-    --cerebre-gold:       #E09818;
+    --cerebre-void: #06080E;
+    --cerebre-ink: #0B1F3A;
+    --cerebre-navy: #0E1828;
+    --cerebre-surface: #122038;
+    --cerebre-border: #1A3058;
+    --cerebre-gold: #E09818;
     --cerebre-gold-light: #F5C040;
-    --cerebre-gold-dark:  #B87C10;
-    --cerebre-gold-dim:   rgba(224, 152, 24, 0.12);
-    --cerebre-gold-glow:  rgba(224, 152, 24, 0.25);
-    --cerebre-teal:       #0CC4A0;
+    --cerebre-gold-dark: #B87C10;
+    --cerebre-gold-dim: rgba(224, 152, 24, 0.12);
+    --cerebre-gold-glow: rgba(224, 152, 24, 0.25);
+    --cerebre-teal: #0CC4A0;
     --cerebre-teal-light: #10EAC0;
-    --cerebre-teal-dim:   rgba(12, 196, 160, 0.10);
-    --cerebre-coral:      #FF4830;
-    --cerebre-lav:        #8B70F0;
-    --cerebre-green:      #10B880;
-    --cerebre-amber:      #F5A623;
-    --cerebre-red:        #E53935;
-    --cerebre-text:       #D8E8F8;
-    --cerebre-muted:      #486880;
-    --cerebre-subtle:     #2A4A68;
+    --cerebre-teal-dim: rgba(12, 196, 160, 0.10);
+    --cerebre-coral: #FF4830;
+    --cerebre-lav: #8B70F0;
+    --cerebre-green: #10B880;
+    --cerebre-amber: #F5A623;
+    --cerebre-red: #E53935;
+    --cerebre-text: #D8E8F8;
+    --cerebre-muted: #486880;
+    --cerebre-subtle: #2A4A68;
 
     /* Typography scale */
     --font-display: 'Cormorant Garamond', Georgia, serif;
-    --font-body:    'Inter', system-ui, sans-serif;
-    --font-mono:    'JetBrains Mono', 'Fira Code', monospace;
+    --font-body: 'Inter', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
 
     /* Spacing & shape */
-    --radius-card:   14px;
+    --radius-card: 14px;
     --radius-button: 8px;
-    --radius-input:  8px;
-    --radius-badge:  6px;
+    --radius-input: 8px;
+    --radius-badge: 6px;
 
     /* Elevation */
-    --shadow-card:     0 2px 12px rgba(0, 0, 0, 0.3);
+    --shadow-card: 0 2px 12px rgba(0, 0, 0, 0.3);
     --shadow-card-hover: 0 6px 28px rgba(0, 0, 0, 0.45);
-    --shadow-cerebre:  0 4px 24px rgba(0, 0, 0, 0.4);
-    --shadow-gold:     0 0 30px rgba(224, 152, 24, 0.25);
-    --shadow-gold-sm:  0 0 16px rgba(224, 152, 24, 0.20);
+    --shadow-cerebre: 0 4px 24px rgba(0, 0, 0, 0.4);
+    --shadow-gold: 0 0 30px rgba(224, 152, 24, 0.25);
+    --shadow-gold-sm: 0 0 16px rgba(224, 152, 24, 0.20);
 
     /* Transitions */
-    --transition-fast:   all 0.15s ease;
-    --transition-base:   all 0.20s ease;
-    --transition-slow:   all 0.35s ease;
+    --transition-fast: all 0.15s ease;
+    --transition-base: all 0.20s ease;
+    --transition-slow: all 0.35s ease;
     --transition-spring: all 0.30s cubic-bezier(0.68, -0.55, 0.265, 1.55);
 
     /* shadcn/ui semantic tokens mapped to Cerebre palette */
-    --background:             222 47% 11%;    /* cerebre-ink */
-    --foreground:             210 60% 91%;    /* cerebre-text */
-    --card:                   218 48% 14%;    /* cerebre-surface */
-    --card-foreground:        210 60% 91%;
-    --popover:                222 48% 12%;
-    --popover-foreground:     210 60% 91%;
-    --primary:                38 86% 50%;     /* cerebre-gold */
-    --primary-foreground:     222 47% 11%;
-    --secondary:              218 48% 14%;    /* cerebre-surface */
-    --secondary-foreground:   210 60% 91%;
-    --muted:                  218 40% 20%;
-    --muted-foreground:       210 40% 55%;   /* cerebre-muted */
-    --accent:                 38 86% 50%;
-    --accent-foreground:      222 47% 11%;
-    --destructive:            4 80% 55%;     /* cerebre-coral */
+    --background: 222 47% 11%;
+    /* cerebre-ink */
+    --foreground: 210 60% 91%;
+    /* cerebre-text */
+    --card: 218 48% 14%;
+    /* cerebre-surface */
+    --card-foreground: 210 60% 91%;
+    --popover: 222 48% 12%;
+    --popover-foreground: 210 60% 91%;
+    --primary: 38 86% 50%;
+    /* cerebre-gold */
+    --primary-foreground: 222 47% 11%;
+    --secondary: 218 48% 14%;
+    /* cerebre-surface */
+    --secondary-foreground: 210 60% 91%;
+    --muted: 218 40% 20%;
+    --muted-foreground: 210 40% 55%;
+    /* cerebre-muted */
+    --accent: 38 86% 50%;
+    --accent-foreground: 222 47% 11%;
+    --destructive: 4 80% 55%;
+    /* cerebre-coral */
     --destructive-foreground: 0 0% 100%;
-    --border:                 218 52% 22%;   /* cerebre-border */
-    --input:                  218 48% 14%;
-    --ring:                   38 86% 50%;    /* gold focus ring */
+    --border: 218 52% 22%;
+    /* cerebre-border */
+    --input: 218 48% 14%;
+    --ring: 38 86% 50%;
+    /* gold focus ring */
 
     /* Z-index ladder */
-    --z-nav:     200;
-    --z-drawer:  300;
-    --z-modal:   400;
-    --z-toast:   500;
+    --z-nav: 200;
+    --z-drawer: 300;
+    --z-modal: 400;
+    --z-toast: 500;
     --z-tooltip: 600;
 
     /* Streaming */
@@ -98,7 +107,9 @@
   }
 
   /* ── Base HTML Reset ─────────────────────────────────────── */
-  *, *::before, *::after {
+  *,
+  *::before,
+  *::after {
     box-sizing: border-box;
     margin: 0;
     padding: 0;
@@ -130,7 +141,12 @@
   }
 
   /* ── Typography Defaults ─────────────────────────────────── */
-  h1, h2, h3, h4, h5, h6 {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     font-family: var(--font-display);
     font-weight: 600;
     line-height: 1.2;
@@ -138,12 +154,29 @@
     color: var(--cerebre-text);
   }
 
-  h1 { font-size: clamp(2rem, 5vw, 3.75rem); }
-  h2 { font-size: clamp(1.5rem, 3vw, 2.5rem); }
-  h3 { font-size: clamp(1.25rem, 2vw, 1.875rem); }
-  h4 { font-size: 1.25rem; }
-  h5 { font-size: 1.125rem; }
-  h6 { font-size: 1rem; }
+  h1 {
+    font-size: clamp(2rem, 5vw, 3.75rem);
+  }
+
+  h2 {
+    font-size: clamp(1.5rem, 3vw, 2.5rem);
+  }
+
+  h3 {
+    font-size: clamp(1.25rem, 2vw, 1.875rem);
+  }
+
+  h4 {
+    font-size: 1.25rem;
+  }
+
+  h5 {
+    font-size: 1.125rem;
+  }
+
+  h6 {
+    font-size: 1rem;
+  }
 
   p {
     line-height: 1.7;
@@ -160,11 +193,13 @@
     color: var(--cerebre-gold-light);
   }
 
-  strong, b {
+  strong,
+  b {
     font-weight: 600;
   }
 
-  em, i {
+  em,
+  i {
     font-style: italic;
   }
 
@@ -197,12 +232,17 @@
     font-size: inherit;
   }
 
-  img, video, svg {
+  img,
+  video,
+  svg {
     max-width: 100%;
     display: block;
   }
 
-  button, input, select, textarea {
+  button,
+  input,
+  select,
+  textarea {
     font-family: var(--font-body);
     font-size: inherit;
   }
@@ -216,7 +256,8 @@
     opacity: 0.5;
   }
 
-  ul, ol {
+  ul,
+  ol {
     padding-left: 1.5em;
   }
 
@@ -236,7 +277,8 @@
     width: 100%;
   }
 
-  th, td {
+  th,
+  td {
     text-align: left;
     padding: 0.75rem 1rem;
     border-bottom: 1px solid var(--cerebre-border);
@@ -407,9 +449,18 @@
 
   /* ── Print ───────────────────────────────────────────────── */
   @media print {
-    body { background: white; color: black; }
-    .no-print { display: none !important; }
-    a { color: inherit; }
+    body {
+      background: white;
+      color: black;
+    }
+
+    .no-print {
+      display: none !important;
+    }
+
+    a {
+      color: inherit;
+    }
   }
 }
 
@@ -468,11 +519,15 @@
     line-height: 1.5;
   }
 
-  .cerebre-input::placeholder { color: var(--cerebre-muted); }
+  .cerebre-input::placeholder {
+    color: var(--cerebre-muted);
+  }
+
   .cerebre-input:focus {
     border-color: var(--cerebre-gold);
     box-shadow: 0 0 0 3px var(--cerebre-gold-dim);
   }
+
   .cerebre-input:hover:not(:focus) {
     border-color: rgba(224, 152, 24, 0.3);
   }
@@ -501,8 +556,16 @@
     transform: translateY(-1px);
   }
 
-  .btn-gold:active { transform: translateY(0); box-shadow: none; }
-  .btn-gold:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+  .btn-gold:active {
+    transform: translateY(0);
+    box-shadow: none;
+  }
+
+  .btn-gold:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+  }
 
   .btn-ghost {
     background: transparent;
@@ -525,7 +588,9 @@
     background: rgba(224, 152, 24, 0.06);
   }
 
-  .btn-ghost:active { transform: scale(0.98); }
+  .btn-ghost:active {
+    transform: scale(0.98);
+  }
 
   .btn-teal {
     background: linear-gradient(135deg, var(--cerebre-teal), var(--cerebre-teal-light));
@@ -646,8 +711,13 @@
     transform: translateY(-2px);
   }
 
-  .tool-card:hover::before { opacity: 1; }
-  .tool-card:active { transform: translateY(0); }
+  .tool-card:hover::before {
+    opacity: 1;
+  }
+
+  .tool-card:active {
+    transform: translateY(0);
+  }
 
   /* ── Streaming Output ────────────────────────────────────── */
   .streaming-cursor::after {
@@ -663,8 +733,15 @@
   }
 
   @keyframes stream-cursor {
-    0%, 100% { opacity: 1; }
-    50%       { opacity: 0; }
+
+    0%,
+    100% {
+      opacity: 1;
+    }
+
+    50% {
+      opacity: 0;
+    }
   }
 
   .output-block {
@@ -682,20 +759,41 @@
 
   /* ── Shimmer Skeleton ────────────────────────────────────── */
   .shimmer {
-    background: linear-gradient(
-      90deg,
-      var(--cerebre-surface) 0%,
-      rgba(255, 255, 255, 0.035) 50%,
-      var(--cerebre-surface) 100%
-    );
+    background: linear-gradient(90deg,
+        var(--cerebre-surface) 0%,
+        rgba(255, 255, 255, 0.035) 50%,
+        var(--cerebre-surface) 100%);
     background-size: 200% 100%;
     animation: shimmer 1.8s infinite linear;
     border-radius: var(--radius-input);
   }
+  .shimmer2 {
+    background: linear-gradient(90deg,
+        var(--cerebre-surface) 0%,
+        rgba(224, 152, 24, 1.0) 50%,
+        var(--cerebre-surface) 100%);
+    background-size: 200% 100%;
+    animation: shimmer2 1.8s infinite linear;
+    border-radius: var(--radius-input);
+  }
 
   @keyframes shimmer {
-    0%   { background-position: -200% 0; }
-    100% { background-position:  200% 0; }
+    0% {
+      background-position: -200% 0;
+    }
+
+    100% {
+      background-position: 200% 0;
+    }
+  }
+  @keyframes shimmer2 {
+    0% {
+      background-position: -200% 0;
+    }
+
+    100% {
+      background-position: 200% 0;
+    }
   }
 
   /* ── Section Divider ─────────────────────────────────────── */
@@ -879,15 +977,11 @@
   /* ── Decorative Background Pattern ──────────────────────── */
   .bg-cerebre-pattern {
     background-color: var(--cerebre-ink);
-    background-image: radial-gradient(
-      ellipse at 20% 20%,
-      rgba(224, 152, 24, 0.04) 0%,
-      transparent 60%
-    ), radial-gradient(
-      ellipse at 80% 80%,
-      rgba(12, 196, 160, 0.04) 0%,
-      transparent 60%
-    );
+    background-image: radial-gradient(ellipse at 20% 20%,
+        rgba(224, 152, 24, 0.04) 0%,
+        transparent 60%), radial-gradient(ellipse at 80% 80%,
+        rgba(12, 196, 160, 0.04) 0%,
+        transparent 60%);
   }
 
   /* ── Prose output styling ────────────────────────────────── */
@@ -906,9 +1000,17 @@
     margin-bottom: 0.5em;
   }
 
-  .prose-cerebre p { margin-bottom: 1em; }
-  .prose-cerebre strong { color: #FFFFFF; }
-  .prose-cerebre em { color: var(--cerebre-teal-light); }
+  .prose-cerebre p {
+    margin-bottom: 1em;
+  }
+
+  .prose-cerebre strong {
+    color: #FFFFFF;
+  }
+
+  .prose-cerebre em {
+    color: var(--cerebre-teal-light);
+  }
 
   .prose-cerebre ul,
   .prose-cerebre ol {
@@ -916,7 +1018,9 @@
     padding-left: 1.5em;
   }
 
-  .prose-cerebre li { margin-bottom: 0.375em; }
+  .prose-cerebre li {
+    margin-bottom: 0.375em;
+  }
 
   .prose-cerebre blockquote {
     border-left: 3px solid var(--cerebre-gold);
@@ -1052,16 +1156,27 @@
   }
 
   /* Aspect ratios */
-  .aspect-card { aspect-ratio: 4 / 3; }
-  .aspect-video { aspect-ratio: 16 / 9; }
-  .aspect-square { aspect-ratio: 1; }
+  .aspect-card {
+    aspect-ratio: 4 / 3;
+  }
+
+  .aspect-video {
+    aspect-ratio: 16 / 9;
+  }
+
+  .aspect-square {
+    aspect-ratio: 1;
+  }
 
   /* Hide scrollbar but keep functionality */
   .scrollbar-hide {
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
-  .scrollbar-hide::-webkit-scrollbar { display: none; }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
 
   /* Full-bleed on mobile */
   .full-bleed {
@@ -1070,12 +1185,29 @@
   }
 
   /* Stagger animations */
-  .stagger-1 { animation-delay: 0.05s; }
-  .stagger-2 { animation-delay: 0.10s; }
-  .stagger-3 { animation-delay: 0.15s; }
-  .stagger-4 { animation-delay: 0.20s; }
-  .stagger-5 { animation-delay: 0.25s; }
-  .stagger-6 { animation-delay: 0.30s; }
+  .stagger-1 {
+    animation-delay: 0.05s;
+  }
+
+  .stagger-2 {
+    animation-delay: 0.10s;
+  }
+
+  .stagger-3 {
+    animation-delay: 0.15s;
+  }
+
+  .stagger-4 {
+    animation-delay: 0.20s;
+  }
+
+  .stagger-5 {
+    animation-delay: 0.25s;
+  }
+
+  .stagger-6 {
+    animation-delay: 0.30s;
+  }
 }
 
 /* ─────────────────────────────────────────────────────────────
@@ -1111,7 +1243,10 @@
    HIGH CONTRAST / ACCESSIBILITY
    ───────────────────────────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
+
+  *,
+  *::before,
+  *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
@@ -1124,9 +1259,48 @@
 }
 
 @media (prefers-contrast: high) {
+
   .cerebre-card,
   .cerebre-card-static {
     border-width: 2px;
     border-color: rgba(224, 152, 24, 0.6);
+  }
+}
+
+
+
+@keyframes ss-bounce {
+
+  0%,
+  60%,
+  100% {
+    transform: translateY(0);
+    opacity: .4;
+  }
+
+  30% {
+    transform: translateY(-5px);
+    opacity: 1;
+  }
+}
+
+.bounce-dot {
+  display:inline-block;
+  width: 5px;
+  height: 5px;
+  border-radius: '50%';
+  background: #F5B830;
+  animation: ss-bounce 1s ease  infinite,
+}
+
+@keyframes ss-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }

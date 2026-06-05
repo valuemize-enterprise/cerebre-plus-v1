@@ -170,13 +170,13 @@ export const FIELD_HINTS: Record<string, string> = {
 // ─────────────────────────────────────────────────────────────
 
 export const TOOL_FIELD_OVERRIDES: Record<string, string> = {
-  // 90-Day Marketing Strategy
+  // 30-Day Marketing Strategy
   'marketing-strategy::goal':
-    'Your primary business goal for the next 90 days. Be specific — include a number and a deadline. E.g. "Double monthly revenue from ₦400K to ₦800K by the end of Q2 2026" or "Get 200 new WhatsApp subscribers in 90 days".',
+    'Your primary business goal for the next 30 days. Be specific — include a number and a deadline. E.g. "Double monthly revenue from ₦400K to ₦800K by the end of Q2 2026" or "Get 200 new WhatsApp subscribers in 30 days".',
   'marketing-strategy::current_situation':
     'Your honest current state — monthly revenue, social following, which channels you use, what\'s worked before. E.g. "Monthly revenue: ₦250,000. Instagram: 2,200 followers. No WhatsApp broadcast list. Facebook ads tried twice — didn\'t convert."',
   'marketing-strategy::budget':
-    'Your total marketing budget for 90 days. Be realistic. E.g. "₦120,000 total (₦40,000/month)" or "₦50,000 total, mostly for content creation".',
+    'Your total marketing budget for 30 days. Be realistic. E.g. "₦120,000 total (₦40,000/month)" or "₦50,000 total, mostly for content creation".',
 
   // Content Calendar
   'content-calendar::content_pillars':

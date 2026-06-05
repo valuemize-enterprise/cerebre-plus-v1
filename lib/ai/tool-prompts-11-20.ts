@@ -667,7 +667,7 @@ Language:           ${L(p)}
 [What's available to ${B(p)} right now that they might not be seeing. Specific to ${I(p)} in ${C(p)}. This is the Law 5 Giant Promise applied at the strategic level.]
 
 **The Risk of Not Executing:**
-[Law 4: What happens in the next 90 days if ${B(p)} doesn't implement this strategy. Specific. Real. The competitor in ${C(p)} who will take their customers if they don't move.]
+[Law 4: What happens in the next 30 days if ${B(p)} doesn't implement this strategy. Specific. Real. The competitor in ${C(p)} who will take their customers if they don't move.]
 
 **Key Strengths to Build On:**
 [What ${B(p)} already has going for it — ${A(p)}, ${PR(p) || YR(p)}, their position in ${C(p)}]
