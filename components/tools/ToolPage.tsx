@@ -681,6 +681,7 @@ export default function ToolPage({ tool, coinBalance, prefill, onCoinDeducted }:
             content={completion || cachedOutput || ''}
             isStreaming={isLoading}
             toolId={tool.id}
+            outputSections={tool.outputSections}
             generationId={generationId ?? undefined}
           // whatsappEnabled={tool.whatsappEnabled}
           />

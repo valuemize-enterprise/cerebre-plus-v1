@@ -97,6 +97,11 @@ export const TOOL_REGISTRY: ToolDefinition[] = [
     description: 'Produces three complete copy variants using different Cerebre Plus psychological triggers. Every variant includes a WhatsApp CTA and is immediately publishable.',
     category: 'copywriting',
     coinCost: 20,
+     outputSections: [
+    'Version A — Energetic Tone',   // ← COPY section
+    'Version B — Formal Tone',      // ← COPY section
+    'Which Version to Use',         // ← GUIDANCE (matches /which to use/i)
+  ],
     icon: '🧠',
     accentColour: '#E09818',
     laws: [1, 4, 5, 6, 7],
@@ -160,7 +165,6 @@ export const TOOL_REGISTRY: ToolDefinition[] = [
       'Adding WhatsApp CTAs and trust signals…',
     ],
     estimatedSeconds: 20,
-    outputSections: ['Variant A — Fear Approach', 'Variant B — Awoof Approach', 'Variant C — Story Approach', 'Which to Use When'],
     nextToolIds: ['caption-craft', 'ad-scribe', 'whatsapp-campaign-builder'],
     whatsappEnabled: true,
     profiling: ['business_name', 'industry', 'city', 'description', 'unique_advantage', 'whatsapp', 'brand_voice', 'social_proof'],
