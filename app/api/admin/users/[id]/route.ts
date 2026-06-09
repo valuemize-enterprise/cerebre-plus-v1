@@ -55,7 +55,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
   const action = body.action as string
 
   // Verify user exists
-  const { data: profile } = await admin.from('profiles').select('first_name,email').eq('id', uid).single()
+  const { data: profile } = await admin.from('profiles').select('full_name, email').eq('id', uid).single()
   if (!profile) return NextResponse.json({ error: 'User not found' }, { status: 404 })
 
   switch (action) {
@@ -92,7 +92,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       const email = authUser?.user?.email
       if (!email) return NextResponse.json({ error: 'User email not found' }, { status: 404 })
       // Send as a direct admin message (reuses the email utility)
-      await sendEmail({ to: email, template: 'welcome', data: { firstName: (profile as { first_name?: string }).first_name || 'there', adminMessage: message } }).catch(() => {})
+      await sendEmail({ to: email, template: 'welcome', data: { firstName: (profile as { full_name?: string }).full_name || 'there', adminMessage: message } }).catch(() => {})
       await logAction(session, A.SEND_EMAIL, 'user', uid, { preview: message.slice(0, 100) })
       return NextResponse.json({ message: 'Email sent' })
     }

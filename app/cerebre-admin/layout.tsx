@@ -56,6 +56,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [loggingOut,setLoggingOut]= useState(false)
 
   useEffect(() => {
+     if (pathname === '/cerebre-admin/login') {
+    setLoading(false)
+    return
+  }
+
     fetch('/api/admin/auth')
       .then(r => r.ok ? r.json() : null)
       .then(d => {
@@ -71,14 +76,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     router.push('/cerebre-admin/login')
   }
 
-  if (loading) return (
+  if (loading && pathname !== '/cerebre-admin/login') (
     <div style={{ minHeight:'100vh', background:VOID, display:'flex', alignItems:'center', justifyContent:'center' }}>
       <div style={{ width:32, height:32, border:`2px solid ${GOLD}`, borderTopColor:'transparent', borderRadius:'50%', animation:'admin-spin 0.8s linear infinite' }} />
       <style>{`@keyframes admin-spin{to{transform:rotate(360deg)}}`}</style>
     </div>
   )
 
-  if (pathname === '/cerebre-admin/login') return <>{children}</>
+  // if (pathname === '/cerebre-admin/login') return <>{children}</>
 
   const role = admin?.role as AdminRole
   const visibleNav = NAV.filter(n => !n.perm || hasPermission(role, n.perm))

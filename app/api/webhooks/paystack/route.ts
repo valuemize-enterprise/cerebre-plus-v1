@@ -51,7 +51,6 @@ export async function POST(request: NextRequest) {
         const isTopUp = metadata?.is_top_up === true;
         const topUpCoins = metadata?.top_up_coins;
 
-
         if (!userId) break;
 
         if (isTopUp && topUpCoins) {
@@ -90,9 +89,9 @@ export async function POST(request: NextRequest) {
 
           // Credit monthly coins
           const PLAN_COINS: Record<string, number> = {
-            starter: 100,
-            growth: 250,
-            premium: 650,
+            free: 700,
+            starter: 150,
+            growth: 700,
           };
           const coins = PLAN_COINS[planId] || 0;
           if (coins > 0) {
@@ -171,7 +170,7 @@ export async function POST(request: NextRequest) {
           await sendEmail({
             to: userEmail,
             template: "payment_failed",
-            data: { firstName: profile,  retryUrl },
+            data: { firstName: profile, retryUrl },
           }).catch(() => {});
         }
         break;

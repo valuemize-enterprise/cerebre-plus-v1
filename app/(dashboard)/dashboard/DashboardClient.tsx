@@ -6,11 +6,11 @@
 // ═══════════════════════════════════════════════════════════════
 
 import React, { useCallback } from 'react'
-import { useRouter }           from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import { motion, } from 'framer-motion'
 import {
   Coins, MessageCircle, ChevronRight, Copy, ExternalLink,
-  AlertTriangle, Sparkles, Flame,  Circle, Award, Target,
+  AlertTriangle, Sparkles, Flame, Circle, Award, Target,
 } from 'lucide-react'
 // canvas-confetti loaded dynamically on milestone events
 // import confetti from 'canvas-confetti'
@@ -23,50 +23,50 @@ import { useToast } from '@/components/ui/ModalToastSelect'
 // ─────────────────────────────────────────────────────────────
 
 interface DashboardClientProps {
-  user:               { id: string; email: string; joinedAt: string }
-  profile:            Record<string, any> | null
-  subscription:       { planTier: string; renewalDate: string | null; daysToRenewal: number | null; status: string }
-  coins:              { balance: number; updatedAt: string | null }
-  recentGenerations:  Array<{ id: string; tool_id: string; tool_name: string; output: string; created_at: string; coin_cost: number }>
-  notifications:      Array<{ id: string; type: string; payload: any }>
-  daysSinceJoin:      number
-  isEarlyMember:      boolean
-  isFoundingMember:   boolean
+  user: { id: string; email: string; joinedAt: string }
+  profile: Record<string, any> | null
+  subscription: { planTier: string; renewalDate: string | null; daysToRenewal: number | null; status: string }
+  coins: { balance: number; updatedAt: string | null }
+  recentGenerations: Array<{ id: string; tool_id: string; tool_name: string; output: string; created_at: string; coin_cost: number }>
+  notifications: Array<{ id: string; type: string; payload: any }>
+  daysSinceJoin: number
+  isEarlyMember: boolean
+  isFoundingMember: boolean
 }
 
 // ─────────────────────────────────────────────────────────────
 // CONSTANTS
 // ─────────────────────────────────────────────────────────────
 
-const NAVY  = '#0B1F3A'
-const GOLD  = '#E09818'
+const NAVY = '#0B1F3A'
+const GOLD = '#E09818'
 
 const PLAN_COIN_LIMITS: Record<string, number> = {
-  free:       70,
-  starter:    200,
-  growth:     600,
-  premium:    1500,
+  free: 700,
+  starter: 150,
+  growth: 700,
+  premium: 1500,
   enterprise: Infinity,
 }
 
 const PLAN_LABELS: Record<string, string> = {
-  free:       'Free',
-  starter:    'Starter',
-  growth:     'Growth',
-  premium:    'Premium',
+  free: 'Free',
+  starter: 'Starter',
+  growth: 'Growth',
+  premium: 'Premium',
   enterprise: 'Enterprise',
 }
 
 // Nigerian cultural calendar — simplified for dashboard
 const NIGERIAN_MOMENTS = [
-  { month: 0,  day: 1,  name: 'New Year',        type: 'holiday',  offset: 7  },
-  { month: 1,  day: 14, name: "Valentine's Day",  type: 'holiday',  offset: 7  },
-  { month: 3,  day: 18, name: 'Easter',           type: 'holiday',  offset: 14 },
-  { month: 4,  day: 1,  name: "Workers' Day",     type: 'holiday',  offset: 3  },
-  { month: 4,  day: 27, name: "Children's Day",   type: 'holiday',  offset: 7  },
-  { month: 9,  day: 1,  name: 'Independence Day', type: 'holiday',  offset: 7  },
-  { month: 10, day: 29, name: 'Black Friday',      type: 'commerce', offset: 14 },
-  { month: 11, day: 25, name: 'Christmas',         type: 'holiday',  offset: 21 },
+  { month: 0, day: 1, name: 'New Year', type: 'holiday', offset: 7 },
+  { month: 1, day: 14, name: "Valentine's Day", type: 'holiday', offset: 7 },
+  { month: 3, day: 18, name: 'Easter', type: 'holiday', offset: 14 },
+  { month: 4, day: 1, name: "Workers' Day", type: 'holiday', offset: 3 },
+  { month: 4, day: 27, name: "Children's Day", type: 'holiday', offset: 7 },
+  { month: 9, day: 1, name: 'Independence Day', type: 'holiday', offset: 7 },
+  { month: 10, day: 29, name: 'Black Friday', type: 'commerce', offset: 14 },
+  { month: 11, day: 25, name: 'Christmas', type: 'holiday', offset: 21 },
 ]
 
 // Starter tool suggestions for new users
@@ -79,13 +79,13 @@ const STARTER_TOOLS = ['copy-brain', 'caption-craft', 'whatsapp-campaign-builder
 function getGreeting(name: string): { text: string; emoji: string } {
   const hour = new Date().toLocaleString('en-NG', {
     timeZone: 'Africa/Lagos',
-    hour:     'numeric',
-    hour12:   false,
+    hour: 'numeric',
+    hour12: false,
   })
   const h = parseInt(hour, 10)
-  if (h < 12) return { text: `Good morning, ${name}`,   emoji: '☀️' }
+  if (h < 12) return { text: `Good morning, ${name}`, emoji: '☀️' }
   if (h < 17) return { text: `Good afternoon, ${name}`, emoji: '🌤️' }
-  return             { text: `Good evening, ${name}`,   emoji: '🌙' }
+  return { text: `Good evening, ${name}`, emoji: '🌙' }
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -93,8 +93,8 @@ function getGreeting(name: string): { text: string; emoji: string } {
 // ─────────────────────────────────────────────────────────────
 
 function getNextMoment() {
-  const now    = new Date()
-  const year   = now.getFullYear()
+  const now = new Date()
+  const year = now.getFullYear()
 
   for (const m of NIGERIAN_MOMENTS) {
     const date = new Date(year, m.month, m.day)
@@ -129,22 +129,22 @@ function CoinWidget({
   daysToRenewal,
   onTopUp,
 }: {
-  balance:       number
-  planTier:      string
+  balance: number
+  planTier: string
   daysToRenewal: number | null
-  onTopUp:       () => void
+  onTopUp: () => void
 }) {
-  const limit     = PLAN_COIN_LIMITS[planTier] || 70
+  const limit = PLAN_COIN_LIMITS[planTier] || 70
   const isUnlimited = planTier === 'enterprise'
-  const pct       = isUnlimited ? 100 : Math.min(100, Math.round((balance / limit) * 100))
+  const pct = isUnlimited ? 100 : Math.min(100, Math.round((balance / limit) * 100))
   const isCritical = !isUnlimited && balance <= 20
-  const isLow      = !isUnlimited && balance <= 50 && balance > 20
+  const isLow = !isUnlimited && balance <= 50 && balance > 20
 
   const TOP_UP_PACKS = [
-    { label: '50 coins', price: '₦500',   coins: 50  },
+    { label: '50 coins', price: '₦500', coins: 50 },
     { label: '300 coins', price: '₦2,500', coins: 300 },
     { label: '800 coins', price: '₦6,000', coins: 800 },
-    { label: '2K coins',  price: '₦13,000', coins: 2000 },
+    { label: '2K coins', price: '₦13,000', coins: 2000 },
   ]
 
   return (
@@ -252,7 +252,7 @@ function MarketingMomentBanner({
   router,
 }: {
   challenges: string[]
-  router:     ReturnType<typeof useRouter>
+  router: ReturnType<typeof useRouter>
 }) {
   const moment = getNextMoment()
   const dayOfMonth = new Date().getDate()
@@ -283,9 +283,9 @@ function MarketingMomentBanner({
 
   if (moment && moment.type !== 'upcoming_salary') {
     const toolMap: Record<string, string> = {
-      holiday:  'whatsapp-campaign-builder',
+      holiday: 'whatsapp-campaign-builder',
       commerce: 'promo-blast',
-      salary:   'promo-blast',
+      salary: 'promo-blast',
     }
     const tool = toolMap[moment.type] || 'campaign-clock'
 
@@ -346,10 +346,10 @@ function MarketingMomentBanner({
 // ─────────────────────────────────────────────────────────────
 
 const QUICK_ACTIONS = [
-  { id: 'caption',   icon: '✍️', label: 'Write a caption',     toolId: 'caption-craft',           color: '#A855F7' },
-  { id: 'today',     icon: '📅', label: "Today's content",     toolId: 'campaign-clock',           color: '#3B82F6' },
-  { id: 'whatsapp',  icon: '💬', label: 'WhatsApp message',    toolId: 'whatsapp-campaign-builder', color: '#25D366' },
-  { id: 'repurpose', icon: '♻️', label: 'Repurpose last',      toolId: 'content-calendar',         color: '#F59E0B' },
+  { id: 'caption', icon: '✍️', label: 'Write a caption', toolId: 'caption-craft', color: '#A855F7' },
+  { id: 'today', icon: '📅', label: "Today's content", toolId: 'campaign-clock', color: '#3B82F6' },
+  { id: 'whatsapp', icon: '💬', label: 'WhatsApp message', toolId: 'whatsapp-campaign-builder', color: '#25D366' },
+  { id: 'repurpose', icon: '♻️', label: 'Repurpose last', toolId: 'content-calendar', color: '#F59E0B' },
 ]
 
 function QuickActions({ router }: { router: ReturnType<typeof useRouter> }) {
@@ -382,24 +382,24 @@ function ToolRecommendations({
   coinBalance,
   router,
 }: {
-  profile:            Record<string, any> | null
-  recentGenerations:  DashboardClientProps['recentGenerations']
-  coinBalance:        number
-  router:             ReturnType<typeof useRouter>
+  profile: Record<string, any> | null
+  recentGenerations: DashboardClientProps['recentGenerations']
+  coinBalance: number
+  router: ReturnType<typeof useRouter>
 }) {
   // Determine recommended tools based on: unused tools + challenges
   const usedToolIds = new Set(recentGenerations.map((g) => g.tool_id))
-  const challenges  = profile?.marketing_challenges as string[] || []
+  const challenges = profile?.marketing_challenges as string[] || []
 
   const challengeToolMap: Record<string, string[]> = {
-    'not enough leads':           ['lead-magnet-forge', 'funnel-builder', 'whatsapp-campaign-builder'],
-    'social media':               ['caption-craft', 'content-calendar', 'carousel-script-builder'],
-    'sales conversion':           ['sales-script-writer', 'follow-up-sequencer', 'pricing-narrator'],
-    'brand awareness':            ['brand-positioner', 'bio-builder', 'copy-brain'],
-    'google visibility':          ['local-seo-kit', 'keyword-hunter', 'website-copy-audit'],
-    'customer retention':         ['win-back-campaign', 'newsletter-ai', 'referral-program-builder'],
-    'advertising roi':            ['ad-pilot', 'budget-optimizer', 'retarget-engine'],
-    'content creation':           ['copy-brain', 'video-script-forge', 'blog-brain'],
+    'not enough leads': ['lead-magnet-forge', 'funnel-builder', 'whatsapp-campaign-builder'],
+    'social media': ['caption-craft', 'content-calendar', 'carousel-script-builder'],
+    'sales conversion': ['sales-script-writer', 'follow-up-sequencer', 'pricing-narrator'],
+    'brand awareness': ['brand-positioner', 'bio-builder', 'copy-brain'],
+    'google visibility': ['local-seo-kit', 'keyword-hunter', 'website-copy-audit'],
+    'customer retention': ['win-back-campaign', 'newsletter-ai', 'referral-program-builder'],
+    'advertising roi': ['ad-pilot', 'budget-optimizer', 'retarget-engine'],
+    'content creation': ['copy-brain', 'video-script-forge', 'blog-brain'],
   }
 
   // Build recommendation list
@@ -488,7 +488,7 @@ function RecentGenerations({
   router,
 }: {
   generations: DashboardClientProps['recentGenerations']
-  router:      ReturnType<typeof useRouter>
+  router: ReturnType<typeof useRouter>
 }) {
   const { toast } = useToast()
 
@@ -643,7 +643,7 @@ const INSIGHT_BANK = [
 function DailyInsights({ industry, router }: { industry: string; router: ReturnType<typeof useRouter> }) {
   // Pick 3 insights (rotate daily based on date)
   const dayOfYear = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000)
-  const insights  = [0, 1, 2].map((i) => INSIGHT_BANK[(dayOfYear + i) % INSIGHT_BANK.length])
+  const insights = [0, 1, 2].map((i) => INSIGHT_BANK[(dayOfYear + i) % INSIGHT_BANK.length])
 
   return (
     <div>
@@ -690,16 +690,16 @@ function DailyInsights({ industry, router }: { industry: string; router: ReturnT
 // ─────────────────────────────────────────────────────────────
 
 const PROFILE_FIELDS = [
-  { key: 'business_name',   label: 'Business name',    path: '/profile?focus=business_name'   },
-  { key: 'industry',        label: 'Industry',          path: '/profile?focus=industry'         },
-  { key: 'city',            label: 'City',              path: '/profile?focus=city'             },
-  { key: 'description',     label: 'Business description', path: '/profile?focus=description'  },
+  { key: 'business_name', label: 'Business name', path: '/profile?focus=business_name' },
+  { key: 'industry', label: 'Industry', path: '/profile?focus=industry' },
+  { key: 'city', label: 'City', path: '/profile?focus=city' },
+  { key: 'description', label: 'Business description', path: '/profile?focus=description' },
   { key: 'unique_advantage', label: 'Unique advantage', path: '/profile?focus=unique_advantage' },
-  { key: 'target_customer', label: 'Target customer',   path: '/profile?focus=target_customer' },
-  { key: 'whatsapp',        label: 'WhatsApp number',   path: '/profile?focus=whatsapp'        },
-  { key: 'social_proof',    label: 'Social proof',      path: '/profile?focus=social_proof'    },
-  { key: 'brand_voice',     label: 'Brand voice',       path: '/profile?focus=brand_voice'     },
-  { key: 'logo_url',        label: 'Logo',              path: '/profile?focus=logo_url'        },
+  { key: 'target_customer', label: 'Target customer', path: '/profile?focus=target_customer' },
+  { key: 'whatsapp', label: 'WhatsApp number', path: '/profile?focus=whatsapp' },
+  { key: 'social_proof', label: 'Social proof', path: '/profile?focus=social_proof' },
+  { key: 'brand_voice', label: 'Brand voice', path: '/profile?focus=brand_voice' },
+  { key: 'logo_url', label: 'Logo', path: '/profile?focus=logo_url' },
 ]
 
 function ProfileCompleteness({
@@ -707,18 +707,18 @@ function ProfileCompleteness({
   router,
 }: {
   profile: Record<string, any> | null
-  router:  ReturnType<typeof useRouter>
+  router: ReturnType<typeof useRouter>
 }) {
-  const filled  = PROFILE_FIELDS.filter((f) => Boolean(profile?.[f.key]))
-  const pct     = Math.round((filled.length / PROFILE_FIELDS.length) * 100)
+  const filled = PROFILE_FIELDS.filter((f) => Boolean(profile?.[f.key]))
+  const pct = Math.round((filled.length / PROFILE_FIELDS.length) * 100)
   const missing = PROFILE_FIELDS.filter((f) => !Boolean(profile?.[f.key])).slice(0, 3)
 
   if (pct >= 80) return null
 
   const qualityLabel =
     pct < 40 ? 'basic (fill more fields for much better results)'
-    : pct < 60 ? 'decent — but incomplete profile means generic outputs'
-    : 'good — completing the remaining fields will noticeably improve results'
+      : pct < 60 ? 'decent — but incomplete profile means generic outputs'
+        : 'good — completing the remaining fields will noticeably improve results'
 
   return (
     <motion.div
@@ -840,11 +840,11 @@ export function DashboardClient({
   isEarlyMember,
   isFoundingMember,
 }: DashboardClientProps) {
-  const router  = useRouter()
+  const router = useRouter()
   const { toast } = useToast()
 
   const firstName = profile?.business_name?.split(' ')[0] || user.email.split('@')[0]
-  const greeting  = getGreeting(firstName)
+  const greeting = getGreeting(firstName)
   const challenges = profile?.marketing_challenges as string[] || []
 
   return (

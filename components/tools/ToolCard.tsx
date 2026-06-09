@@ -399,7 +399,7 @@ const EMPTY_ILLUSTRATIONS: Record<string, React.ReactNode> = {
       <text x="95" y="29" textAnchor="middle" fontSize="10" fill="rgba(224,152,24,0.8)">?</text>
     </svg>
   ),
-  library: (
+  Library: (
     <svg viewBox="0 0 120 100" className="w-24 h-20 mx-auto" aria-hidden="true">
       <rect x="15" y="25" width="90" height="55" rx="8" fill="rgba(26,48,88,0.8)" stroke="rgba(26,48,88,1)" strokeWidth="1.5"/>
       <path d="M45 55 L60 40 L75 55" stroke="rgba(224,152,24,0.5)" strokeWidth="2" fill="none" strokeLinecap="round"/>

@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
     .single();
 
   // 👇 log this
-  console.log("[coin reward] existing check:", { existing, checkError });
+  // console.log("[coin reward] existing check:", { existing, checkError });
 
   if (existing) {
     return NextResponse.json({ already_claimed: true });

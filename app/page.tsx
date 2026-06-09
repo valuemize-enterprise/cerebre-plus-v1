@@ -62,7 +62,7 @@ const PLANS = [
     cta: 'Start Free — No Card Needed', href: '/signup',
   },
   {
-    id: 'starter', name: 'Starter', price: 20000, yearLabel: '₦20,000',
+    id: 'free', name: 'Free', price: 20000, yearLabel: '₦20,000',
     monthEq: '₦1,667/mo', coins: 150, validity: 'Full year',
     badge: null, featured: false,
     tagline: 'Your first real marketing system. ₦1,667/month. For a full year.',

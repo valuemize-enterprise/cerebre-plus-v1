@@ -33,6 +33,9 @@ export default function UserProfile() {
   }
   useEffect(() => { load() }, [id])
 
+  // console.log('Loaded user:', user)
+
+
   const action = async (act: string, body: any) => {
     setSaving(act)
     const res = await fetch(`/api/admin/users/${id}`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ action: act, ...body }) })
@@ -64,11 +67,11 @@ export default function UserProfile() {
       {/* Header */}
       <div style={{ display:'flex', alignItems:'flex-start', gap:18, marginBottom:28, flexWrap:'wrap' }}>
         <div style={{ width:64, height:64, borderRadius:'50%', background:`${GOLD}18`, border:`1px solid ${GOLD}30`, display:'flex', alignItems:'center', justifyContent:'center', fontFamily:"'Georgia',serif", fontSize:24, fontWeight:900, color:GL, flexShrink:0 }}>
-          {(user.first_name || user.email)?.[0]?.toUpperCase() || '?'}
+          {(user.full_name || user.email)?.[0]?.toUpperCase() || '?'}
         </div>
         <div style={{ flex:1 }}>
           <h1 style={{ fontFamily:"'Georgia',serif", fontSize:22, fontWeight:900, color:'#fff', marginBottom:4 }}>
-            {user.first_name ? `${user.first_name} ${user.last_name||''}`.trim() : 'No name set'}
+            {user.full_name ? `${user.full_name}`.trim() : 'No name set'}
           </h1>
           <p style={{ fontSize:14, color:DIM, marginBottom:8 }}>{user.email}</p>
           <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>

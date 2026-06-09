@@ -29,6 +29,11 @@ export async function POST(request: NextRequest) {
       { status: 400 },
     );
   }
+  const PLAN_PRICES: Record<string, number> = {
+    starter: 20000,
+    growth: 50000,
+    premium: 150000,
+  };
 
   // Idempotency: check if we've already processed this reference
   const { data: existing } = await supabase
@@ -53,16 +58,24 @@ export async function POST(request: NextRequest) {
 
   // Subscription upgrade
   const PLAN_COINS: Record<string, number> = {
-    starter: 100,
-    growth: 250,
-    premium: 650,
+    free: 700,
+    starter: 150,
+    growth: 700,
   };
   const coins = PLAN_COINS[planId] || 0;
   const periodEnd = new Date(
     Date.now() + 30 * 24 * 60 * 60 * 1000,
   ).toISOString();
 
-  await Promise.all([
+  //console.log("6. Plan insert:", { planId, coins, periodEnd, userId: user.id });
+
+  if (!planId || coins === 0) {
+    return NextResponse.json(
+      { success: false, error: `Invalid planId: ${planId}` },
+      { status: 400 },
+    );
+  }
+  const [subResult, coinResult, profileResult] = await Promise.all([
     supabase.from("subscriptions").upsert(
       {
         user_id: user.id,
@@ -70,16 +83,26 @@ export async function POST(request: NextRequest) {
         status: "active",
         current_period_start: new Date().toISOString(),
         current_period_end: periodEnd,
+        coins_per_period: coins,
+        price_naira: PLAN_PRICES[planId], // ← add this
       },
       { onConflict: "user_id" },
     ),
     supabase.rpc("credit_coins", {
       p_user_id: user.id,
       p_amount: coins,
-      p_type: "subscription_renewal",
+      p_type: "allocation", // ← subscription coins
       p_description: `paystack:${reference}`,
     }),
+    supabase
+      .from("profiles")
+      .update({ plan_tier: planId }) // ← add this
+      .eq("id", user.id),
   ]);
+
+  // console.log("Profile error:", profileResult.error);
+  // console.log("Sub upsert:", subResult.error);
+  // console.log("Coin credit:", coinResult.error);
 
   // After activate_annual_plan() succeeds:
   const isGrowth = planId === "growth";
@@ -93,16 +116,16 @@ export async function POST(request: NextRequest) {
   if (user.email) {
     await sendEmail({
       to: user.email,
-    template: isGrowth ? "sme_club_welcome" : "upgrade_confirm",
-    data: {
-      firstName: ((profile as { full_name?: string } | null)?.full_name ?? ""),
-      planName: planId === "growth" ? "Growth" : "Starter",
-      coins,
-      validUntil: new Date(Date.now() + 365 * 86400000).toLocaleDateString(
-        "en-NG",
-        { day: "numeric", month: "long", year: "numeric" },
-      ),
-    },
+      template: isGrowth ? "sme_club_welcome" : "upgrade_confirm",
+      data: {
+        firstName: (profile as { full_name?: string } | null)?.full_name ?? "",
+        planName: planId === "growth" ? "Growth" : "Starter",
+        coins,
+        validUntil: new Date(Date.now() + 365 * 86400000).toLocaleDateString(
+          "en-NG",
+          { day: "numeric", month: "long", year: "numeric" },
+        ),
+      },
     }).catch(() => {});
   }
 

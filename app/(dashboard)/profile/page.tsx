@@ -262,7 +262,7 @@ export default function ProfilePage() {
 
     if (error) {
       toast({ type: 'error', title: 'Save failed', description: error.message })
-      console.log('Error saving profile:', error)
+      //console.log('Error saving profile:', error)
     } else {
       setSaved(true)
       setTimeout(() => setSaved(false), 2500)

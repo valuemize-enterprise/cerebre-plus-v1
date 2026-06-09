@@ -32,7 +32,7 @@ const NAV_ITEMS: NavItemDef[] = [
   { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, section: 'main' },
   { label: 'Tools', href: '/tools', icon: Zap, section: 'main' },
   { label: 'History', href: '/history', icon: Clock, section: 'main' },
-  { label: 'library', href: '/library?tab=saved', icon: Library, section: 'main' },
+  { label: 'Library', href: '/library?tab=saved', icon: Library, section: 'main' },
 
   // ── Marketing ───────────────────────────────────────────────
   { label: 'Ideas', href: '/ideas', icon: Sparkles, section: 'marketing', badge: 'Daily' },

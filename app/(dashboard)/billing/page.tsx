@@ -387,67 +387,124 @@ export default function BillingPage() {
   const pct = getCoinRemainingPct(coins, planTier)
   const userCanTopUp = canTopUp(planTier) && subscription?.status === 'active'
 
+
+  const paystackKey = process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY
+
   // ── Paystack ───────────────────────────────────────────────
   const initPaystack = useCallback(async (
     type: 'plan_upgrade' | 'topup_bulk' | 'topup_custom',
     opts: Record<string, any>
   ) => {
-    if (!user?.email) { toast({ type: 'warning', title: 'Log in required' }); return }
-    const key = type === 'plan_upgrade' ? opts.planId : `${type}_${opts.packId || opts.coinQty}`
-    setPaying(key)
+    if (!user?.email) {
+      toast({ type: 'warning', title: 'Log in required' });
+      return;
+    }
+
+    const key = type === 'plan_upgrade'
+      ? opts.planId
+      : `${type}_${opts.packId || opts.coinQty}`;
+    setPaying(key);
 
     try {
       const res = await fetch('/api/billing/create-payment', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ type, ...opts }),
-      })
+      });
+
       if (!res.ok) {
-        const err = await res.json()
-        toast({ type: 'error', title: 'Error', description: err.error }); setPaying(null); return
+        const err = await res.json();
+        toast({ type: 'error', title: 'Error', description: err.error });
+        setPaying(null);
+        return;
       }
-      const { reference, amount, coins: outCoins, metadata } = await res.json()
+
+      const { reference, amount, coins: outCoins, metadata } = await res.json();
 
       if (!window.PaystackPop) {
-        toast({ type: 'error', title: 'Payment not ready', description: 'Please wait a moment and try again.' })
-        setPaying(null); return
+        toast({
+          type: 'error',
+          title: 'Payment not ready',
+          description: 'Please wait a moment and try again.',
+        });
+        setPaying(null);
+        return;
       }
 
       const handler = window.PaystackPop.setup({
-        key: process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY,
+        key: paystackKey,
         email: user.email,
         amount: amount * 100,
         currency: 'NGN',
         ref: reference,
         metadata,
-        callback: async (response: { reference: string }) => {
-          const verRes = await fetch('/api/billing/verify-payment', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ reference: response.reference, type, ...opts, coins: outCoins }),
-          })
-          const verData = await verRes.json()
-          if (verData.success) {
-            toast({
-              type: 'success',
-              title: type === 'plan_upgrade' ? `🎉 Welcome to ${opts.planId}!` : `+${outCoins} coins added!`,
-              description: type === 'plan_upgrade' ? 'Your plan is now active.' : 'Coins credited to your account.',
-            })
-            setTimeout(() => window.location.reload(), 1200)
-          } else {
-            toast({ type: 'error', title: 'Verification failed', description: 'Contact support if payment was deducted.' })
-          }
+        callback: (response: { reference: string }) => {
+          void (async () => {
+            try {
+              const verRes = await fetch('/api/billing/verify-payment', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  reference: response.reference,
+                  planId: type === 'plan_upgrade' ? opts.planId : undefined,
+                  isTopUp: type !== 'plan_upgrade',
+                  topUpCoins: type !== 'plan_upgrade' ? outCoins : undefined,
+                }),
+              });
+
+              const verData = await verRes.json();
+
+              if (verData.success) {
+                toast({
+                  type: 'success',
+                  title: type === 'plan_upgrade'
+                    ? `🎉 Welcome to ${opts.planId}!`
+                    : `+${outCoins} coins added!`,
+                  description: type === 'plan_upgrade'
+                    ? 'Your plan is now active.'
+                    : 'Coins credited to your account.',
+                });
+                setTimeout(() => window.location.reload(), 1200);
+              } else {
+                toast({
+                  type: 'error',
+                  title: 'Verification failed',
+                  description: 'Contact support if payment was deducted.',
+                });
+              }
+            } catch (e: any) {
+              toast({
+                type: 'error',
+                title: 'Verification error',
+                description: e.message,
+              });
+            } finally {
+              setPaying(null);
+            }
+          })();
         },
         onClose: () => setPaying(null),
-      })
-      handler.openIframe()
-    } catch (e: any) {
-      toast({ type: 'error', title: 'Payment failed', description: e.message })
-      setPaying(null)
-    }
-  }, [user, toast])
+      });
 
-  const handleUpgrade = (planId: PlanId) => initPaystack('plan_upgrade', { planId })
-  const handleBulk = (packId: string) => initPaystack('topup_bulk', { packId })
-  const handleCustom = (qty: number, price: number) => initPaystack('topup_custom', { coinQty: qty })
+      handler.openIframe();
+
+    } catch (e: any) {
+      console.error('Payment error', e);
+      toast({ type: 'error', title: 'Payment failed', description: e.message });
+      setPaying(null);
+    }
+  }, [user, toast]);
+
+  // ── Handlers — defined after initPaystack ──────────────────────
+  const handleUpgrade = useCallback((planId: PlanId) =>
+    initPaystack('plan_upgrade', { planId }), [initPaystack]);
+
+
+  const handleBulk = useCallback((packId: string) =>
+    initPaystack('topup_bulk', { packId }), [initPaystack]);
+
+  const handleCustom = useCallback((qty: number, price: number) =>
+    initPaystack('topup_custom', { coinQty: qty, price }), [initPaystack]);
 
   // ── Render ─────────────────────────────────────────────────
   if (loading) {
