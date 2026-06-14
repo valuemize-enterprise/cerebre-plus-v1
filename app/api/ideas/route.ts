@@ -109,13 +109,14 @@ export async function GET(request: NextRequest) {
 
   // ── Forced refresh: deduct coins ──────────────────────────
   if (forceRefresh) {
-    const { error: deductError } = await supabase.rpc('deduct_coins', {
+    const { data, error: deductError } = await supabase.rpc('deduct_coins', {
       p_user_id:  userId,
       p_amount:   REFRESH_COST,
       p_tool_id:  'ideas_refresh',
       p_generation_id: null,
     })
-    if (deductError) {
+    const deductResult = Array.isArray(data) ? data[0] : data
+    if (deductError || !(deductResult as any)?.success) {
       return NextResponse.json(
         { error: 'INSUFFICIENT_COINS', message: `Need ${REFRESH_COST} coins to refresh ideas` },
         { status: 402 }

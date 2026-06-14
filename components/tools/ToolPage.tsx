@@ -8,48 +8,49 @@
 // ═══════════════════════════════════════════════════════════════
 
 import React, {
-  useState, useCallback, useEffect, useRef,
+  useState, useCallback, useEffect, useRef, useMemo,
   type ChangeEvent,
 } from 'react'
-import { useRouter } from 'next/navigation'
-import { useCompletion } from 'ai/react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { useCompletion }    from 'ai/react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Coins, ChevronDown, ChevronUp, Sparkles, WifiOff, AlertTriangle,
+  Coins, ChevronDown, ChevronUp, Sparkles,
+  MessageCircle, Wifi, WifiOff, AlertTriangle,
   ArrowRight, CheckCircle2, Clock,
 } from 'lucide-react'
 
 import type { ToolDefinition, ToolFormField } from '@/lib/tools/registry'
-import { getNextTools } from '@/lib/tools/registry'
-import { SmartSuggest } from '@/components/tools/SmartSuggest'
-import { OutputRenderer } from '@/components/tools/OutputRenderer'
-import { LoadingStages } from '@/components/ui/LoadingStages'
-// import { ToolCard }        from '@/components/tools/ToolCard'
-// import { CoinDisplay }     from '@/components/ui/CardBadgeSkeleton'
-import { useUser } from '@/lib/hooks/useUser'
-import { useToast } from '@/components/ui/ModalToastSelect'
+import { getNextTools }    from '@/lib/tools/registry'
+import { OutputRenderer }  from '@/components/tools/OutputRenderer'
+import { LoadingStages }   from '@/components/ui/LoadingStages'
+import { ToolCard }        from '@/components/tools/ToolCard'
+import { CoinDisplay }     from '@/components/ui/CardBadgeSkeleton'
+import { useUser }         from '@/lib/hooks/useUser'
+import { useToast }        from '@/components/ui/ModalToastSelect'
+import { SuggestionStrip } from '@/components/tools/SuggestionStrip'
+import {
+  getFieldSuggestions,
+  fieldIsEligibleForSuggestions,
+  type ProfileContext,
+} from '@/lib/tools/form-suggestions'
 
 // ─────────────────────────────────────────────────────────────
 // CONSTANTS
 // ─────────────────────────────────────────────────────────────
 
-const NAVY = '#0B1F3A'
-const GOLD = '#E09818'
+const NAVY  = '#0B1F3A'
+const GOLD  = '#E09818'
 const PRIMARY_FIELDS = 4  // Show this many before the "more context" toggle
-
-
-// Field types that benefit from AI suggestions
-const SUGGESTABLE_TYPES = new Set(['text', 'textarea', 'number'])
-const shouldSuggest = (type: string) => SUGGESTABLE_TYPES.has(type)
 
 // ─────────────────────────────────────────────────────────────
 // TYPES
 // ─────────────────────────────────────────────────────────────
 
 interface ToolPageProps {
-  tool: ToolDefinition
-  coinBalance: number
-  prefill?: Record<string, string> | null
+  tool:            ToolDefinition
+  coinBalance:     number
+  prefill?:        Record<string, string> | null
   onCoinDeducted?: (cost: number) => void
 }
 
@@ -68,8 +69,8 @@ function FormField({
   value,
   onChange,
 }: {
-  field: ToolFormField
-  value: string | string[] | boolean
+  field:    ToolFormField
+  value:    string | string[] | boolean
   onChange: (key: string, val: string | string[] | boolean) => void
 }) {
   const base = `
@@ -201,24 +202,40 @@ function RestoreToast({ onRestore, onDismiss }: { onRestore: () => void; onDismi
 // ─────────────────────────────────────────────────────────────
 
 export default function ToolPage({ tool, coinBalance, prefill, onCoinDeducted }: ToolPageProps) {
-  const router = useRouter()
+  const router       = useRouter()
+  const searchParams = useSearchParams()
+  // ?free=1 → user is running their one-time free tool from the dashboard widget
+  const isFreeRun    = searchParams.get('free') === '1'
   const { toast } = useToast()
   const { profile } = useUser()
 
+  // Build suggestion context from the user's saved profile.
+  // useMemo so we don't recompute on every render.
+  const profileCtx = useMemo((): ProfileContext => ({
+    businessName:     profile?.business_name,
+    industry:         profile?.industry,
+    city:             profile?.city,
+    targetCustomer:   profile?.target_customer,
+    description:      profile?.description,
+    uniqueAdvantage:  profile?.unique_advantage,
+    primaryGoal:      (profile as any)?.primaryGoal    as string | undefined,
+    primaryChallenge: (profile as any)?.primaryChallenge as string | undefined,
+  }), [profile])
+
   // ── State ─────────────────────────────────────────────────
-  const [mobileTab, setMobileTab] = useState<MobileTab>('brief')
-  const [showMore, setShowMore] = useState(false)
-  const [form, setForm] = useState<FormState>({})
-  const [showRestore, setShowRestore] = useState(false)
-  const [savedForm, setSavedForm] = useState<FormState | null>(null)
-  const [generationId, setGenerationId] = useState<string | null>(null)
-  const [_, setBalanceAfter] = useState(coinBalance)
-  const [isOnline, setIsOnline] = useState(true)
-  const [cachedOutput, setCachedOutput] = useState<string | null>(null)
+  const [mobileTab,     setMobileTab]     = useState<MobileTab>('brief')
+  const [showMore,      setShowMore]      = useState(false)
+  const [form,          setForm]          = useState<FormState>({})
+  const [showRestore,   setShowRestore]   = useState(false)
+  const [savedForm,     setSavedForm]     = useState<FormState | null>(null)
+  const [generationId,  setGenerationId]  = useState<string | undefined>(undefined)
+  const [balanceAfter,  setBalanceAfter]  = useState(coinBalance)
+  const [isOnline,      setIsOnline]      = useState(true)
+  const [cachedOutput,  setCachedOutput]  = useState<string | null>(null)
 
   const outputPanelRef = useRef<HTMLDivElement>(null)
-  const storageKey = `cerebre_form_${tool.id}`
-  const cacheKey = `cerebre_output_${tool.id}`
+  const storageKey     = `cerebre_form_${tool.id}`
+  const cacheKey       = `cerebre_output_${tool.id}`
 
   // ── Initialise default values ─────────────────────────────
   useEffect(() => {
@@ -239,12 +256,12 @@ export default function ToolPage({ tool, coinBalance, prefill, onCoinDeducted }:
 
   // ── Online / offline detection ────────────────────────────
   useEffect(() => {
-    const online = () => setIsOnline(true)
+    const online  = () => setIsOnline(true)
     const offline = () => setIsOnline(false)
-    window.addEventListener('online', online)
+    window.addEventListener('online',  online)
     window.addEventListener('offline', offline)
     return () => {
-      window.removeEventListener('online', online)
+      window.removeEventListener('online',  online)
       window.removeEventListener('offline', offline)
     }
   }, [])
@@ -295,9 +312,9 @@ export default function ToolPage({ tool, coinBalance, prefill, onCoinDeducted }:
     api: `/api/generate/${tool.id}`,
     onResponse: (response) => {
       // Read response headers for generation metadata
-      const genId = response.headers.get('X-Generation-Id')
-      const balAfter = response.headers.get('X-Balance-After')
-      if (genId) setGenerationId(genId)
+      const genId        = response.headers.get('X-Generation-Id')
+      const balAfter     = response.headers.get('X-Balance-After')
+      if (genId)    setGenerationId(genId)
       if (balAfter) {
         const bal = parseInt(balAfter, 10)
         setBalanceAfter(bal)
@@ -326,6 +343,7 @@ export default function ToolPage({ tool, coinBalance, prefill, onCoinDeducted }:
       } catch { /* ignore */ }
     },
     onError: (err) => {
+      console.log('[onError] raw:', err.message)
       let msg = 'Generation failed. No coins were deducted.'
       try {
         const parsed = JSON.parse(err.message)
@@ -353,8 +371,8 @@ export default function ToolPage({ tool, coinBalance, prefill, onCoinDeducted }:
 
     if (missing.length > 0) {
       toast({
-        type: 'warning',
-        title: 'Missing required fields',
+        type:        'warning',
+        title:       'Missing required fields',
         description: `Please fill in: ${missing.map((f) => f.label).join(', ')}`,
       })
       return
@@ -362,29 +380,29 @@ export default function ToolPage({ tool, coinBalance, prefill, onCoinDeducted }:
 
     if (!isOnline) {
       toast({
-        type: 'warning',
-        title: 'You\'re offline',
+        type:        'warning',
+        title:       'You\'re offline',
         description: 'Check your connection and try again.',
       })
       return
     }
 
     await complete('', {
-      body: { inputs: form },
+      body: { inputs: form, freeRun: isFreeRun },
     })
   }, [isLoading, stop, form, tool.formBlocks, isOnline, complete, toast])
 
   // ── Derived state ─────────────────────────────────────────
-  const canAfford = coinBalance >= tool.coinCost
-  const primaryFields = tool.formBlocks.filter((f) => f.tier === 'primary')
-  const moreFields = tool.formBlocks.filter((f) => f.tier === 'more_context')
-  const hasOutput = Boolean(completion || cachedOutput)
-  // const displayOutput  = completion || cachedOutput || ''
-  const nextTools = getNextTools(tool.id)
+  const canAfford      = coinBalance >= tool.coinCost
+  const primaryFields  = tool.formBlocks.filter((f) => f.tier === 'primary')
+  const moreFields     = tool.formBlocks.filter((f) => f.tier === 'more_context')
+  const hasOutput      = Boolean(completion || cachedOutput)
+  const displayOutput  = completion || cachedOutput || ''
+  const nextTools      = getNextTools(tool.id)
 
   // ── Profile chip data ─────────────────────────────────────
   const profileFieldsUsed = tool.profiling.filter((f) => Boolean(profile?.[f as keyof typeof profile]))
-  // const profileComplete   = Math.round((profileFieldsUsed.length / tool.profiling.length) * 100)
+  const profileComplete   = Math.round((profileFieldsUsed.length / tool.profiling.length) * 100)
 
   // ─────────────────────────────────────────────────────────
   // FORM PANEL
@@ -446,33 +464,35 @@ export default function ToolPage({ tool, coinBalance, prefill, onCoinDeducted }:
       {/* Form fields */}
       <div className="flex-1 space-y-5 px-5 py-4">
         {/* Primary fields (always visible) */}
-        {primaryFields.map((field) => (
-          <div key={field.key} className="space-y-1.5">
-            <label className="flex items-center gap-1.5 text-sm font-medium text-white/80">
-              {field.label}
-              {field.required && <span className="text-[#E09818] text-xs">*</span>}
-              {field.helpText && (
-                <span className="text-white/30 text-xs font-normal">— {field.helpText}</span>
-              )}
-            </label>
-            <FormField
-              field={field}
-              value={form[field.key] ?? (field.type === 'multiselect' ? [] : field.type === 'toggle' ? false : '')}
-              onChange={handleFormChange}
-            />
-            {/* ── SmartSuggest ── */}
-            {shouldSuggest(field.type) && (
-              <SmartSuggest
-                toolId={tool.id}
-                toolName={tool.name}
-                fieldKey={field.key}
-                fieldLabel={field.label}
-                formState={form as Record<string, any>}
-                onSelect={(value) => handleFormChange(field.key, value)}
+        {primaryFields.map((field) => {
+          const sugs = fieldIsEligibleForSuggestions(field.type)
+            ? getFieldSuggestions(field.key, field.label || '', profileCtx)
+            : []
+          const fieldVal = String(form[field.key] ?? '')
+          return (
+            <div key={field.key} className="space-y-1.5">
+              <label className="flex items-center gap-1.5 text-sm font-medium text-white/80">
+                {field.label}
+                {field.required && <span className="text-[#E09818] text-xs">*</span>}
+                {field.helpText && (
+                  <span className="text-white/30 text-xs font-normal">— {field.helpText}</span>
+                )}
+              </label>
+              <FormField
+                field={field}
+                value={form[field.key] ?? (field.type === 'multiselect' ? [] : field.type === 'toggle' ? false : '')}
+                onChange={handleFormChange}
               />
-            )}
-          </div>
-        ))}
+              {sugs.length > 0 && (
+                <SuggestionStrip
+                  suggestions={sugs}
+                  onSelect={v => handleFormChange(field.key, v)}
+                  visible={fieldVal.length < 25}
+                />
+              )}
+            </div>
+          )
+        })}
 
         {/* More context toggle */}
         {moreFields.length > 0 && (
@@ -502,30 +522,32 @@ export default function ToolPage({ tool, coinBalance, prefill, onCoinDeducted }:
                   className="overflow-hidden"
                 >
                   <div className="mt-4 space-y-5">
-                    {moreFields.map((field) => (
-                      <div key={field.key} className="space-y-1.5">
-                        <label className="flex items-center gap-1.5 text-sm font-medium text-white/60">
-                          {field.label}
-                          <span className="text-white/30 text-xs font-normal">(optional)</span>
-                        </label>
-                        <FormField
-                          field={field}
-                          value={form[field.key] ?? (field.type === 'multiselect' ? [] : field.type === 'toggle' ? false : '')}
-                          onChange={handleFormChange}
-                        />
-                        {/* ── SmartSuggest ── */}
-                        {shouldSuggest(field.type) && (
-                          <SmartSuggest
-                            toolId={tool.id}
-                            toolName={tool.name}
-                            fieldKey={field.key}
-                            fieldLabel={field.label}
-                            formState={form as Record<string, any>}
-                            onSelect={(value) => handleFormChange(field.key, value)}
+                    {moreFields.map((field) => {
+                      const sugs = fieldIsEligibleForSuggestions(field.type)
+                        ? getFieldSuggestions(field.key, field.label || '', profileCtx)
+                        : []
+                      const fieldVal = String(form[field.key] ?? '')
+                      return (
+                        <div key={field.key} className="space-y-1.5">
+                          <label className="flex items-center gap-1.5 text-sm font-medium text-white/60">
+                            {field.label}
+                            <span className="text-white/30 text-xs font-normal">(optional)</span>
+                          </label>
+                          <FormField
+                            field={field}
+                            value={form[field.key] ?? (field.type === 'multiselect' ? [] : field.type === 'toggle' ? false : '')}
+                            onChange={handleFormChange}
                           />
-                        )}
-                      </div>
-                    ))}
+                          {sugs.length > 0 && (
+                            <SuggestionStrip
+                              suggestions={sugs}
+                              onSelect={v => handleFormChange(field.key, v)}
+                              visible={fieldVal.length < 25}
+                            />
+                          )}
+                        </div>
+                      )
+                    })}
                   </div>
                 </motion.div>
               )}
@@ -540,7 +562,7 @@ export default function ToolPage({ tool, coinBalance, prefill, onCoinDeducted }:
           <p className="mb-2 text-center text-xs text-red-400">
             You need {tool.coinCost} coins. You have {coinBalance}.{' '}
             <button
-              onClick={() => router.push('/billing')}
+              onClick={() => router.push('/coins')}
               className="text-[#E09818] underline"
             >
               Top up
@@ -678,12 +700,15 @@ export default function ToolPage({ tool, coinBalance, prefill, onCoinDeducted }:
       {(completion || (cachedOutput && !isLoading)) && (
         <div className="flex-1">
           <OutputRenderer
-            content={completion || cachedOutput || ''}
+            text={completion || cachedOutput || ''}
             isStreaming={isLoading}
             toolId={tool.id}
+            toolName={tool.name}
+            toolCategory={tool.category as any}
             outputSections={tool.outputSections}
-            generationId={generationId ?? undefined}
-          // whatsappEnabled={tool.whatsappEnabled}
+            coinsSpent={tool.coinCost}
+            generationId={generationId}
+            whatsappEnabled={tool.whatsappEnabled}
           />
         </div>
       )}

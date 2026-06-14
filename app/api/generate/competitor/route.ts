@@ -163,12 +163,16 @@ Generate a structured competitive intelligence report:
           }
           if (event.type === "message_stop") {
             if (!isEnterprise) {
-              await supabase.rpc("deduct_coins", {
+              const { data, error: deductError } = await supabase.rpc("deduct_coins", {
                 p_user_id: user.id,
                 p_amount: TOOL_COST,
                 p_tool_id: "competitor-snoop",
                 p_generation_id: genRow?.id ?? null,
               });
+              const deductResult = Array.isArray(data) ? data?.[0] : data;
+              if (deductError || !deductResult?.success) {
+                console.error("[competitor] deduct_coins failed:", deductError ?? deductResult?.error_message);
+              }
             }
             if (genRow?.id) {
               await supabase

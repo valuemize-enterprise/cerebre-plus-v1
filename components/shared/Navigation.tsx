@@ -5,56 +5,67 @@ import * as TooltipPrimitive from '@radix-ui/react-tooltip'
 import { motion, AnimatePresence } from 'framer-motion'
 import { usePathname, useRouter } from 'next/navigation'
 import {
-  LayoutDashboard, Zap, Clock, Library,
+  LayoutDashboard, Zap, Clock, Library, Eye,
   Lightbulb, User, CreditCard, Users2, LifeBuoy,
-  ChevronLeft, ChevronRight, Bell, ChevronDown,
+  ChevronLeft, ChevronRight, Bell, Menu, ChevronDown,
   LogOut, Settings, HelpCircle, MessageSquare,
-  Sparkles, Eye, Palette,
+  Sparkles, Palette, BookOpen,
 } from 'lucide-react'
 import { twMerge } from 'tailwind-merge'
-import { Badge, planBadgeVariant, CoinDisplay } from '../../components/ui/CardBadgeSkeleton'
-import Image from 'next/image'
+import { Badge, planBadgeVariant, CoinDisplay } from '../ui/CardBadgeSkeleton'
 
 // ─────────────────────────────────────────────────────────────
 // NAV ITEM DEFINITIONS
 // ─────────────────────────────────────────────────────────────
 
 interface NavItemDef {
-  label: string
-  href: string
-  icon: React.ElementType
-  section?: string
-  badge?: string
+  label:      string
+  href:       string
+  icon:       React.ElementType
+  section?:   string
+  badge?:     React.ReactNode
 }
 
 const NAV_ITEMS: NavItemDef[] = [
   // ── Main ────────────────────────────────────────────────────
   { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, section: 'main' },
-  { label: 'Tools', href: '/tools', icon: Zap, section: 'main' },
-  { label: 'History', href: '/history', icon: Clock, section: 'main' },
-  { label: 'Library', href: '/library?tab=saved', icon: Library, section: 'main' },
+  { label: 'Tools',     href: '/tools',     icon: Zap,             section: 'main' },
+  { label: 'Design',    href: '/design',    icon: Palette,         section: 'main' },
+  { label: 'History',   href: '/history',   icon: Clock,           section: 'main' },
+  { label: 'Library',   href: '/library',   icon: Library,         section: 'main' },
 
   // ── Marketing ───────────────────────────────────────────────
-  { label: 'Ideas', href: '/ideas', icon: Sparkles, section: 'marketing', badge: 'Daily' },
-  { label: 'Competitor', href: '/competitor', icon: Eye, section: 'marketing' },
-  { label: 'Brand Vault', href: '/brand', icon: Palette, section: 'marketing' },
-  { label: 'Insights', href: '/insights', icon: Lightbulb, section: 'marketing' },
+  // Ideas: daily AI-generated content ideas for your business
+  {
+    label: 'Ideas',
+    href:  '/ideas',
+    icon:  Sparkles,
+    section: 'marketing',
+    badge: <Badge variant="new" size="xs">Daily</Badge>,
+  },
+  // Competitor Intelligence 2.0 — live web scraping + modular analysis
+  { label: 'Competitor Intel', href: '/competitor-intelligence', icon: Eye,       section: 'marketing' },
+  // Brand Settings: colors, font, logo for Design Tools
+  { label: 'Brand Settings',   href: '/brand-settings',          icon: Palette,   section: 'marketing' },
+  { label: 'Brand Vault',      href: '/brand',                   icon: Palette,   section: 'marketing' },
+  // Insights: Nigerian market intelligence + Cerebre Laws
+  { label: 'Insights',    href: '/insights',   icon: Lightbulb, section: 'marketing' },
 
   // ── Account ─────────────────────────────────────────────────
-  { label: 'Profile', href: '/profile', icon: User, section: 'account' },
-  { label: 'Billing', href: '/billing', icon: CreditCard, section: 'account' },
-  { label: 'Referrals', href: '/referral', icon: Users2, section: 'account' },
-  { label: 'Settings', href: '/settings', icon: Settings, section: 'account' },
+  { label: 'Profile',   href: '/profile',  icon: User,       section: 'account' },
+  { label: 'Billing',   href: '/billing',  icon: CreditCard, section: 'account' },
+  { label: 'Referrals', href: '/referral', icon: Users2,     section: 'account' },
+  { label: 'Settings',  href: '/settings', icon: Settings,   section: 'account' },
 
   // ── Support ─────────────────────────────────────────────────
   { label: 'Help', href: '/help', icon: LifeBuoy, section: 'support' },
 ]
 
 const SECTION_LABELS: Record<string, string> = {
-  main: 'Main',
+  main:      'Main',
   marketing: 'Marketing',
-  account: 'Account',
-  support: 'Support',
+  account:   'Account',
+  support:   'Support',
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -67,10 +78,10 @@ const SidebarNavItem = ({
   isActive,
   onClick,
 }: {
-  item: NavItemDef
+  item:      NavItemDef
   collapsed: boolean
-  isActive: boolean
-  onClick: () => void
+  isActive:  boolean
+  onClick:   () => void
 }) => {
   const Icon = item.icon
 
@@ -105,9 +116,7 @@ const SidebarNavItem = ({
       {!collapsed && (
         <>
           <span className="flex-1 truncate text-left">{item.label}</span>
-          {item.badge && (
-            <Badge variant="new" size="xs">{item.badge}</Badge>
-          )}
+          {item.badge && <span>{item.badge}</span>}
         </>
       )}
     </motion.button>
@@ -139,14 +148,14 @@ const SidebarNavItem = ({
 // ─────────────────────────────────────────────────────────────
 
 export interface SidebarProps {
-  coinBalance: number
-  planTier: string
+  coinBalance:   number
+  planTier:      string
   renewsInDays?: number
   userInitials?: string
-  userName?: string
-  userEmail?: string
-  notifCount?: number
-  onSignOut?: () => void
+  userName?:     string
+  userEmail?:    string
+  notifCount?:   number
+  onSignOut?:    () => void
 }
 
 export const Sidebar = ({
@@ -160,7 +169,7 @@ export const Sidebar = ({
 }: SidebarProps) => {
   const [collapsed, setCollapsed] = React.useState(false)
   const pathname = usePathname()
-  const router = useRouter()
+  const router   = useRouter()
 
   const isActive = (href: string) => {
     if (href.includes('?')) return pathname === href.split('?')[0]
@@ -204,16 +213,9 @@ export const Sidebar = ({
               transition={{ duration: 0.2 }}
               className="flex items-center gap-2.5"
             >
-              <div className="w-10 h-18 rounded-lg flex items-center justify-center flex-shrink-0">
-                <Image
-                  src="/CMA Logo.png"
-                  alt="Cerebre Plus"
-                  width={40}
-                  height={40}
-                  className="object-contain"
-                />
+              <div className="w-7 h-7 rounded-lg bg-cerebre-gold flex items-center justify-center flex-shrink-0">
+                <span className="text-cerebre-ink font-black text-xs font-mono">C+</span>
               </div>
-
               <div>
                 <p className="text-sm font-bold text-cerebre-text leading-none">Cerebre Plus</p>
                 <p className="text-[10px] text-cerebre-muted leading-none mt-0.5">by Cerebre Media Africa</p>
@@ -226,15 +228,9 @@ export const Sidebar = ({
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
-              className="w-10 h-18 rounded-lg flex items-center justify-center flex-shrink-0"
+              className="w-7 h-7 rounded-lg bg-cerebre-gold flex items-center justify-center"
             >
-              <Image
-                src="/CMA Logo.png"
-                alt="Cerebre Plus"
-                width={40}
-                height={40}
-                className="object-contain"
-              />
+              <span className="text-cerebre-ink font-black text-xs font-mono">C+</span>
             </motion.div>
           )}
         </AnimatePresence>
@@ -333,10 +329,10 @@ export const Sidebar = ({
 // ─────────────────────────────────────────────────────────────
 
 const MOBILE_TABS = [
-  { label: 'Home', href: '/dashboard', icon: LayoutDashboard },
-  { label: 'Tools', href: '/tools', icon: Zap },
-  { label: 'Ideas', href: '/ideas', icon: Sparkles },
-  { label: 'You', href: '/profile', icon: User },
+  { label: 'Home',       href: '/dashboard', icon: LayoutDashboard },
+  { label: 'Tools',      href: '/tools',     icon: Zap },
+  { label: 'Ideas',      href: '/ideas',     icon: Sparkles },
+  { label: 'You',        href: '/profile',   icon: User },
 ]
 
 export interface MobileNavProps {
@@ -345,7 +341,7 @@ export interface MobileNavProps {
 
 export const MobileNav = ({ notifCount = 0 }: MobileNavProps) => {
   const pathname = usePathname()
-  const router = useRouter()
+  const router   = useRouter()
 
   const isActive = (href: string) =>
     pathname === href || pathname.startsWith(href + '/')
@@ -363,7 +359,7 @@ export const MobileNav = ({ notifCount = 0 }: MobileNavProps) => {
       aria-label="Mobile navigation"
     >
       {MOBILE_TABS.map((tab) => {
-        const Icon = tab.icon
+        const Icon   = tab.icon
         const active = isActive(tab.href)
         const showBadge = tab.label === 'Home' && notifCount > 0
 
@@ -421,15 +417,15 @@ export const MobileNav = ({ notifCount = 0 }: MobileNavProps) => {
 // ─────────────────────────────────────────────────────────────
 
 export interface TopNavProps {
-  title?: string
-  breadcrumbs?: { label: string; href?: string }[]
-  coinBalance: number
-  planTier: string
-  notifCount?: number
+  title?:        string
+  breadcrumbs?:  { label: string; href?: string }[]
+  coinBalance:   number
+  planTier:      string
+  notifCount?:   number
   userInitials?: string
-  userName?: string
-  userEmail?: string
-  onSignOut?: () => void
+  userName?:     string
+  userEmail?:    string
+  onSignOut?:    () => void
   renewsInDays?: number
 }
 
@@ -445,11 +441,11 @@ export const TopNav = ({
   onSignOut,
   renewsInDays,
 }: TopNavProps) => {
-  const router = useRouter()
+  const router         = useRouter()
   const [scrolled, setScrolled] = React.useState(false)
   const [userMenuOpen, setUserMenuOpen] = React.useState(false)
-  const [notifOpen, setNotifOpen] = React.useState(false)
-  const menuRef = React.useRef<HTMLDivElement>(null)
+  const [notifOpen,    setNotifOpen]    = React.useState(false)
+  const menuRef  = React.useRef<HTMLDivElement>(null)
 
   React.useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20)

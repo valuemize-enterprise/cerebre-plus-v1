@@ -289,12 +289,16 @@ const { data: recycleRow } = await supabase
           if (event.type === 'message_stop') {
             // Deduct coins
             if (!isEnterprise) {
-              await supabase.rpc('deduct_coins', {
+              const { data, error: deductError } = await supabase.rpc('deduct_coins', {
                 p_user_id:       userId,
                 p_amount:        RECYCLE_COST,
                 p_tool_id:       `recycle_${transformId}`,
                 p_generation_id: recycleRow?.id ?? null,
               })
+              const deductResult = data as any
+              if (deductError || !deductResult?.success) {
+                console.error('[recycle] deduct_coins failed:', deductError ?? deductResult?.error_message)
+              }
             }
             // Save
             if (recycleRow?.id) {

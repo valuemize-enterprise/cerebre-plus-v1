@@ -20,8 +20,6 @@ import { getToolPrompt31to40 } from "@/lib/ai/tool-prompts-31-40";
 import { validateToolInputs } from "@/lib/validations/tool-schemas";
 import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
-import { sendEmail } from "@/lib/email";
-import { getPlan } from "@/lib/coins/economy";
 
 // Mixpanel — fire-and-forget via HTTP (no SDK import needed, avoids mixpanel-browser vs mixpanel confusion)
 async function trackEvent(event: string, props: Record<string, unknown>) {
@@ -175,20 +173,11 @@ export async function POST(
     .eq("id", userId)
     .single();
 
+  // console.log('profile', error)
+
   if (!profile) return errResponse(ERR.PROFILE_MISSING);
 
-  // ── 4. Parse request body first so onboarding can bypass coin checks ───
-  let body: Record<string, unknown>;
-  try {
-    body = await request.json();
-  } catch {
-    return errResponse(ERR.VALIDATION_FAILED, "Invalid request body");
-  }
-
-  const inputs = (body.inputs as Record<string, unknown>) ?? {};
-  const isOnboarding = Boolean(body.isOnboarding);
-
-  // ── 5. Check plan & coin balance ─────────────────────────
+  // ── 4. Check plan & coin balance ─────────────────────────
   const { data: subscription } = await supabase
     .from("subscriptions")
     .select("plan_tier, status")
@@ -198,10 +187,9 @@ export async function POST(
   const planTier = subscription?.plan_tier || "free";
   const isEnterprise = planTier === "enterprise";
   const coinCost = tool.coinCost;
-  const skipCoins = isEnterprise || isOnboarding;
 
   let balance = 0;
-  if (!skipCoins) {
+  if (!isEnterprise) {
     const { data: coinData } = await supabase
       .from("coin_balances")
       .select("balance")
@@ -218,7 +206,7 @@ export async function POST(
     }
   }
 
-  // ── 6. Rate limit (10 req/min/user) ─────────────────────
+  // ── 5. Rate limit (10 req/min/user) ─────────────────────
   const { success: ratePassed, remaining } = await ratelimit.limit(userId);
   if (!ratePassed) {
     return errResponse(
@@ -227,7 +215,33 @@ export async function POST(
     );
   }
 
-  // ── 7. Validate inputs ───────────────────────────────────
+  // ── 6. Parse & validate inputs ───────────────────────────
+  let body: Record<string, unknown>;
+  try {
+    body = await request.json();
+  } catch {
+    return errResponse(ERR.VALIDATION_FAILED, "Invalid request body");
+  }
+
+  const inputs = (body.inputs as Record<string, unknown>) ?? {};
+  const isOnboarding = Boolean(body.isOnboarding);
+  const isFreeRun = Boolean(body.freeRun);
+
+  // ── Free-run eligibility check ─────────────────────────────
+  // If the user is running their one-time free tool (from the dashboard widget),
+  // skip coin deduction AND mark profile.free_tool_used = true afterwards.
+  let eligibleForFreeRun = false;
+  if (isFreeRun && !isEnterprise) {
+    const { data: profCheck } = await supabase
+      .from("profiles")
+      .select("free_tool_used")
+      .eq("id", userId)
+      .single() as any;
+    eligibleForFreeRun = !profCheck?.free_tool_used;
+  }
+
+  const skipCoins = isEnterprise || isOnboarding || eligibleForFreeRun;
+
   const validated = validateInputs(toolId, inputs);
   if (!validated.success) {
     return errResponse(ERR.VALIDATION_FAILED, validated.errors.join(" | "));
@@ -257,38 +271,26 @@ export async function POST(
   let didComplete = false;
 
   // Pre-insert generation row in pending state (for recovery if stream dies)
-  const { data: genRow, error: genInsertError } = await supabase
+  const { data: genRow } = await supabase
     .from("generations")
     .insert({
       user_id: userId,
       tool_id: toolId,
       tool_name: tool.name,
-      tool_category: tool.category,
-      input_data: validated.data,
+      inputs: validated.data,
       status: "streaming",
-      coins_deducted: 0,
-      output_content: null,
-      output_metadata: {},
-      token_count: null,
+      coin_cost: skipCoins ? 0 : coinCost,
     } as any)
     .select("id")
     .single();
 
-  if (genInsertError || !genRow) {
-    return errResponse(
-      ERR.GENERATION_FAILED,
-      "Failed to create generation record",
-    );
-  }
-
-  generationId = genRow.id;
+  generationId = genRow?.id ?? null;
 
   const encoder = new TextEncoder();
 
   const stream = new ReadableStream({
     async start(controller) {
       try {
-        const startedAt = Date.now();
         const response = await anthropic.messages.create({
           model: "claude-sonnet-4-5",
           max_tokens: 8192,
@@ -298,10 +300,9 @@ export async function POST(
         });
 
         let fullText = "";
-        let lastEventType: string | null = null;
 
         for await (const event of response) {
-          lastEventType = event.type;
+          
 
           if (
             event.type === "content_block_delta" &&
@@ -315,143 +316,86 @@ export async function POST(
 
           if (event.type === "message_delta") {
             totalTokens = event.usage?.output_tokens ?? 0;
-          }
 
-          if (event.type === "message_stop") {
-            didComplete = true;
+            if (event.delta.stop_reason === "end_turn") {
+              didComplete = true;
 
-            // ── 9. Atomic coin deduction (onFinish) ───────
-            if (!skipCoins && generationId) {
-              const { error: deductError } = await supabase.rpc(
-                "deduct_coins",
-                {
-                  p_user_id: userId,
-                  p_amount: coinCost,
-                  p_tool_id: toolId,
-                  p_generation_id: generationId,
-                },
-              );
-
-              if (deductError) {
-                // Refund if deduction RPC fails (shouldn't happen — RPC uses FOR UPDATE lock)
-                console.error("[generate] coin deduction failed:", deductError);
-              }
-
-              // ── 9b. Low coins email ───────────────────────────
-              const newBalance = balance - coinCost;
-              const plan = getPlan(planTier);
-              const threshold = Math.floor(plan.coins * 0.2);
-
-              if (newBalance > 0 && newBalance <= threshold) {
-                await sendEmail({
-                  to: user.email!,
-                  template: "low_coins",
-                  data: {
-                    firstName: profile.business_name,
-                    balance: newBalance,
-                    planName: plan.name,
+              // ── 9. Atomic coin deduction ───────
+              // if (!skipCoins && generationId) {
+                const { data, error: deductError } = await supabase.rpc(
+                  "deduct_coins",
+                  {
+                    p_user_id: userId,
+                    p_amount: coinCost,
+                    p_tool_id: toolId,
+                    p_generation_id: generationId,
                   },
-                }).catch(() => {});
-              }
-            }
-
-            // ── 10. Save complete generation ──────────────
-            if (generationId) {
-              const { error: updateError } = await supabase
-                .from("generations")
-                .update({
-                  output_content: fullText,
-                  status: "completed",
-                  coins_deducted: skipCoins ? 0 : coinCost,
-                  token_count: totalTokens,
-                  is_saved: true,
-                  saved_at: new Date().toISOString(),
-                  generation_time_ms: Date.now() - startedAt,
-                  updated_at: new Date().toISOString(),
-                } as any)
-                .eq("id", generationId);
-
-              if (updateError) {
-                console.error(
-                  "[generate] failed to save complete generation:",
-                  updateError,
                 );
+
+                const result = Array.isArray(data) ? data[0] : data;
+                if (deductError || !result?.success) {
+                  console.error(
+                    "[deduct_coins] failed:",
+                    deductError ?? result?.error_message,
+                  );
+                  controller.enqueue(
+                    encoder.encode(
+                      `3:${JSON.stringify({ code: "DEDUCTION_FAILED", message: deductError ? "Coin deduction error" : (result?.error_message ?? "Coin deduction failed") })}\n`,
+                    ),
+                  );
+                }
+              // }
+
+              // ── 10. Save complete generation ──────────────
+              if (generationId) {
+                await supabase
+                  .from("generations")
+                  .update({
+                    output: fullText,
+                    status: "complete",
+                    tokens_used: totalTokens,
+                    completed_at: new Date().toISOString(),
+                  })
+                  .eq("id", generationId);
               }
-            }
-            // ── 10b. First generation email ───────────────────
-            if (!skipCoins) {
-              const { count } = await supabase
-                .from("coin_transactions")
-                .select("*", { count: "exact", head: true })
-                .eq("user_id", userId)
-                .eq("type", "deduction");
 
-              if (count === 1) {
-                await sendEmail({
-                  to: user.email!,
-                  template: "first_generation",
-                  data: {
-                    firstName: profile.business_name,
-                    toolName: tool.name,
-                  },
-                }).catch(() => {});
+              if (eligibleForFreeRun) {
+                await supabase
+                  .from("profiles")
+                  .update({ free_tool_used: true, free_tool_id: toolId } as any)
+                  .eq("id", userId);
               }
+
+              checkMilestones(userId, supabase).catch(console.error);
+
+              trackEvent("generation_complete", {
+                distinct_id: userId,
+                tool_id: toolId,
+                tool_name: tool.name,
+                coin_cost: skipCoins ? 0 : coinCost,
+                plan_tier: planTier,
+                tokens: totalTokens,
+                is_onboarding: isOnboarding,
+                city: profile.city,
+                industry: profile.industry,
+              });
+
+              controller.enqueue(
+                encoder.encode(
+                  `d:{"finishReason":"stop","usage":{"promptTokens":0,"completionTokens":${totalTokens}}}\n`,
+                ),
+              );
             }
-
-            // ── 11. Check milestones ───────────────────────
-            checkMilestones(userId, supabase).catch(console.error);
-
-            // ── 12. Analytics ──────────────────────────────────
-            trackEvent("generation_complete", {
-              distinct_id: userId,
-              tool_id: toolId,
-              tool_name: tool.name,
-              coin_cost: skipCoins ? 0 : coinCost,
-              plan_tier: planTier,
-              tokens: totalTokens,
-              is_onboarding: isOnboarding,
-              city: profile.city,
-              industry: profile.industry,
-            });
-
-            // Send the finish signal
-            controller.enqueue(
-              encoder.encode(
-                `d:${JSON.stringify({ finishReason: "stop", usage: { promptTokens: 0, completionTokens: totalTokens } })}\n`,
-              ),
-            );
           }
-        }
-
-        if (!didComplete && generationId) {
-          console.error("[generate] stream closed before message_stop event", {
-            generationId,
-            lastEventType,
-            totalTokens,
-          });
-
-          await supabase
-            .from("generations")
-            .update({
-              status: "failed",
-              error_message: `Stream closed before message_stop event (lastEventType=${lastEventType})`,
-              output_content: fullText,
-              token_count: totalTokens,
-              updated_at: new Date().toISOString(),
-            })
-            .eq("id", generationId);
         }
       } catch (err: any) {
         console.error("[generate] streaming error:", err);
+
         // Mark generation as failed
         if (generationId) {
           await supabase
             .from("generations")
-            .update({
-              status: "failed",
-              error_message: err.message ?? "Unknown error",
-              updated_at: new Date().toISOString(),
-            })
+            .update({ status: "failed" })
             .eq("id", generationId);
         }
 
@@ -469,7 +413,7 @@ export async function POST(
     },
   });
 
-  // Return the stram in Vercel AI SDK format
+  // Return the stream in Vercel AI SDK format
   return new Response(stream, {
     headers: {
       "Content-Type": "text/plain; charset=utf-8",
@@ -501,7 +445,7 @@ async function checkMilestones(userId: string, supabase: any) {
       user_id: userId,
       type: "milestone",
       payload: { generations: count },
-      isread: false,
+      read: false,
     });
   }
 }

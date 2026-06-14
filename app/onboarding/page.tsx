@@ -1,1369 +1,427 @@
 'use client'
+// /app/(auth)/onboarding/page.tsx
+// Onboarding with contextual suggestion system.
+// Suggestions appear below text fields, pulsing gently to signal they exist.
+// Industry-aware: suggestions update the moment the user picks their industry.
+// Client-side only — no new API routes, no migrations, no new dependencies.
 
-// ═══════════════════════════════════════════════════════════════
-// /app/(dashboard)/onboarding/page.tsx
-// The 7-step onboarding wizard for Cerebre Plus.
-// Server-redirects here if onboarding_complete = false.
-// ═══════════════════════════════════════════════════════════════
-
-import * as React from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { motion, AnimatePresence } from 'framer-motion'
-import {
-  ArrowRight, ArrowLeft, Check, X, ChevronDown,
-  Search, Upload, Palette, Loader2, Sparkles,
-} from 'lucide-react'
-import { useForm, Controller } from 'react-hook-form'
-// import { zodResolver } from '@hookform/resolvers/zod'
-// import { z } from 'zod'
 import { createBrowserClient } from '@/lib/supabase/client'
-import {
-  detectIndustryFromName,
-  getCityAutocomplete,
-  mapLocationToCity,
-  INDUSTRY_CATEGORIES,
-  getIndustryPriceRanges,
-  type IndustryCategory,
-  type LocationResult,
-} from '@/lib/onboarding/business-intelligence'
-import {
-  getDescriptionSuggestion,
-  getTargetCustomerSuggestion,
-  getUniqueAdvantageSuggestion,
-  getPainPointSuggestion,
-} from '@/lib/onboarding/description-predictor'
-import {
-  ONBOARDING_STEPS,
-  getTimeRemaining,
-  getStepEncouragement,
-} from '@/lib/onboarding/description-predictor'
-import { LoadingStages } from '@/components/ui/LoadingStages'
-import { OutputRenderer } from '@/components/tools/OutputRenderer'
-import Image from 'next/image'
-import { FaFacebook } from "react-icons/fa";
-import { FaTiktok } from "react-icons/fa";
-import { FaLinkedin } from "react-icons/fa";
-import { FaSquareInstagram } from "react-icons/fa6";
-import { BsTwitterX } from "react-icons/bs";
+import { RefreshCw, Check, Sparkles } from 'lucide-react'
 
-// ─────────────────────────────────────────────────────────────
-// MARKETING CHALLENGE OPTIONS
-// ─────────────────────────────────────────────────────────────
+// ── Design tokens ─────────────────────────────────────────────
+const N = '#0B1F3A'
+const GOLD = '#E09818'
+const GL = '#F5B830'
+const TEAL = '#12D4B4'
+const W = '#EBF2FC'
+const MUTED = 'rgba(205,217,236,0.4)'
+const B = 'rgba(255,255,255,0.08)'
+const DIM = 'rgba(205,217,236,0.65)'
 
+// ── Constant lists ─────────────────────────────────────────────
+const INDUSTRIES = [
+  'fashion_clothing', 'food_restaurants', 'beauty_cosmetics', 'technology_software',
+  'real_estate', 'education_training', 'logistics_delivery', 'healthcare_wellness',
+  'events_entertainment', 'ecommerce_retail', 'finance_fintech', 'other',
+]
+const INDUSTRY_LABELS: Record<string, string> = {
+  fashion_clothing: 'Fashion / Clothing',
+  food_restaurants: 'Food & Restaurants',
+  beauty_cosmetics: 'Beauty & Cosmetics',
+  technology_software: 'Technology / Software',
+  real_estate: 'Real Estate',
+  education_training: 'Education & Training',
+  logistics_delivery: 'Logistics & Delivery',
+  healthcare_wellness: 'Healthcare & Wellness',
+  events_entertainment: 'Events & Entertainment',
+  ecommerce_retail: 'E-commerce / Retail',
+  finance_fintech: 'Finance / Fintech',
+  other: 'Other',
+}
+const GOALS = [
+  'Get more customers',
+  'Improve my content quality',
+  'Understand my competitors',
+  'Build a stronger brand',
+  'Increase revenue / sales',
+  'Launch a new product or service',
+]
 const CHALLENGES = [
-  { id: 'awareness', icon: '🔇', text: 'Not enough people know my business' },
-  { id: 'conversion', icon: '📉', text: 'People enquire but don\'t buy' },
-  { id: 'retention', icon: '🔄', text: 'Customers buy once and don\'t come back' },
-  { id: 'roi', icon: '💸', text: 'I\'m spending on marketing with no results' },
-  { id: 'time', icon: '⏰', text: 'No time to create content consistently' },
-  { id: 'channels', icon: '🎯', text: 'Don\'t know which channels to focus on' },
-  { id: 'competitors', icon: '🏆', text: 'Competitors look more professional online' },
-  { id: 'social_media', icon: '📱', text: 'I know I need social media but don\'t know what to post' },
-] as const
+  "I don't have time for marketing",
+  "I don't know where to start",
+  "I can't afford a marketing team",
+  "I post but get no engagement",
+  "I don't know what my competitors are doing",
+  "My branding is inconsistent",
+]
+const CITIES = [
+  'Lagos', 'Abuja', 'Port Harcourt', 'Kano', 'Ibadan', 'Enugu',
+  'Owerri', 'Benin City', 'Calabar', 'Warri', 'Akure', 'Asaba',
+]
 
-type ChallengeId = typeof CHALLENGES[number]['id']
-
-// ─────────────────────────────────────────────────────────────
-// BRAND VOICE OPTIONS
-// ─────────────────────────────────────────────────────────────
-
-const BRAND_VOICES = [
-  {
-    id: 'professional',
-    label: 'Professional & Authoritative',
-    description: 'The credible expert. Formal, precise, trustworthy.',
-    example: '"We provide certified financial advisory services tailored to your goals."',
-    emoji: '🎓',
-  },
-  {
-    id: 'friendly',
-    label: 'Friendly & Approachable',
-    description: 'The warm neighbour. Conversational, accessible, personable.',
-    example: '"We\'d love to help you find the perfect home — just reach out anytime!"',
-    emoji: '😊',
-  },
-  {
-    id: 'bold_direct',
-    label: 'Energetic & Bold',
-    description: 'The challenger. Direct, punchy, confident, action-oriented.',
-    example: '"Stop wasting time. Get results. Start today."',
-    emoji: '⚡',
-  },
-  {
-    id: 'luxury',
-    label: 'Luxury & Premium',
-    description: 'The exclusive brand. Refined, aspirational, beautifully curated.',
-    example: '"Crafted for those who demand the extraordinary in every detail."',
-    emoji: '💎',
-  },
-  {
-    id: 'storytelling',
-    label: 'Warm & Personal',
-    description: 'The trusted friend. Honest, human, storytelling-led.',
-    example: '"We started this because we felt the same frustration you\'re feeling now."',
-    emoji: '❤️',
-  },
-  {
-    id: 'mass_market',
-    label: 'Mass Market & Direct',
-    description: 'The people\'s brand. Plain language, high energy, no-nonsense.',
-    example: '"Best price in Lagos. Order now and get it delivered today!"',
-    emoji: '🔥',
-  },
-] as const
-
-// ─────────────────────────────────────────────────────────────
-// CHALLENGE → TOOL MAPPING
-// ─────────────────────────────────────────────────────────────
-
-const CHALLENGE_TO_TOOL: Record<ChallengeId, {
-  toolId: string
-  toolName: string
-  coinCost: number
-  reasoning: string
-  loadingMsgs: string[]
-  estimatedSecs: number
+// ── Suggestion data ────────────────────────────────────────────
+// All text is Nigerian-market specific. targetCustomers are one-line descriptions
+// a user can click to instantly fill that field on their onboarding form.
+const INDUSTRY_SUGGESTIONS: Record<string, {
+  targetCustomers: string[]
+  businessNameHints: string[]
 }> = {
-  awareness: {
-    toolId: 'strategy-brain', toolName: 'StrategyBrain', coinCost: 0,
-    reasoning: 'Your biggest challenge is visibility. StrategyBrain will build you a complete 90-day plan for getting known in your market.',
-    loadingMsgs: ['Reading your business profile…', 'Analysing your market opportunity…', 'Building your 90-day visibility strategy…', 'Adding Naira-specific recommendations…', 'Finalising your personalised plan…'],
-    estimatedSecs: 30,
+  fashion_clothing: {
+    targetCustomers: [
+      'Lagos women 25–40 seeking premium, locally-made fashion and bespoke styles',
+      'Corporate women who need stylish ready-to-wear pieces for work and events',
+      'Young professionals who prefer unique handcrafted designs over fast fashion',
+      'Brides and bridal parties seeking custom made-in-Nigeria aso-ebi and gowns',
+    ],
+    businessNameHints: [
+      "Amara's Stitch House",
+      'Lagos Thread Room',
+      'The Style Collective',
+      'Chic by Chi Couture',
+    ],
   },
-  social_media: {
-    toolId: 'content-calendar', toolName: 'Content Calendar', coinCost: 0,
-    reasoning: 'You need a content system. Content Calendar will build your full 30-day posting plan across all your platforms.',
-    loadingMsgs: ['Reading your industry and audience…', 'Planning your content themes…', 'Scheduling around Nigerian salary cycle…', 'Building your 30-day calendar…', 'Adding platform-specific formats…'],
-    estimatedSecs: 20,
+  food_restaurants: {
+    targetCustomers: [
+      'Lagos office workers wanting quality hot lunch delivered within 30 minutes',
+      'Families in Abuja seeking authentic Nigerian cuisine for celebrations and events',
+      'Young professionals who want healthy, home-cooked meal alternatives on weekdays',
+      'Corporate clients who need reliable catering for meetings and company events',
+    ],
+    businessNameHints: [
+      "Mama Ada's Kitchen",
+      'The Pepper Spot Abuja',
+      'Lagos Bites & Co.',
+      'Naija Flavours Catering',
+    ],
   },
-  conversion: {
-    toolId: 'sales-script-writer', toolName: 'SalesScriptWriter', coinCost: 0,
-    reasoning: 'People are interested but not buying. SalesScriptWriter will write you a step-by-step script for turning enquiries into paying customers.',
-    loadingMsgs: ['Studying your offer and audience…', 'Building objection-handling branches…', 'Writing your closing sequence…', 'Adding Nigerian buyer psychology…', 'Finalising your sales script…'],
-    estimatedSecs: 22,
+  beauty_cosmetics: {
+    targetCustomers: [
+      'Nigerian women 20–40 seeking premium skincare formulated for melanin-rich skin',
+      'Working Lagos women who want salon-quality services with shorter wait times',
+      'Brides and bridal parties needing complete beauty packages for their big day',
+      'Naturalists seeking organic, locally-sourced hair and skin products',
+    ],
+    businessNameHints: [
+      'GlowUp by Chi',
+      'The Beauty Bar Lagos',
+      'Flawless Skin Studio',
+      'Radiance Beauty Abuja',
+    ],
   },
-  time: {
-    toolId: 'caption-craft', toolName: 'CaptionCraft', coinCost: 0,
-    reasoning: 'Time is your constraint. CaptionCraft will generate a week\'s worth of ready-to-post captions in under a minute.',
-    loadingMsgs: ['Studying your brand voice…', 'Crafting scroll-stopping hooks…', 'Writing captions for your platform…', 'Adding hashtag strategy…', 'Including WhatsApp CTAs…'],
-    estimatedSecs: 12,
+  technology_software: {
+    targetCustomers: [
+      'Nigerian SMEs needing affordable software solutions with local support',
+      'Startups in Lagos and Abuja who need solid tech infrastructure from day one',
+      'Traditional businesses ready to digitise their operations and go online',
+      'Companies needing custom software built specifically for the African market',
+    ],
+    businessNameHints: [
+      'TechBridge Nigeria',
+      'Naija Dev Studio',
+      'Digital Gate NG',
+      'SoftCraft Solutions',
+    ],
   },
-  retention: {
-    toolId: 'win-back-campaign', toolName: 'WinBackCampaign', coinCost: 0,
-    reasoning: 'Keeping customers is cheaper than finding new ones. WinBackCampaign will give you a complete re-engagement sequence.',
-    loadingMsgs: ['Analysing your customer retention challenge…', 'Building re-engagement strategy…', 'Writing your "we miss you" messages…', 'Adding urgency mechanisms…', 'Finalising your win-back sequence…'],
-    estimatedSecs: 20,
+  real_estate: {
+    targetCustomers: [
+      'Lagos professionals earning ₦500K+/month looking for their first home purchase',
+      'Diaspora Nigerians investing in Lagos and Abuja real estate from abroad',
+      'Young couples seeking affordable land plots in emerging satellite towns',
+      'Investors seeking short-let property opportunities in Lagos Island or Lekki',
+    ],
+    businessNameHints: [
+      'Lagos Homes Collective',
+      'PrimeSpace Properties',
+      'Abuja Realty Partners',
+      'Capital Land NG',
+    ],
   },
-  roi: {
-    toolId: 'budget-optimizer', toolName: 'BudgetOptimizer', coinCost: 0,
-    reasoning: 'You need better returns from your marketing spend. BudgetOptimizer will show you exactly where to put every naira.',
-    loadingMsgs: ['Analysing your industry and market…', 'Calculating channel ROI for Nigerian businesses…', 'Building your optimal allocation plan…', 'Adding Naira-specific benchmarks…', 'Finalising your budget strategy…'],
-    estimatedSecs: 25,
+  education_training: {
+    targetCustomers: [
+      'Nigerian youth 18–30 seeking practical, career-ready vocational skills',
+      'Working professionals who want to upskill without leaving their day jobs',
+      'Business owners wanting industry certifications and structured business training',
+      'Parents seeking quality STEM tutoring and after-school programmes for children',
+    ],
+    businessNameHints: [
+      'Naija Skills Academy',
+      'The Learning Hub Lagos',
+      'Future Builders Institute',
+      'Growth Mind School',
+    ],
   },
-  channels: {
-    toolId: 'audience-profiler', toolName: 'AudienceProfiler', coinCost: 0,
-    reasoning: 'Knowing your customer tells you which channels to use. AudienceProfiler builds your complete Ideal Customer Portrait.',
-    loadingMsgs: ['Studying your industry and city…', 'Building your Nigerian customer profile…', 'Mapping buying psychology…', 'Identifying FOBE patterns…', 'Completing your audience portrait…'],
-    estimatedSecs: 28,
+  logistics_delivery: {
+    targetCustomers: [
+      'Lagos SMEs needing reliable same-day delivery across the island and mainland',
+      'E-commerce sellers looking for affordable last-mile delivery partners',
+      'Restaurants and food businesses needing fast, professional delivery riders',
+      'Businesses needing cargo clearing, forwarding, and warehousing in Nigeria',
+    ],
+    businessNameHints: [
+      'SwiftMove Logistics',
+      'Lagos Dispatch Co.',
+      'FastLink Delivery NG',
+      'Haul Pro Nigeria',
+    ],
   },
-  competitors: {
-    toolId: 'brand-positioner', toolName: 'BrandPositioner', coinCost: 0,
-    reasoning: 'Looking more professional starts with positioning. BrandPositioner crafts your unique market position statement.',
-    loadingMsgs: ['Analysing your competitive landscape…', 'Identifying your positioning territory…', 'Crafting your brand promise…', 'Writing your value proposition…', 'Finalising your brand positioning…'],
-    estimatedSecs: 28,
+  healthcare_wellness: {
+    targetCustomers: [
+      'Lagos residents 30–55 wanting accessible, affordable primary healthcare nearby',
+      'Corporate clients seeking HMO packages and employee wellness programmes',
+      'Pregnant women and new mothers needing quality maternal health support',
+      'Fitness-conscious Nigerians looking for personalised nutrition and wellness coaching',
+    ],
+    businessNameHints: [
+      'WellCare Nigeria',
+      'Lagos Health Plus',
+      'Vitalis Wellness Centre',
+      'Healing Springs Clinic',
+    ],
+  },
+  events_entertainment: {
+    targetCustomers: [
+      'Lagos professionals planning weddings with budgets from ₦5M upwards',
+      'Corporate clients needing professional event management for conferences',
+      'Families planning birthday, naming ceremony, and graduation celebrations',
+      'Brands seeking creative event activations and experiential marketing',
+    ],
+    businessNameHints: [
+      'Luxe Events Lagos',
+      'The Event Studio NG',
+      'Grand Occasions Abuja',
+      'Prestige Affairs Events',
+    ],
+  },
+  ecommerce_retail: {
+    targetCustomers: [
+      'Nigerian online shoppers 20–40 who value convenience and fast delivery',
+      'Budget-conscious buyers looking for genuine quality at competitive prices',
+      'Gift buyers searching for unique, locally-made Nigerian products and crafts',
+      'Bulk buyers and resellers sourcing products to sell through their own channels',
+    ],
+    businessNameHints: [
+      'ShopNaija Direct',
+      'Quality Finds NG',
+      'The Lagos Marketplace',
+      'DealsHub Nigeria',
+    ],
+  },
+  finance_fintech: {
+    targetCustomers: [
+      'Nigerian SMEs needing accessible business loans without traditional collateral',
+      'Salary earners wanting investment tools built for the Nigerian economic reality',
+      'Students and young professionals building their first savings and investment habits',
+      'Businesses needing faster, cheaper cross-border payment and FX solutions',
+    ],
+    businessNameHints: [
+      'MoneyBridge Nigeria',
+      'Lagos Capital Finance',
+      'WealthNaija Solutions',
+      'SmartSave NG',
+    ],
+  },
+  other: {
+    targetCustomers: [
+      'Nigerian business owners seeking reliable, affordable professional services',
+      'Lagos professionals who value quality work and excellent customer care',
+      'SMEs across Nigeria looking for solutions that understand the local market',
+      'Anyone who has been underserved or overcharged by existing market options',
+    ],
+    businessNameHints: [
+      '[Your Name] & Co.',
+      'The [Service] Hub Lagos',
+      '[Name] Professional Services',
+      'Quality [Service] Nigeria',
+    ],
   },
 }
 
-// ─────────────────────────────────────────────────────────────
-// STEP PROGRESS BAR
-// ─────────────────────────────────────────────────────────────
+// ── SuggestionStrip component ──────────────────────────────────
+// Renders below a field when there are relevant suggestions to show.
+// The container has a gentle pulsating glow animation — subtle enough
+// not to distract, but visible enough to signal the feature exists.
+interface SuggestionStripProps {
+  suggestions: string[]
+  label?: string
+  onSelect: (value: string) => void
+  visible: boolean
+}
 
-const StepProgressBar = ({
-  currentStep,
-  totalSteps,
-  firstName,
-}: {
-  currentStep: number
-  totalSteps: number
-  firstName: string
-}) => (
-  <div className="fixed top-0 left-0 right-0 z-50 bg-cerebre-ink/95 backdrop-blur-sm border-b border-cerebre-border px-4 py-3">
-    <div className="max-w-lg mx-auto">
-      {/* Dots */}
-      <div className="flex items-center gap-2 mb-2">
-        {Array.from({ length: totalSteps }).map((_, i) => {
-          const step = i + 1
-          const done = step < currentStep
-          const active = step === currentStep
+function SuggestionStrip({ suggestions, label, onSelect, visible }: SuggestionStripProps) {
+  const [justApplied, setJustApplied] = useState<string | null>(null)
 
+  const handleSelect = (s: string) => {
+    onSelect(s)
+    setJustApplied(s)
+    setTimeout(() => setJustApplied(null), 1500)
+  }
+
+  if (!visible || suggestions.length === 0) return null
+
+  return (
+    <div style={{
+      marginTop: 8,
+      padding: '12px 14px',
+      borderRadius: 12,
+      border: '1px solid rgba(18,212,180,0.22)',
+      background: 'rgba(18,212,180,0.04)',
+      // Pulsating animation applied to the container
+      animation: 'suggestionPulse 3s ease-in-out infinite',
+    }}>
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 9 }}>
+        <Sparkles size={11} style={{ color: TEAL, flexShrink: 0 }} />
+        <span style={{
+          fontSize: 10.5, fontWeight: 700, color: TEAL,
+          letterSpacing: '0.8px', textTransform: 'uppercase',
+        }}>
+          {label || 'Suggestions — tap to fill'}
+        </span>
+      </div>
+
+      {/* Chips */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+        {suggestions.map((s, i) => {
+          const applied = justApplied === s
           return (
-            <React.Fragment key={step}>
-              <motion.div
-                animate={{
-                  scale: active ? 1.15 : 1,
-                }}
-                className={[
-                  'flex items-center justify-center rounded-full flex-shrink-0',
-                  'transition-colors duration-300',
-                  active ? 'w-5 h-5 bg-cerebre-gold border-2 border-cerebre-gold' :
-                    done ? 'w-4 h-4 bg-cerebre-teal' :
-                      'w-4 h-4 bg-cerebre-border',
-                ].join(' ')}
-              >
-                {done && <Check className="h-2.5 w-2.5 text-cerebre-ink" />}
-                {active && (
-                  <div className="w-2 h-2 rounded-full bg-cerebre-ink" />
-                )}
-              </motion.div>
-              {i < totalSteps - 1 && (
-                <div className={[
-                  'flex-1 h-0.5 rounded-full transition-colors duration-300',
-                  step < currentStep ? 'bg-cerebre-teal' : 'bg-cerebre-border',
-                ].join(' ')} />
-              )}
-            </React.Fragment>
+            <button
+              key={i}
+              type="button"
+              onClick={() => handleSelect(s)}
+              style={{
+                padding: '5px 12px',
+                borderRadius: 20,
+                fontSize: 12,
+                fontWeight: 500,
+                fontFamily: 'inherit',
+                cursor: 'pointer',
+                transition: 'all 0.18s',
+                background: applied ? 'rgba(34,197,94,0.14)' : 'rgba(18,212,180,0.1)',
+                border: `1px solid ${applied ? 'rgba(34,197,94,0.4)' : 'rgba(18,212,180,0.28)'}`,
+                color: applied ? '#22C55E' : TEAL,
+              }}
+              onMouseEnter={e => {
+                if (!applied) {
+                  ; (e.currentTarget as HTMLButtonElement).style.background = 'rgba(18,212,180,0.18)'
+                    ; (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(18,212,180,0.5)'
+                }
+              }}
+              onMouseLeave={e => {
+                if (!applied) {
+                  ; (e.currentTarget as HTMLButtonElement).style.background = 'rgba(18,212,180,0.1)'
+                    ; (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(18,212,180,0.28)'
+                }
+              }}
+            >
+              {applied ? '✓ Applied' : s}
+            </button>
           )
         })}
       </div>
-
-      {/* Label */}
-      <div className="flex items-center justify-between">
-        <p className="text-xs text-cerebre-muted">
-          Step <span className="text-cerebre-text font-medium">{currentStep}</span> of {totalSteps}
-          {' '}· {ONBOARDING_STEPS[currentStep - 1]?.title}
-        </p>
-        <p className="text-xs text-cerebre-muted">{getTimeRemaining(currentStep)}</p>
-      </div>
     </div>
-  </div>
-)
-
-// ─────────────────────────────────────────────────────────────
-// TYPEWRITER EFFECT HOOK
-// ─────────────────────────────────────────────────────────────
-
-function useTypewriter(text: string, onComplete?: () => void) {
-  const [displayed, setDisplayed] = React.useState('')
-  const [isTyping, setIsTyping] = React.useState(false)
-
-  const startTyping = React.useCallback((content: string) => {
-    setDisplayed('')
-    setIsTyping(true)
-    let i = 0
-    const interval = setInterval(() => {
-      if (i >= content.length) {
-        clearInterval(interval)
-        setIsTyping(false)
-        onComplete?.()
-        return
-      }
-      setDisplayed(content.slice(0, i + 1))
-      i++
-    }, 12)  // ~80 chars/second
-    return () => clearInterval(interval)
-  }, [onComplete])
-
-  return { displayed, isTyping, startTyping }
-}
-
-// ─────────────────────────────────────────────────────────────
-// SUGGESTION CARD (ghost text + "Use this suggestion" button)
-// ─────────────────────────────────────────────────────────────
-
-const SuggestionCard = ({
-  suggestion,
-  onAccept,
-  label = 'Use this suggestion',
-}: {
-  suggestion: string
-  onAccept: (text: string) => void
-  label?: string
-}) => {
-  if (!suggestion) return null
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 6, height: 0 }}
-      animate={{ opacity: 1, y: 0, height: 'auto' }}
-      exit={{ opacity: 0, y: 6, height: 0 }}
-      transition={{ duration: 0.25 }}
-      className="mt-2 p-3 rounded-lg border border-cerebre-gold/25 bg-cerebre-gold-dim"
-    >
-      <p className="text-xs text-cerebre-muted italic leading-relaxed mb-2 line-clamp-3">
-        "{suggestion}"
-      </p>
-      <button
-        type="button"
-        onClick={() => onAccept(suggestion)}
-        className="text-xs font-semibold text-cerebre-gold hover:text-cerebre-gold-light transition-colors flex items-center gap-1"
-      >
-        <Sparkles className="h-3 w-3" /> {label}
-      </button>
-    </motion.div>
   )
 }
 
-// ─────────────────────────────────────────────────────────────
-// INDUSTRY DETECT CARD
-// ─────────────────────────────────────────────────────────────
-
-const IndustryDetectCard = ({
-  reasoning,
-  industry,
-  onConfirm,
-  onDismiss,
-}: {
-  reasoning: string
-  industry: string
-  onConfirm: () => void
-  onDismiss: () => void
-}) => (
-  <motion.div
-    initial={{ opacity: 0, y: 6, height: 0 }}
-    animate={{ opacity: 1, y: 0, height: 'auto' }}
-    exit={{ opacity: 0, height: 0 }}
-    className="mt-2 p-3 rounded-lg border border-cerebre-teal/30 bg-cerebre-teal-dim"
-  >
-    <p className="text-xs text-cerebre-muted mb-2">
-      💡 {reasoning}. We think you're in{' '}
-      <span className="font-semibold text-cerebre-text">{industry}</span> — is that right?
-    </p>
-    <div className="flex gap-2">
-      <button type="button" onClick={onConfirm}
-        className="flex items-center gap-1 text-xs font-semibold text-cerebre-teal hover:text-cerebre-teal-light transition-colors">
-        <Check className="h-3.5 w-3.5" /> Yes, that's right
-      </button>
-      <button type="button" onClick={onDismiss}
-        className="flex items-center gap-1 text-xs text-cerebre-muted hover:text-cerebre-text transition-colors ml-3">
-        <X className="h-3 w-3" /> No, let me change it
-      </button>
-    </div>
-  </motion.div>
-)
-
-// ─────────────────────────────────────────────────────────────
-// FORM STATE
-// ─────────────────────────────────────────────────────────────
-
-interface OnboardingState {
-  // Step 1
-  firstName: string
-
-  // Step 2
-  businessName: string
-  industry: IndustryCategory | ''
-  city: string
-  cityResult: LocationResult | null
-  yearsInBusiness: string
-  description: string
-
-  // Step 3
-  targetCustomer: string
-  painPointSolved: string
-  uniqueAdvantage: string
-  priceRange: string
-
-  // Step 4
-  brandVoice: string
-  languagePreference: string
-  primaryCta: string
-
-  // Step 5
-  whatsapp: string
-  phone: string
-  emailContact: string
-  address: string
-  instagram: string
-  facebook: string
-  linkedin: string
-  tiktok: string
-
-  // Step 6
-  logoUrl: string
-  brandColour: string
-
-  // Step 7 (challenge)
-  challenges: ChallengeId[]
+// ── City quick-select strip (distinct visual — amber accent) ───
+interface CityStripProps {
+  onSelect: (city: string) => void
+  visible: boolean
+  currentValue: string
 }
 
-const INITIAL_STATE: OnboardingState = {
-  firstName: '', businessName: '', industry: '', city: '',
-  cityResult: null, yearsInBusiness: '', description: '',
-  targetCustomer: '', painPointSolved: '', uniqueAdvantage: '', priceRange: '',
-  brandVoice: '', languagePreference: 'nigerian_english', primaryCta: 'WhatsApp Us',
-  whatsapp: '', phone: '', emailContact: '', address: '',
-  instagram: '', facebook: '', linkedin: '', tiktok: '',
-  logoUrl: '', brandColour: '#E09818', challenges: [],
-}
-
-// ─────────────────────────────────────────────────────────────
-// REUSABLE INPUT STYLES
-// ─────────────────────────────────────────────────────────────
-
-const inputClass = 'w-full h-10 bg-cerebre-navy rounded-input border border-cerebre-border px-3.5 text-sm text-cerebre-text placeholder:text-cerebre-muted outline-none transition-all duration-200 hover:border-cerebre-gold/40 focus:border-cerebre-gold focus:ring-2 focus:ring-cerebre-gold/20'
-const textareaClass = 'w-full bg-cerebre-navy rounded-card border border-cerebre-border px-3.5 py-2.5 text-sm text-cerebre-text placeholder:text-cerebre-muted outline-none transition-all duration-200 hover:border-cerebre-gold/40 focus:border-cerebre-gold focus:ring-2 focus:ring-cerebre-gold/20 resize-none leading-relaxed'
-const labelClass = 'block text-sm font-medium text-cerebre-text mb-1.5'
-
-// ─────────────────────────────────────────────────────────────
-// NAVIGATION BUTTONS
-// ─────────────────────────────────────────────────────────────
-
-const StepNav = ({
-  step,
-  totalSteps,
-  onBack,
-  onNext,
-  nextLabel = 'Continue',
-  nextLoading = false,
-  nextDisabled = false,
-}: {
-  step: number
-  totalSteps: number
-  onBack?: () => void
-  onNext: () => void
-  nextLabel?: string
-  nextLoading?: boolean
-  nextDisabled?: boolean
-}) => (
-  <div className="flex items-center justify-between pt-6 border-t border-cerebre-border/50 mt-8">
-    {step > 1 ? (
-      <button type="button" onClick={onBack}
-        className="flex items-center gap-1.5 text-sm text-cerebre-muted hover:text-cerebre-text transition-colors">
-        <ArrowLeft className="h-4 w-4" /> Back
-      </button>
-    ) : <div />}
-
-    <button
-      type="button"
-      onClick={onNext}
-      disabled={nextDisabled || nextLoading}
-      className="flex items-center gap-2 h-10 px-6 rounded-button text-sm font-semibold text-cerebre-ink bg-gradient-to-r from-cerebre-gold to-cerebre-gold-light hover:shadow-gold hover:-translate-y-px transition-all duration-200 active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
-    >
-      {nextLoading ? (
-        <Loader2 className="h-4 w-4 animate-spin" />
-      ) : (
-        <>
-          {nextLabel}
-          {nextLabel === 'Continue' && <ArrowRight className="h-4 w-4" />}
-        </>
-      )}
-    </button>
-  </div>
-)
-
-// ─────────────────────────────────────────────────────────────
-// STEP 1 — WELCOME
-// ─────────────────────────────────────────────────────────────
-
-const Step1Welcome = ({
-  firstName,
-  onNext,
-  onSkip,
-}: {
-  firstName: string
-  onNext: () => void
-  onSkip: () => void
-}) => {
-  const benefits = [
-    { icon: '⚡', number: '40', text: 'AI marketing tools are ready for your business' },
-    { icon: '🇳🇬', text: 'Built specifically for Nigerian and African market realities' },
-    { icon: '📣', text: 'Your competitors are already looking for this — don\'t be last' },
-  ]
-
+function CityStrip({ onSelect, visible, currentValue }: CityStripProps) {
+  if (!visible) return null
   return (
-    <div className="text-center">
-      {/* Logo animation */}
-      <motion.div
-        initial={{ scale: 0.8, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={{ type: 'spring', damping: 20, stiffness: 200, delay: 0.1 }}
-        className="mb-8"
-      >
-        <div className="w-16 h-16 rounded-2xl bg-black mx-auto flex items-center justify-center shadow-gold mb-3">
-          <Image
-            src="/CMA Logo.png"
-            alt="Cerebre Plus"
-            width={40}
-            height={40}
-            className="object-contain"
-          />
-        </div>
-
-        {/* <div className="w-16 h-16 rounded-2xl mx-auto flex items-center justify-center shadow-gold mb-3 relative overflow-hidden">
-  <Image
-    src="/Cerebre_Plus_2.png"
-    alt="Cerebre Plus"
-    fill
-    className="object-cover"
-  />
-</div> */}
-        <motion.p
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.35 }}
-          className="text-xs text-cerebre-muted"
-        >
-          by Cerebre Media Africa
-        </motion.p>
-      </motion.div>
-
-      {/* Headline */}
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.4 }}
-        className="mb-8"
-      >
-        <h1 className="font-display font-bold text-2xl md:text-3xl text-cerebre-text mb-3">
-          Welcome{firstName ? `, ${firstName}` : ''}. 👋
-        </h1>
-        <p className="text-base text-cerebre-muted leading-relaxed max-w-sm mx-auto">
-          Let's make your business <span className="text-cerebre-gold font-semibold">impossible to ignore.</span>
-        </p>
-      </motion.div>
-
-      {/* Benefits */}
-      <div className="space-y-3 mb-8 max-w-sm mx-auto text-left">
-        {benefits.map((b, i) => (
-          <motion.div
-            key={i}
-            initial={{ opacity: 0, x: -16 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.5 + i * 0.15 }}
-            className="flex items-start gap-3 p-3.5 rounded-xl border border-cerebre-border bg-cerebre-surface"
+    <div style={{
+      marginTop: 8,
+      padding: '10px 12px',
+      borderRadius: 10,
+      border: '1px solid rgba(245,184,48,0.2)',
+      background: 'rgba(245,184,48,0.04)',
+      animation: 'suggestionPulse 3s ease-in-out infinite',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 7 }}>
+        <span style={{ fontSize: 11 }}>📍</span>
+        <span style={{ fontSize: 10.5, fontWeight: 700, color: GL, letterSpacing: '0.8px', textTransform: 'uppercase' }}>
+          Quick select
+        </span>
+      </div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+        {CITIES.map(city => (
+          <button
+            key={city}
+            type="button"
+            onClick={() => onSelect(city)}
+            style={{
+              padding: '4px 11px', borderRadius: 16, fontSize: 12,
+              fontFamily: 'inherit', cursor: 'pointer', transition: 'all .15s',
+              background: currentValue === city ? 'rgba(245,184,48,0.2)' : 'rgba(255,255,255,0.05)',
+              border: `1px solid ${currentValue === city ? 'rgba(245,184,48,0.5)' : B}`,
+              color: currentValue === city ? GL : MUTED,
+              fontWeight: currentValue === city ? 700 : 400,
+            }}
           >
-            <span className="text-xl flex-shrink-0">{b.icon}</span>
-            <p className="text-sm text-cerebre-text leading-snug">
-              {b.number && (
-                <span className="font-bold text-cerebre-gold">{b.number} </span>
-              )}
-              {b.text}
-            </p>
-          </motion.div>
+            {city}
+          </button>
         ))}
       </div>
-
-      {/* CTA */}
-      <motion.div
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.95 }}
-        className="space-y-3"
-      >
-        <p className="text-sm text-cerebre-muted">It takes 3 minutes to set up.</p>
-        <button
-          type="button"
-          onClick={onNext}
-          className="w-full max-w-xs mx-auto flex items-center justify-center gap-2 h-12 rounded-button text-base font-bold text-cerebre-ink bg-gradient-to-r from-cerebre-gold to-cerebre-gold-light hover:shadow-gold hover:-translate-y-px transition-all duration-200 active:translate-y-0"
-        >
-          Start Setup <ArrowRight className="h-5 w-5" />
-        </button>
-        <button type="button" onClick={onSkip}
-          className="block text-xs text-cerebre-muted hover:text-cerebre-text transition-colors mx-auto pt-1">
-          Skip for now
-        </button>
-      </motion.div>
     </div>
   )
 }
 
-// ─────────────────────────────────────────────────────────────
-// STEP 2 — YOUR BUSINESS
-// ─────────────────────────────────────────────────────────────
-
-const Step2Business = ({
-  state,
-  update,
-  onNext,
-  onBack,
-}: {
-  state: OnboardingState
-  update: (key: keyof OnboardingState, value: any) => void
-  onNext: () => void
-  onBack: () => void
-}) => {
-  // const [detecting,    setDetecting]    = React.useState(false)
-  const [detection, setDetection] = React.useState<{ industry: IndustryCategory; reasoning: string } | null>(null)
-  const [showDetect, setShowDetect] = React.useState(false)
-  const [cityQuery, setCityQuery] = React.useState(state.city)
-  const [cityResults, setCityResults] = React.useState<LocationResult[]>([])
-  const [showCitySugg, setShowCitySugg] = React.useState(false)
-  const [descSuggestion, setDescSugg] = React.useState('')
-  const { startTyping } = useTypewriter(state.description)
-  const detectTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  // Auto-detect industry from business name with debounce
-  const handleNameChange = (name: string) => {
-    update('businessName', name)
-    if (detectTimer.current) clearTimeout(detectTimer.current)
-    detectTimer.current = setTimeout(() => {
-      const result = detectIndustryFromName(name)
-      if (result && result.confidence !== 'low') {
-        setDetection({ industry: result.industry as IndustryCategory, reasoning: result.reasoning })
-        setShowDetect(true)
-      } else {
-        setShowDetect(false)
-      }
-    }, 400)
-  }
-
-  const handleIndustryConfirm = () => {
-    if (detection) {
-      update('industry', detection.industry)
-      setShowDetect(false)
-    }
-  }
-
-  // City autocomplete
-  const handleCityChange = (q: string) => {
-    setCityQuery(q)
-    update('city', q)
-    const results = getCityAutocomplete(q)
-    setCityResults(results)
-    setShowCitySugg(results.length > 0 && q.length > 1)
-  }
-
-  const handleCitySelect = (loc: LocationResult) => {
-    update('city', loc.city)
-    update('cityResult', loc)
-    setCityQuery(loc.display)
-    setShowCitySugg(false)
-  }
-
-  // Description suggestion when industry + city are both set
-  React.useEffect(() => {
-    if (state.industry && state.city && !state.description) {
-      const sugg = getDescriptionSuggestion(
-        state.industry as IndustryCategory,
-        state.city,
-        state.businessName,
-      )
-      setDescSugg(sugg)
-    }
-  }, [state.industry, state.city, state.businessName, state.description])
-
-  const handleUseSuggestion = (text: string) => {
-    startTyping(text)
-    update('description', text)
-    setDescSugg('')
-  }
-
-  const canProceed = state.businessName && state.industry && state.city && state.description.length >= 20
-
-
-  const INDUSTRIES = [
-    'Fashion & Clothing', 'Food & Beverages', 'Beauty & Personal Care',
-    'Health & Wellness', 'Real Estate & Property', 'Education & Training',
-    'Technology & Software', 'Retail & E-commerce', 'Professional Services',
-    'Events & Entertainment', 'Logistics & Delivery', 'Finance & Fintech',
-    'Agriculture', 'Media & Content Creation', 'Hospitality & Travel',
-    'Manufacturing', 'Other'
-  ];
-
-  return (
-    <div className="space-y-5">
-      <div>
-        <h2 className="font-display font-semibold text-xl text-cerebre-text mb-1">Tell us about your business</h2>
-        <p className="text-sm text-cerebre-muted">This powers all your AI tool outputs — the more specific, the better.</p>
-      </div>
-
-      {/* Business name */}
-      <div>
-        <label className={labelClass} htmlFor="biz-name">Business name *</label>
-        <input
-          id="biz-name" type="text"
-          value={state.businessName}
-          onChange={(e) => handleNameChange(e.target.value)}
-          placeholder="e.g. Adaeze Skincare Lagos"
-          className={inputClass}
-        />
-        <AnimatePresence>
-          {showDetect && detection && (
-            <IndustryDetectCard
-              reasoning={detection.reasoning}
-              industry={detection.industry}
-              onConfirm={handleIndustryConfirm}
-              onDismiss={() => setShowDetect(false)}
-            />
-          )}
-        </AnimatePresence>
-      </div>
-
-      {/* Industry */}
-      <div>
-        <label className={labelClass} htmlFor="industry">Industry *</label>
-        <div className="relative">
-          <select
-            id="industry"
-            value={state.industry}
-            onChange={(e) => update('industry', e.target.value)}
-            className={`${inputClass} pr-9 appearance-none`}
-          >
-            <option value="">Select your industry…</option>
-            <option value="">Select industry</option>
-            {INDUSTRY_CATEGORIES.map((cat) => (
-              <option key={cat} value={cat}>{cat}</option>
-            ))}
-          </select>
-          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-cerebre-muted pointer-events-none" />
-        </div>
-      </div>
-
-      {/* City */}
-      <div>
-        <label className={labelClass} htmlFor="city">
-          City *
-          {state.cityResult && (
-            <span className="ml-2 text-cerebre-teal font-normal text-xs">
-              {state.cityResult.flag} {state.cityResult.display}
-            </span>
-          )}
-        </label>
-        <div className="relative">
-          <input
-            id="city" type="text"
-            value={cityQuery}
-            onChange={(e) => handleCityChange(e.target.value)}
-            onFocus={() => cityQuery.length > 1 && setShowCitySugg(true)}
-            onBlur={() => setTimeout(() => setShowCitySugg(false), 200)}
-            placeholder="e.g. Lekki, Lagos"
-            className={inputClass}
-            autoComplete="off"
-          />
-          {/* Autocomplete dropdown */}
-          <AnimatePresence>
-            {showCitySugg && (
-              <motion.div
-                initial={{ opacity: 0, y: 4 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 4 }}
-                className="absolute top-full left-0 right-0 mt-1 z-20 bg-cerebre-surface border border-cerebre-border rounded-card shadow-cerebre overflow-hidden"
-              >
-                {cityResults.map((loc) => (
-                  <button
-                    key={loc.display}
-                    type="button"
-                    onMouseDown={() => handleCitySelect(loc)}
-                    className="w-full text-left px-3.5 py-2.5 text-sm text-cerebre-text hover:bg-cerebre-gold-dim transition-colors flex items-center gap-2"
-                  >
-                    <span>{loc.flag}</span>
-                    <span>{loc.display}</span>
-                  </button>
-                ))}
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-      </div>
-
-      {/* Years in business */}
-      <div>
-        <label className={labelClass} htmlFor="years">Years in business</label>
-        <div className="relative">
-          <select
-            id="years"
-            value={state.yearsInBusiness}
-            onChange={(e) => update('yearsInBusiness', e.target.value)}
-            className={`${inputClass} pr-9 appearance-none`}
-          >
-            <option value="">Select…</option>
-            <option value="less_than_1">Less than 1 year</option>
-            <option value="1_to_3">1–3 years</option>
-            <option value="3_to_5">3–5 years</option>
-            <option value="5_to_10">5–10 years</option>
-            <option value="10_plus">10+ years</option>
-          </select>
-          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-cerebre-muted pointer-events-none" />
-        </div>
-      </div>
-
-      {/* Description */}
-      <div>
-        <div className="flex items-center justify-between mb-1.5">
-          <label className="text-sm font-medium text-cerebre-text" htmlFor="desc">
-            Business description *
-          </label>
-
-        </div>
-        <textarea
-          id="desc"
-          value={state.description}
-          onChange={(e) => {
-            if (e.target.value.length <= 250) update('description', e.target.value)
-          }}
-          placeholder="Describe what your business does, who you serve, and what makes you different…"
-          className={textareaClass}
-          rows={4}
-          maxLength={250}
-        />
-        <p className="mt-1 text-xs text-cerebre-muted">
-          This is the foundation of all your tool outputs — the more specific, the better your results.
-        </p>
-        <AnimatePresence>
-          {descSuggestion && !state.description && (
-            <SuggestionCard suggestion={descSuggestion} onAccept={handleUseSuggestion} />
-          )}
-        </AnimatePresence>
-      </div>
-
-      <StepNav step={2} totalSteps={7} onBack={onBack} onNext={onNext} nextDisabled={!canProceed} />
-    </div>
-  )
-}
-
-// ─────────────────────────────────────────────────────────────
-// STEP 3 — YOUR CUSTOMERS
-// ─────────────────────────────────────────────────────────────
-
-const Step3Customers = ({
-  state, update, onNext, onBack,
-}: { state: OnboardingState; update: (k: keyof OnboardingState, v: any) => void; onNext: () => void; onBack: () => void }) => {
-  const industry = state.industry as IndustryCategory | null
-  const priceRanges = industry ? getIndustryPriceRanges(industry) : []
-
-  const customerSugg = getTargetCustomerSuggestion(industry, state.city)
-  const advantageSugg = getUniqueAdvantageSuggestion(industry)
-  const painPointSugg = getPainPointSuggestion(industry)
-
-  const canProceed = state.targetCustomer.length >= 10 && state.uniqueAdvantage.length >= 5
-
-  return (
-    <div className="space-y-5">
-      <div>
-        <h2 className="font-display font-semibold text-xl text-cerebre-text mb-1">Who do you serve?</h2>
-        <p className="text-sm text-cerebre-muted">Define your ideal customer — this shapes every tool output.</p>
-      </div>
-
-      {/* Target customer */}
-      <div>
-        <div className="flex items-center justify-between mb-1.5">
-          <label className={labelClass.replace('mb-1.5', '')} htmlFor="target">Target customer *</label>
-          <span className="text-xs text-cerebre-muted">{state.targetCustomer.length}/250</span>
-        </div>
-        <textarea id="target" value={state.targetCustomer}
-          onChange={(e) => { if (e.target.value.length <= 250) update('targetCustomer', e.target.value) }}
-          placeholder="e.g. Lagos professionals aged 28–45 who want quality skincare but struggle to find trusted brands"
-          className={textareaClass} rows={3} maxLength={250} />
-        <AnimatePresence>
-          {customerSugg && !state.targetCustomer && (
-            <SuggestionCard suggestion={customerSugg} onAccept={(t) => update('targetCustomer', t)} />
-          )}
-        </AnimatePresence>
-      </div>
-
-      {/* Pain point */}
-      <div>
-        <label className={labelClass} htmlFor="pain">Primary problem you solve</label>
-        <input id="pain" type="text" value={state.painPointSolved}
-          onChange={(e) => update('painPointSolved', e.target.value)}
-          placeholder="e.g. Finding quality skincare products without fear of fakes or skin damage"
-          className={inputClass} />
-        <AnimatePresence>
-          {painPointSugg && !state.painPointSolved && (
-            <SuggestionCard suggestion={painPointSugg} onAccept={(t) => update('painPointSolved', t)} label="Use suggestion" />
-          )}
-        </AnimatePresence>
-      </div>
-
-      {/* Unique advantage */}
-      <div>
-        <label className={labelClass} htmlFor="advantage">Unique advantage *</label>
-        <input id="advantage" type="text" value={state.uniqueAdvantage}
-          onChange={(e) => update('uniqueAdvantage', e.target.value)}
-          placeholder="What makes you different from every other business in your industry?"
-          className={inputClass} />
-        <p className="mt-1 text-xs text-cerebre-muted">
-          This becomes your competitive edge in every piece of content.
-        </p>
-        <AnimatePresence>
-          {advantageSugg && !state.uniqueAdvantage && (
-            <SuggestionCard suggestion={advantageSugg} onAccept={(t) => update('uniqueAdvantage', t)} label="Use suggestion" />
-          )}
-        </AnimatePresence>
-      </div>
-
-      {/* Price range */}
-      <div>
-        <label className={labelClass} htmlFor="price">Starting price range</label>
-        <div className="relative">
-          <select id="price" value={state.priceRange}
-            onChange={(e) => update('priceRange', e.target.value)}
-            className={`${inputClass} pr-9 appearance-none`}>
-            <option value="">Select approximate price range…</option>
-            {priceRanges.map((r) => <option key={r} value={r}>{r}</option>)}
-          </select>
-          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-cerebre-muted pointer-events-none" />
-        </div>
-      </div>
-
-      <StepNav step={3} totalSteps={7} onBack={onBack} onNext={onNext} nextDisabled={!canProceed} />
-    </div>
-  )
-}
-
-// ─────────────────────────────────────────────────────────────
-// STEP 4 — BRAND VOICE
-// ─────────────────────────────────────────────────────────────
-
-const Step4BrandVoice = ({
-  state, update, onNext, onBack,
-}: { state: OnboardingState; update: (k: keyof OnboardingState, v: any) => void; onNext: () => void; onBack: () => void }) => {
-  const LANGUAGE_OPTIONS = [
-    { id: 'standard_english', label: 'Standard English', example: '"We provide premium solutions tailored to your business goals."' },
-    { id: 'nigerian_english', label: 'Nigerian English', example: '"We deliver top-notch service that will take your business to the next level!"' },
-    { id: 'mix_pidgin', label: 'Mix with Pidgin', example: '"Our service na the real deal — e go change your business completely."' },
-  ]
-
-  const CTA_OPTIONS = [
-    'WhatsApp Us', 'Call Us Now', 'Book Appointment',
-    'Shop Now', 'Get a Free Consultation', 'Start Your Free Trial', 'Visit Our Store',
-  ]
-
-  const canProceed = !!state.brandVoice
-
-  return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="font-display font-semibold text-xl text-cerebre-text mb-1">What's your brand voice?</h2>
-        <p className="text-sm text-cerebre-muted">This determines the tone of every piece of content we generate for you.</p>
-      </div>
-
-      {/* Brand voice cards */}
-      <div>
-        <p className={labelClass}>Choose your communication style</p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-          {BRAND_VOICES.map((voice) => {
-            const selected = state.brandVoice === voice.id
-            return (
-              <motion.button
-                key={voice.id}
-                type="button"
-                whileHover={{ y: -1 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => update('brandVoice', voice.id)}
-                className={[
-                  'text-left p-3.5 rounded-card border transition-all duration-200',
-                  selected
-                    ? 'border-cerebre-gold/60 bg-cerebre-gold-dim shadow-gold-sm'
-                    : 'border-cerebre-border bg-cerebre-surface hover:border-cerebre-gold/30',
-                ].join(' ')}
-              >
-                <div className="flex items-start gap-2.5">
-                  <span className="text-xl flex-shrink-0">{voice.emoji}</span>
-                  <div className="min-w-0">
-                    <p className={`text-sm font-semibold ${selected ? 'text-cerebre-gold' : 'text-cerebre-text'}`}>
-                      {voice.label}
-                    </p>
-                    <p className="text-xs text-cerebre-muted mt-0.5 leading-snug">{voice.description}</p>
-                    {selected && (
-                      <motion.p
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: 'auto' }}
-                        className="text-xs text-cerebre-muted italic mt-2 leading-relaxed border-t border-cerebre-gold/20 pt-2"
-                      >
-                        {voice.example}
-                      </motion.p>
-                    )}
-                  </div>
-                  {selected && (
-                    <div className="ml-auto flex-shrink-0 w-4 h-4 rounded-full bg-cerebre-gold flex items-center justify-center">
-                      <Check className="h-2.5 w-2.5 text-cerebre-ink" />
-                    </div>
-                  )}
-                </div>
-              </motion.button>
-            )
-          })}
-        </div>
-      </div>
-
-      {/* Language preference */}
-      <div>
-        <p className={labelClass}>Language preference</p>
-        <div className="space-y-2">
-          {LANGUAGE_OPTIONS.map((lang) => {
-            const selected = state.languagePreference === lang.id
-            return (
-              <label key={lang.id}
-                className={[
-                  'flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all duration-200',
-                  selected ? 'border-cerebre-gold/40 bg-cerebre-gold-dim' : 'border-cerebre-border hover:border-cerebre-gold/25',
-                ].join(' ')}>
-                <input type="radio" name="language" value={lang.id} checked={selected}
-                  onChange={() => update('languagePreference', lang.id)}
-                  className="mt-0.5 accent-cerebre-gold" />
-                <div>
-                  <p className={`text-sm font-medium ${selected ? 'text-cerebre-gold' : 'text-cerebre-text'}`}>{lang.label}</p>
-                  <p className="text-xs text-cerebre-muted italic mt-0.5">{lang.example}</p>
-                </div>
-              </label>
-            )
-          })}
-        </div>
-      </div>
-
-      {/* Primary CTA */}
-      <div>
-        <label className={labelClass} htmlFor="cta">Primary call-to-action</label>
-        <div className="relative">
-          <select id="cta" value={state.primaryCta}
-            onChange={(e) => update('primaryCta', e.target.value)}
-            className={`${inputClass} pr-9 appearance-none`}>
-            {CTA_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
-          </select>
-          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-cerebre-muted pointer-events-none" />
-        </div>
-      </div>
-
-      <StepNav step={4} totalSteps={7} onBack={onBack} onNext={onNext} nextDisabled={!canProceed} />
-    </div>
-  )
-}
-
-// ─────────────────────────────────────────────────────────────
-// STEP 5 — CONTACT DETAILS
-// ─────────────────────────────────────────────────────────────
-
-const Step5Contact = ({
-  state, update, onNext, onBack,
-}: { state: OnboardingState; update: (k: keyof OnboardingState, v: any) => void; onNext: () => void; onBack: () => void }) => {
-  const canProceed = state.whatsapp.length >= 10
-
-  return (
-    <div className="space-y-5">
-      <div>
-        <h2 className="font-display font-semibold text-xl text-cerebre-text mb-1">How do people reach you?</h2>
-        <p className="text-sm text-cerebre-muted">Your WhatsApp number appears on every piece of content we generate.</p>
-      </div>
-
-      {/* WhatsApp */}
-      <div>
-        <label className={labelClass} htmlFor="wa">WhatsApp number *</label>
-        <div className="flex gap-2">
-          <div className="flex items-center gap-1.5 h-10 px-3 rounded-input border border-cerebre-border bg-cerebre-navy text-sm text-cerebre-text flex-shrink-0">
-            🇳🇬 +234
-          </div>
-          <input id="wa" type="tel" value={state.whatsapp}
-            onChange={(e) => update('whatsapp', e.target.value)}
-            placeholder="08012345678"
-            className={`${inputClass} flex-1`} />
-        </div>
-        <p className="mt-1 text-xs text-cerebre-gold">
-          This becomes the CTA on all your marketing content
-        </p>
-      </div>
-
-      {/* Phone */}
-      <div>
-        <label className={labelClass} htmlFor="phone">Phone number <span className="text-cerebre-muted font-normal">(optional)</span></label>
-        <input id="phone" type="tel" value={state.phone}
-          onChange={(e) => update('phone', e.target.value)}
-          placeholder="08012345678" className={inputClass} />
-      </div>
-
-      {/* Email */}
-      <div>
-        <label className={labelClass} htmlFor="emailc">Business email</label>
-        <input id="emailc" type="email" value={state.emailContact}
-          onChange={(e) => update('emailContact', e.target.value)}
-          placeholder="hello@yourbusiness.com" className={inputClass} />
-      </div>
-
-      {/* Address */}
-      <div>
-        <label className={labelClass} htmlFor="addr">Physical address <span className="text-cerebre-muted font-normal">(optional — boosts local SEO)</span></label>
-        <input id="addr" type="text" value={state.address}
-          onChange={(e) => update('address', e.target.value)}
-          placeholder="e.g. 14 Admiralty Way, Lekki Phase 1, Lagos"
-          className={inputClass} />
-      </div>
-
-      {/* Social handles */}
-      <div>
-        <p className={labelClass}>Social media handles <span className="text-cerebre-muted font-normal">(optional)</span></p>
-        <div className="grid grid-cols-2 gap-2.5">
-          {[
-            { key: 'instagram', placeholder: '@yourhandle', icon: FaSquareInstagram },
-            { key: 'facebook', placeholder: 'Page name', icon: FaFacebook },
-            { key: 'linkedin', placeholder: 'Profile URL', icon: FaLinkedin },
-            { key: 'tiktok', placeholder: '@yourhandle', icon: FaTiktok },
-            { key: 'X (twitter)', placeholder: '@yourhandle', icon: BsTwitterX },
-          ].map((s) => {
-            const Icon = s.icon
-            return (
-              <div key={s.key} className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm">
-                  {typeof Icon === 'string' ? Icon : <Icon />}
-                </span>
-                <input type="text" value={(state as any)[s.key]}
-                  onChange={(e) => update(s.key as keyof OnboardingState, e.target.value)}
-                  placeholder={s.placeholder}
-                  className={`${inputClass} pl-9 text-xs`} />
-              </div>
-            )
-          })}
-        </div>
-      </div>
-
-      <StepNav step={5} totalSteps={7} onBack={onBack} onNext={onNext} nextDisabled={!canProceed} />
-    </div>
-  )
-}
-
-// ─────────────────────────────────────────────────────────────
-// STEP 6 — LOGO & BRAND
-// ─────────────────────────────────────────────────────────────
-
-const Step6Brand = ({
-  state, update, onNext, onBack,
-}: { state: OnboardingState; update: (k: keyof OnboardingState, v: any) => void; onNext: () => void; onBack: () => void }) => {
-  const [uploading, setUploading] = React.useState(false)
-  const [dragOver, setDragOver] = React.useState(false)
-  const [noLogo, setNoLogo] = React.useState(false)
-  const fileInputRef = React.useRef<HTMLInputElement>(null)
-
-  const extractColourFromImage = async (file: File): Promise<string | null> => {
-    return new Promise((resolve) => {
-      const img = new window.Image()
-      const canvas = document.createElement('canvas')
-      const ctx = canvas.getContext('2d')
-      img.onload = () => {
-        canvas.width = 32
-        canvas.height = 32
-        ctx?.drawImage(img, 0, 0, 32, 32)
-        const data = ctx?.getImageData(0, 0, 32, 32).data
-        if (!data) { resolve(null); return }
-        // Average colour of non-white pixels
-        let r = 0, g = 0, b = 0, count = 0
-        for (let i = 0; i < data.length; i += 4) {
-          if (data[i] > 240 && data[i + 1] > 240 && data[i + 2] > 240) continue
-          r += data[i]; g += data[i + 1]; b += data[i + 2]; count++
-        }
-        if (count === 0) { resolve(null); return }
-        const toHex = (n: number) => Math.round(n / count).toString(16).padStart(2, '0')
-        resolve(`#${toHex(r)}${toHex(g)}${toHex(b)}`)
-      }
-      img.onerror = () => resolve(null)
-      img.src = URL.createObjectURL(file)
-    })
-  }
-
-  const handleFile = async (file: File) => {
-    if (!file) return
-    if (file.size > 5 * 1024 * 1024) { alert('File too large. Max 5MB.'); return }
-    setUploading(true)
-
-    const colour = await extractColourFromImage(file)
-    if (colour) update('brandColour', colour)
-
-    const form = new FormData()
-    form.append('file', file)
-    try {
-      const res = await fetch('/api/profile/upload-logo', { method: 'POST', body: form })
-      if (res.ok) {
-        const { url } = await res.json()
-        update('logoUrl', url)
-      }
-    } catch { }
-    setUploading(false)
-  }
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault()
-    setDragOver(false)
-    const file = e.dataTransfer.files[0]
-    if (file) handleFile(file)
-  }
-
-  return (
-    <div className="space-y-5">
-      <div>
-        <h2 className="font-display font-semibold text-xl text-cerebre-text mb-1">Logo & brand identity</h2>
-        <p className="text-sm text-cerebre-muted">Your logo and colours make all exported content look professional.</p>
-      </div>
-
-      {/* Logo upload */}
-      {!noLogo ? (
-        <div>
-          <p className={labelClass}>Business logo</p>
-          <div
-            onDrop={handleDrop}
-            onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
-            onDragLeave={() => setDragOver(false)}
-            onClick={() => fileInputRef.current?.click()}
-            className={[
-              'relative flex flex-col items-center justify-center gap-3 p-8 rounded-card border-2 border-dashed cursor-pointer transition-all duration-200',
-              dragOver ? 'border-cerebre-gold bg-cerebre-gold-dim' : 'border-cerebre-border hover:border-cerebre-gold/40 hover:bg-cerebre-surface',
-            ].join(' ')}
-          >
-            <input ref={fileInputRef} type="file" accept=".png,.jpg,.jpeg,.svg,.webp"
-              className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f) }} />
-
-            {uploading ? (
-              <Loader2 className="h-8 w-8 text-cerebre-gold animate-spin" />
-            ) : state.logoUrl ? (
-              <div className="text-center">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={state.logoUrl} alt="Logo" className="h-16 mx-auto mb-2 object-contain" />
-                <p className="text-xs text-cerebre-teal">✅ Logo uploaded — click to change</p>
-              </div>
-            ) : (
-              <>
-                <Upload className="h-8 w-8 text-cerebre-muted" />
-                <div className="text-center">
-                  <p className="text-sm font-medium text-cerebre-text">Drag & drop your logo here</p>
-                  <p className="text-xs text-cerebre-muted mt-0.5">or click to browse · PNG, JPG, SVG · Max 5MB</p>
-                </div>
-              </>
-            )}
-          </div>
-
-          {/* Brand colour detected from logo */}
-          {state.logoUrl && (
-            <motion.div
-              initial={{ opacity: 0, y: 4 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="mt-2 flex items-center gap-2 text-xs text-cerebre-muted"
-            >
-              <div className="w-4 h-4 rounded-full border border-cerebre-border flex-shrink-0"
-                style={{ backgroundColor: state.brandColour }} />
-              <span>Detected brand colour:</span>
-              <span className="font-mono text-cerebre-text">{state.brandColour}</span>
-              <span>·</span>
-              <span className="text-cerebre-gold cursor-pointer">Adjust</span>
-            </motion.div>
-          )}
-
-          <button type="button" onClick={() => setNoLogo(true)}
-            className="mt-2 text-sm shimmer2 px-4 text-white hover:text-cerebre-gold-light transition-colors">
-            I don't have a logo yet →
-          </button>
-        </div>
-      ) : (
-        <div className="p-4 rounded-card border border-cerebre-border bg-cerebre-surface">
-          <div className="flex items-center gap-3 mb-2">
-            <div
-              className="w-10 h-10 rounded-xl flex items-center justify-center text-xs font-black flex-shrink-0"
-              style={{ backgroundColor: state.brandColour, color: '#06080E' }}
-            >
-              {(state.businessName || 'C').slice(0, 2).toUpperCase()}
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-cerebre-text">{state.businessName || 'Your Business'}</p>
-              <p className="text-xs text-cerebre-muted">Text-based logo preview</p>
-            </div>
-          </div>
-          <p className="text-xs text-cerebre-muted">
-            You can add your logo anytime from Brand Settings.
-          </p>
-          <button type="button" onClick={() => setNoLogo(false)}
-            className="mt-2 text-xs text-cerebre-gold hover:text-cerebre-gold-light transition-colors">
-            ← Upload logo instead
-          </button>
-        </div>
-      )}
-
-      {/* Brand colour manual input */}
-      <div>
-        <label className={labelClass} htmlFor="colour">Brand colour</label>
-        <div className="flex items-center gap-3">
-          <input type="color" value={state.brandColour}
-            onChange={(e) => update('brandColour', e.target.value)}
-            className="w-10 h-10 rounded-lg border border-cerebre-border cursor-pointer bg-transparent p-0.5" />
-          <input type="text" value={state.brandColour}
-            onChange={(e) => { if (/^#[0-9A-Fa-f]{0,6}$/.test(e.target.value)) update('brandColour', e.target.value) }}
-            className={`${inputClass} font-mono flex-1 uppercase`}
-            placeholder="#E09818" maxLength={7} />
-          <div className="w-10 h-10 rounded-lg border border-cerebre-border flex-shrink-0"
-            style={{ backgroundColor: state.brandColour }} />
-        </div>
-      </div>
-
-      <StepNav step={6} totalSteps={7} onBack={onBack} onNext={onNext} nextLabel="Continue" />
-    </div>
-  )
-}
-
-// ─────────────────────────────────────────────────────────────
-// CHALLENGE STEP (Between 6 & 7)
-// ─────────────────────────────────────────────────────────────
-
-const ChallengeStep = ({
-  selected,
-  onToggle,
-  onNext,
-  onBack,
-}: {
-  selected: ChallengeId[]
-  onToggle: (id: ChallengeId) => void
-  onNext: () => void
-  onBack: () => void
-}) => (
-  <div className="space-y-6">
-    <div className="text-center">
-      <h2 className="font-display font-bold text-2xl text-cerebre-text mb-2">
-        What's your #1 marketing challenge?
-      </h2>
-      <p className="text-sm text-cerebre-muted">
-        Select up to 3. This personalises your dashboard recommendations.
-      </p>
-    </div>
-
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-      {CHALLENGES.map((c) => {
-        const isSelected = selected.includes(c.id)
-        const atMax = selected.length >= 3 && !isSelected
-
-        return (
-          <motion.button
-            key={c.id}
-            type="button"
-            whileHover={!atMax ? { y: -1 } : undefined}
-            whileTap={!atMax ? { scale: 0.98 } : undefined}
-            onClick={() => { if (!atMax) onToggle(c.id) }}
-            className={[
-              'text-left p-3.5 rounded-card border transition-all duration-200',
-              isSelected
-                ? 'border-cerebre-gold bg-cerebre-gold-dim shadow-gold-sm'
-                : atMax
-                  ? 'border-cerebre-border bg-cerebre-navy opacity-40 cursor-not-allowed'
-                  : 'border-cerebre-border bg-cerebre-surface hover:border-cerebre-gold/35',
-            ].join(' ')}
-          >
-            <div className="flex items-start gap-2.5">
-              <span className="text-xl flex-shrink-0">{c.icon}</span>
-              <p className={`text-sm leading-snug ${isSelected ? 'text-cerebre-gold font-medium' : 'text-cerebre-text'}`}>
-                {c.text}
-              </p>
-              {isSelected && (
-                <div className="ml-auto flex-shrink-0 w-4 h-4 rounded-full bg-cerebre-gold flex items-center justify-center">
-                  <Check className="h-2.5 w-2.5 text-cerebre-ink" />
-                </div>
-              )}
-            </div>
-          </motion.button>
-        )
-      })}
-    </div>
-
-    <StepNav step={7} totalSteps={7} onBack={onBack} onNext={onNext}
-      nextLabel="Generate My First Result 🚀"
-      nextDisabled={selected.length === 0} />
-  </div>
-)
-
-// ─────────────────────────────────────────────────────────────
-// STEP 7 — MAGIC MOMENT
-// ─────────────────────────────────────────────────────────────
-
-const Step7MagicMoment = ({
-  state,
-  businessName,
-  onComplete,
-}: {
-  state: OnboardingState
+// ── Main onboarding page ───────────────────────────────────────
+interface FormState {
   businessName: string
-  onComplete: () => void
-}) => {
+  industry: string
+  city: string
+  targetCustomers: string
+  primaryGoal: string
+  primaryChallenge: string
+}
+
+export default function OnboardingPage() {
+  const router = useRouter()
+  const supabase = createBrowserClient()
+
+  const [step, setStep] = useState(0)
+  const [d, setD] = useState<FormState>({
+    businessName: '', industry: '', city: '',
+    targetCustomers: '', primaryGoal: '', primaryChallenge: '',
+  })
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+  const [focusedField, setFocusedField] = useState<string | null>(null)
+
+  // Pre-fill business name from signup session storage
+  useEffect(() => {
+    const biz = sessionStorage.getItem('signup_bizname')
+    if (biz) setD(p => ({ ...p, businessName: biz }))
+  }, [])
+
+  const set = useCallback((k: keyof FormState, v: string) =>
+    setD(p => ({ ...p, [k]: v })), [])
+
+  // ── Suggestion visibility logic ──
+  const sug = INDUSTRY_SUGGESTIONS[d.industry] || null
+
+  // Show name hints: industry is selected AND field is empty or very short
+  const showNameHints = !!sug && d.businessName.length < 4 && (focusedField === 'businessName' || d.businessName === '')
+
+  // Show target customer suggestions: industry selected AND field under 25 chars
+  const showTargetSugs = !!sug && d.targetCustomers.length < 25 &&
+    (focusedField === 'targetCustomers' || d.targetCustomers.length === 0)
+
+  // Show cities: field has < 3 chars or is focused
+  const showCities = d.city.length < 3 || focusedField === 'city'
+
+  // ── Validation ──
+  const isValid = () => {
+    if (step === 0) return d.businessName.trim() && d.industry && d.city.trim()
+    if (step === 1) return d.primaryGoal && d.primaryChallenge
+    return true
+  }
 
   const handleGetReward = async () => {
     try {
@@ -1385,537 +443,377 @@ const Step7MagicMoment = ({
     }
   }
 
-  const primaryChallenge = state.challenges[0] as ChallengeId | undefined
-  const toolConfig = primaryChallenge
-    ? CHALLENGE_TO_TOOL[primaryChallenge]
-    : CHALLENGE_TO_TOOL['awareness']
-
-  const [phase, setPhase] = React.useState<'intro' | 'generating' | 'complete'>('intro')
-  const [output, setOutput] = React.useState('')
-  const [error, setError] = React.useState<string | null>(null)
-
-  const runGeneration = async () => {
-    setPhase('generating')
-    setError(null)
-
-    const buildOnboardingInputs = (toolId: string, state: OnboardingState, primaryChallenge?: ChallengeId) => {
-      const CHALLENGE_TO_STRATEGY: Record<string, string> = {
-        awareness: 'build_online_presence',
-        leads: 'get_first_100_customers',
-        sales: 'double_monthly_revenue',
-        retention: 'increase_repeat_purchases',
-        launch: 'launch_new_product',
-        local: 'dominate_local_market',
-        organic: 'reduce_ad_spend_grow_organic',
-        whatsapp: 'build_whatsapp_email_list',
-        new_market: 'enter_new_city_market',
-        slow_period: 'recover_from_slow_period',
-      }
-
-      const PRICE_TO_BUDGET: Record<string, string> = {
-        under_100k: '0_50k',
-        '100k_500k': '50_150k',
-        '500k_1m': '150_500k',
-        '1m_5m': '500k_1m',
-        '5m_plus': '1m_plus',
-      }
-
-      const description = state.description?.trim() || `${state.businessName} is a ${state.industry} business based in ${state.city}, Nigeria.`
-      const preferredChannels = state.instagram || state.tiktok
-        ? (['instagram', 'tiktok', 'whatsapp'] as const).filter(Boolean)
-        : ['whatsapp', 'instagram']
-
-      switch (toolId) {
-        case 'strategy-brain':
-          return {
-            strategy_goal: CHALLENGE_TO_STRATEGY[primaryChallenge ?? 'awareness'] ?? 'build_online_presence',
-            current_situation: description,
-            monthly_budget: PRICE_TO_BUDGET[state.priceRange ?? ''] ?? '0_50k',
-            biggest_challenge: state.challenges.length
-              ? `Our biggest challenges include: ${state.challenges.join(', ')}. We need a clear strategy to overcome these and grow.`
-              : 'Growing brand awareness and acquiring new customers consistently in a competitive market.',
-            team_size: 'solo_founder',
-            time_available_per_week: '5_10hrs',
-            preferred_channels: preferredChannels,
-          }
-
-        case 'caption-craft':
-          return {
-            platform: ['instagram', 'facebook', 'tiktok'],
-            post_topic: `Marketing for ${state.businessName} in ${state.city}`,
-            post_type: 'engagement_question',
-            tone_override: 'use_brand_voice',
-            hashtag_strategy: 'include_full_set',
-            cta_preference: 'whatsapp_cta',
-            num_variations: '3',
-            caption_length: 'medium',
-            target_emotion: 'confidence',
-          }
-
-        case 'content-calendar':
-          return {
-            calendar_duration: '30',
-            platforms: ['instagram', 'facebook', 'whatsapp'],
-            posts_per_week: '5',
-            content_goals: ['awareness', 'engagement', 'leads'],
-            upcoming_promotions: '',
-            upcoming_events: '',
-            products_to_feature: '',
-            salary_cycle_awareness: true,
-            include_content_ideas: true,
-            include_caption_hooks: true,
-            include_repurpose_guide: false,
-          }
-
-        case 'sales-script-writer':
-          return {
-            script_type: 'whatsapp_conversation',
-            product_service: `${state.businessName} ${state.industry} service`,
-            lead_temperature: 'warm',
-            top_objection: 'price_too_high',
-            desired_outcome: 'book_appointment',
-            typical_sale_value: state.priceRange || undefined,
-            awoof_comparison: '',
-            previous_interaction: '',
-            include_all_five_objections: true,
-            include_all_four_closes: true,
-            include_voice_note_script: false,
-          }
-
-        case 'win-back-campaign':
-          return {
-            inactive_period: '30_days',
-            reason_for_inactivity: 'forgot_about_us',
-            win_back_offer: 'special discount for returning customers',
-            win_back_channel: 'whatsapp',
-            messages_in_sequence: '3',
-            what_changed_or_improved: '',
-            customer_segment: 'all_inactive_customers',
-            win_back_deadline: '',
-            include_akin_winback_formula: true,
-            include_reactivation_offer: true,
-            include_final_goodbye_message: true,
-          }
-
-        case 'budget-optimizer':
-          return {
-            total_monthly_budget: state.priceRange || '0_50k',
-            business_goal: 'drive_sales',
-            current_channels: ['whatsapp', 'instagram'],
-            past_ad_performance: '',
-            business_stage: 'early_stage_0_1yr',
-            target_customer_online_behaviour: 'moderate_online_daily_use',
-            seasonal_factor: '',
-            competitor_spend: '',
-            cost_per_lead_target: '',
-          }
-
-        case 'audience-profiler':
-          return {
-            current_customer_description: state.targetCustomer || 'local small business customers',
-            product_being_sold: state.description || 'products and services',
-            problems_you_solve: state.painPointSolved || 'help businesses get more customers',
-            target_city: 'lagos',
-            income_bracket: 'not_sure',
-            age_range: '25_35',
-            gender_focus: 'balanced_mixed',
-            depth: 'standard',
-            include_anti_profile: true,
-            include_messaging_matrix: true,
-            include_trust_touchpoints: true,
-          }
-
-        case 'brand-positioner':
-          return {
-            positioning_challenge: 'differentiate_from_competition',
-            competition_description: 'Other local businesses offering similar services',
-            your_differentiators: state.uniqueAdvantage || 'better value and trust',
-            positioning_geography: 'national_nigeria',
-            include_tagline_options: true,
-            include_brand_story: true,
-            include_competitive_map: true,
-            include_messaging_hierarchy: true,
-          }
-
-        default:
-          return {}
-      }
-    }
-
-
-    const inputs = buildOnboardingInputs(toolConfig.toolId, state, primaryChallenge)
-
+  // ── Save + complete ──
+  const saveAndFinish = async () => {
+    setSaving(true); setError('')
     try {
-      const response = await fetch(`/api/generate/${toolConfig.toolId}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          inputs, // Profile is auto-filled server-side
-          isOnboarding: true,
-        }),
-      })
-
-      if (!response.ok || !response.body) {
-        throw new Error('Generation failed')
-      }
-
-      const reader = response.body.getReader()
-      const decoder = new TextDecoder()
-      let full = ''
-
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
-
-        const chunk = decoder.decode(value, { stream: true })
-        const lines = chunk.split('\n')
-
-        for (const line of lines) {
-            full += line
-        }
-
-        setOutput(full)
-      }
-
-      await handleGetReward()
-      setPhase('complete')
-
-      // Confetti
-      const confetti = (await import('canvas-confetti')).default
-      confetti({
-        particleCount: 120,
-        spread: 80,
-        origin: { y: 0.6 },
-        colors: ['#E09818', '#F5C040', '#0CC4A0', '#FFFFFF'],
-      })
-    } catch (e: any) {
-      setError(e.message ?? 'Something went wrong. Please try again.')
-      setPhase('intro')
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('Not authenticated')
+      const { error: e } = await supabase.from('profiles').update({
+        business_name: d.businessName.trim(),
+        industry: d.industry,
+        city: d.city.trim(),
+        target_customers: d.targetCustomers.trim(),
+        primary_goal: d.primaryGoal,
+        primary_challenge: d.primaryChallenge,
+        onboarding_complete: true,
+      }).eq('id', user.id)
+      if (e) throw new Error(e.message)
+      setStep(2)
+      handleGetReward()
+      setTimeout(() => router.push('/dashboard'), 2200)
+    } catch (err: any) {
+      setError(err.message || 'Save failed. Please try again.')
+      setSaving(false)
     }
   }
 
-  return (
-    <div className="space-y-6">
-      {phase === 'intro' && (
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center space-y-6"
-        >
-          <div>
-            <p className="text-xs font-bold text-cerebre-gold uppercase tracking-widest mb-3">
-              Final step
-            </p>
-            <h2 className="font-display font-bold text-2xl text-cerebre-text mb-2">
-              Let's show you exactly what Cerebre Plus can do for{' '}
-              <span className="text-cerebre-gold">{businessName || 'your business'}</span>.
-            </h2>
-          </div>
+  const next = () => {
+    if (step === 1) saveAndFinish()
+    else setStep(s => s + 1)
+  }
 
-          {/* Recommended tool card */}
-          <div className="p-5 rounded-card border border-cerebre-gold/30 bg-cerebre-gold-dim text-left">
-            <div className="flex items-start gap-3 mb-3">
-              <div className="w-10 h-10 rounded-xl bg-cerebre-gold/20 border border-cerebre-gold/30 flex items-center justify-center flex-shrink-0">
-                <Sparkles className="h-5 w-5 text-cerebre-gold" />
+  // ── Shared input style ──
+  const inputStyle = (focused = false): React.CSSProperties => ({
+    width: '100%',
+    padding: '11px 14px',
+    background: 'rgba(255,255,255,0.07)',
+    border: `1.5px solid ${focused ? TEAL + '55' : B}`,
+    borderRadius: 10,
+    color: W,
+    fontFamily: 'inherit',
+    fontSize: 14,
+    outline: 'none',
+    boxSizing: 'border-box',
+    transition: 'border-color .18s',
+  })
+
+  const labelStyle: React.CSSProperties = {
+    display: 'block',
+    fontSize: 11,
+    fontWeight: 700,
+    color: MUTED,
+    letterSpacing: '1px',
+    textTransform: 'uppercase',
+    marginBottom: 7,
+  }
+
+  // ── Render ──
+  return (
+    <div style={{
+      minHeight: '100vh',
+      background: '#080F1F',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '20px 16px',
+    }}>
+      {/* Global animation keyframes */}
+      <style>{`
+        @keyframes suggestionPulse {
+          0%, 100% {
+            border-color: rgba(18,212,180,0.15);
+            box-shadow: 0 0 0 0 rgba(18,212,180,0);
+          }
+          50% {
+            border-color: rgba(18,212,180,0.38);
+            box-shadow: 0 0 0 5px rgba(18,212,180,0.04);
+          }
+        }
+        @keyframes spin { to { transform: rotate(360deg) } }
+        @keyframes fadeIn { from { opacity:0; transform:translateY(-4px) } to { opacity:1; transform:translateY(0) } }
+      `}</style>
+
+      <div style={{ width: '100%', maxWidth: 520 }}>
+
+        {/* Logo */}
+        <div style={{ textAlign: 'center', marginBottom: 28 }}>
+          <span style={{ fontFamily: "'Georgia',serif", fontSize: 22, fontWeight: 900, color: W, letterSpacing: 2 }}>CEREBRE</span>
+          <span style={{ fontFamily: "'Georgia',serif", fontSize: 22, fontWeight: 900, color: GL, letterSpacing: 2 }}> PLUS</span>
+        </div>
+
+        {/* Step progress bar */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0, marginBottom: 24 }}>
+          {['Business', 'Your Goals', 'Done!'].map((label, i) => (
+            <React.Fragment key={label}>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                <div style={{
+                  width: 28, height: 28, borderRadius: '50%',
+                  background: i < step ? TEAL : i === step ? `linear-gradient(135deg,${GOLD},${GL})` : B,
+                  border: `2px solid ${i < step ? TEAL : i === step ? GL : B}`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 11, fontWeight: 900,
+                  color: i < step ? '#fff' : i === step ? '#071528' : MUTED,
+                  transition: 'all .3s',
+                }}>
+                  {i < step ? '✓' : i + 1}
+                </div>
+                <span style={{ fontSize: 10, color: i === step ? GL : i < step ? TEAL : MUTED, fontWeight: i === step ? 700 : 400 }}>
+                  {label}
+                </span>
               </div>
-              <div>
-                <p className="text-xs text-cerebre-muted mb-0.5">Recommended for your challenge</p>
-                <p className="font-bold text-cerebre-gold">{toolConfig.toolName}</p>
+              {i < 2 && (
+                <div style={{ flex: 1, height: 1.5, background: i < step ? TEAL + '50' : B, margin: '0 6px 14px', transition: 'background .3s' }} />
+              )}
+            </React.Fragment>
+          ))}
+        </div>
+
+        {/* Card */}
+        <div style={{ background: N, border: `1px solid ${B}`, borderRadius: 18, padding: '28px 26px' }}>
+
+          {/* ─────── STEP 2: Done ─────── */}
+          {step === 2 && (
+            <div style={{ textAlign: 'center', padding: '20px 0', animation: 'fadeIn .4s ease' }}>
+              <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'rgba(34,197,94,0.14)', border: '2px solid rgba(34,197,94,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+                <Check size={26} style={{ color: '#22C55E' }} />
+              </div>
+              <h2 style={{ fontFamily: "'Georgia',serif", fontSize: 22, fontWeight: 900, color: W, marginBottom: 8 }}>Welcome to Cerebre Plus!</h2>
+              <p style={{ fontSize: 14, color: MUTED, lineHeight: 1.65 }}>
+                Your account is ready. Taking you to your dashboard — your first free tool is waiting there for you.
+              </p>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 18, color: TEAL, fontSize: 13 }}>
+                <RefreshCw size={14} style={{ animation: 'spin 0.8s linear infinite' }} />
+                Going to dashboard…
               </div>
             </div>
-            <p className="text-sm text-cerebre-text leading-relaxed">{toolConfig.reasoning}</p>
-          </div>
-
-          <div className="space-y-2">
-            <p className="text-sm text-cerebre-muted">
-              This runs completely free — zero coins deducted.
-            </p>
-            <button
-              type="button"
-              onClick={runGeneration}
-              className="w-full h-12 flex items-center justify-center gap-2 rounded-button text-base font-bold text-cerebre-ink bg-gradient-to-r from-cerebre-gold to-cerebre-gold-light hover:shadow-gold hover:-translate-y-px transition-all duration-200 active:translate-y-0"
-            >
-              🚀 Generate My Free First Result
-            </button>
-          </div>
-
-          {error && (
-            <p className="text-xs text-cerebre-coral">{error}</p>
           )}
-        </motion.div>
-      )}
 
-      {phase === 'generating' && (
-        <LoadingStages
-          messages={toolConfig.loadingMsgs}
-          estimatedSeconds={toolConfig.estimatedSecs}
-          toolName={toolConfig.toolName}
-        />
-      )}
+          {/* ─────── STEP 0: Business Details ─────── */}
+          {step === 0 && (
+            <div style={{ animation: 'fadeIn .35s ease' }}>
+              <h2 style={{ fontFamily: "'Georgia',serif", fontSize: 20, fontWeight: 900, color: W, marginBottom: 6 }}>
+                Set up your business
+              </h2>
+              <p style={{ fontSize: 13, color: MUTED, marginBottom: 22, fontStyle: 'italic' }}>
+                Takes under 2 minutes. Every Cerebre Plus tool uses this to personalise your results.
+              </p>
 
-      {phase === 'complete' && output && (
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4 }}
-        >
-          <div className="text-center mb-6">
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ type: 'spring', damping: 15, stiffness: 250, delay: 0.1 }}
-              className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-cerebre-teal-dim border border-cerebre-teal/30 mb-3"
-            >
-              <span className="text-2xl">🎉</span>
-            </motion.div>
-            <h3 className="font-display font-bold text-xl text-cerebre-text mb-1">
-              Your first result is ready!
-            </h3>
-            <p className="text-sm text-cerebre-muted">
-              This is what Cerebre Plus does for {businessName} — every single time you use a tool.
-            </p>
-          </div>
 
-          <OutputRenderer
-            content={output}
-            isStreaming={false}
-            toolName={toolConfig.toolName}
-             toolId={toolConfig.toolId} 
-          />
+              {/* Industry */}
+              <div style={{ marginBottom: 18 }}>
+                <label style={labelStyle}>Industry <span style={{ color: GOLD }}>*</span></label>
+                <select
+                  value={d.industry}
+                  onChange={e => set('industry', e.target.value)}
+                  style={{ ...inputStyle(), color: d.industry ? W : MUTED, cursor: 'pointer' }}
+                >
+                  <option value="">Select your industry…</option>
+                  {INDUSTRIES.map(id => (
+                    <option key={id} className='bg-black' value={id}>{INDUSTRY_LABELS[id]}</option>
+                  ))}
+                </select>
+                {/* Inline industry hint appears right after selecting */}
+                {d.industry && (
+                  <p style={{ fontSize: 11.5, color: TEAL, marginTop: 6, display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <span>✦</span>
+                    Suggestions for {INDUSTRY_LABELS[d.industry]} businesses are now active below.
+                  </p>
+                )}
+              </div>
 
-          <div className="mt-8 text-center">
+              {/* Business name */}
+              <div style={{ marginBottom: 18 }}>
+                <label style={labelStyle}>Business name <span style={{ color: GOLD }}>*</span></label>
+                <input
+                  type="text"
+                  value={d.businessName}
+                  onChange={e => set('businessName', e.target.value)}
+                  onFocus={() => setFocusedField('businessName')}
+                  onBlur={() => setFocusedField(null)}
+                  placeholder="e.g. Amara's Fashion House"
+                  style={inputStyle(focusedField === 'businessName')}
+                />
+                {/* Business name hints — only shown when industry is selected */}
+                {showNameHints && sug && (
+                  <SuggestionStrip
+                    suggestions={sug.businessNameHints}
+                    label="Example business names for your industry"
+                    onSelect={v => set('businessName', v)}
+                    visible
+                  />
+                )}
+              </div>
+
+
+
+              {/* City */}
+              <div style={{ marginBottom: 18 }}>
+                <label style={labelStyle}>City / Location <span style={{ color: GOLD }}>*</span></label>
+                <input
+                  type="text"
+                  value={d.city}
+                  onChange={e => set('city', e.target.value)}
+                  onFocus={() => setFocusedField('city')}
+                  onBlur={() => setTimeout(() => setFocusedField(f => f === 'city' ? null : f), 200)}
+                  placeholder="e.g. Lagos"
+                  style={inputStyle(focusedField === 'city')}
+                />
+                <CityStrip
+                  visible={showCities}
+                  currentValue={d.city}
+                  onSelect={v => { set('city', v); setFocusedField(null) }}
+                />
+              </div>
+
+              {/* Target customers */}
+              <div style={{ marginBottom: 4 }}>
+                <label style={labelStyle}>
+                  Who are your customers?
+                  <span style={{ fontSize: 10, fontWeight: 400, textTransform: 'none', marginLeft: 6 }}>(optional — improves every tool)</span>
+                </label>
+                <textarea
+                  value={d.targetCustomers}
+                  onChange={e => set('targetCustomers', e.target.value)}
+                  onFocus={() => setFocusedField('targetCustomers')}
+                  onBlur={() => setTimeout(() => setFocusedField(f => f === 'targetCustomers' ? null : f), 200)}
+                  rows={2}
+                  placeholder={
+                    d.industry
+                      ? 'Tap a suggestion below, or describe in your own words…'
+                      : 'e.g. Nigerian women 25–40 who value premium quality fashion'
+                  }
+                  style={{ ...inputStyle(focusedField === 'targetCustomers'), resize: 'vertical' as const, lineHeight: 1.6 }}
+                />
+                {/* Customer suggestions — the most impactful suggestions in the whole form */}
+                {showTargetSugs && sug && (
+                  <SuggestionStrip
+                    suggestions={sug.targetCustomers}
+                    label={d.industry ? `Ideas for ${INDUSTRY_LABELS[d.industry]} businesses` : 'Suggestions'}
+                    onSelect={v => set('targetCustomers', v)}
+                    visible
+                  />
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* ─────── STEP 1: Goals & Challenges ─────── */}
+          {step === 1 && (
+            <div style={{ animation: 'fadeIn .35s ease' }}>
+              <h2 style={{ fontFamily: "'Georgia',serif", fontSize: 20, fontWeight: 900, color: W, marginBottom: 6 }}>
+                What are you trying to achieve?
+              </h2>
+              <p style={{ fontSize: 13, color: MUTED, marginBottom: 20, fontStyle: 'italic' }}>
+                We use this to prioritise the tools that matter most for your situation.
+              </p>
+
+              {/* Primary goal */}
+              <div style={{ marginBottom: 18 }}>
+                <label style={labelStyle}>Primary goal <span style={{ color: GOLD }}>*</span></label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+                  {GOALS.map(g => (
+                    <button
+                      key={g}
+                      type="button"
+                      onClick={() => set('primaryGoal', g)}
+                      style={{
+                        padding: '10px 14px',
+                        borderRadius: 10,
+                        fontFamily: 'inherit',
+                        fontSize: 13,
+                        fontWeight: d.primaryGoal === g ? 700 : 500,
+                        cursor: 'pointer',
+                        background: d.primaryGoal === g ? `${GL}15` : B,
+                        border: `1.5px solid ${d.primaryGoal === g ? GL + '50' : B}`,
+                        color: d.primaryGoal === g ? GL : MUTED,
+                        textAlign: 'left',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 8,
+                        transition: 'all .15s',
+                      }}
+                    >
+                      {d.primaryGoal === g && <Check size={13} style={{ color: GL, flexShrink: 0 }} />}
+                      {g}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Primary challenge */}
+              <div>
+                <label style={labelStyle}>Biggest marketing challenge <span style={{ color: GOLD }}>*</span></label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+                  {CHALLENGES.map(c => (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => set('primaryChallenge', c)}
+                      style={{
+                        padding: '10px 14px',
+                        borderRadius: 10,
+                        fontFamily: 'inherit',
+                        fontSize: 13,
+                        fontWeight: d.primaryChallenge === c ? 700 : 500,
+                        cursor: 'pointer',
+                        background: d.primaryChallenge === c ? 'rgba(18,212,180,0.1)' : B,
+                        border: `1.5px solid ${d.primaryChallenge === c ? TEAL + '40' : B}`,
+                        color: d.primaryChallenge === c ? TEAL : MUTED,
+                        textAlign: 'left',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 8,
+                        transition: 'all .15s',
+                      }}
+                    >
+                      {d.primaryChallenge === c && <Check size={13} style={{ color: TEAL, flexShrink: 0 }} />}
+                      {c}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Error message */}
+          {error && (
+            <div style={{ padding: '10px 14px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)', borderRadius: 10, marginTop: 14, fontSize: 13, color: '#FCA5A5' }}>
+              {error}
+            </div>
+          )}
+
+          {/* Navigation button */}
+          {step < 2 && (
             <button
-              type="button"
-              onClick={onComplete}
-              className="inline-flex items-center gap-2 h-11 px-8 rounded-button text-sm font-bold text-cerebre-ink bg-gradient-to-r from-cerebre-gold to-cerebre-gold-light hover:shadow-gold hover:-translate-y-px transition-all duration-200"
+              onClick={next}
+              disabled={!isValid() || saving}
+              style={{
+                width: '100%',
+                marginTop: step === 0 ? 20 : 20,
+                padding: '14px',
+                borderRadius: 12,
+                fontFamily: 'inherit',
+                fontWeight: 800,
+                fontSize: 15,
+                background: !isValid() || saving
+                  ? B
+                  : `linear-gradient(135deg,${GOLD},${GL})`,
+                border: `1px solid ${!isValid() || saving ? B : GOLD + '50'}`,
+                color: !isValid() || saving ? MUTED : '#071528',
+                cursor: !isValid() || saving ? 'not-allowed' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 8,
+                transition: 'all .2s',
+              }}
             >
-              Continue to Your Dashboard <ArrowRight className="h-4 w-4" />
+              {saving
+                ? <><RefreshCw size={15} style={{ animation: 'spin 1s linear infinite' }} />Saving…</>
+                : step === 1
+                  ? 'Finish & go to dashboard →'
+                  : 'Continue →'
+              }
             </button>
-          </div>
-        </motion.div>
-      )}
-    </div>
-  )
-}
+          )}
+        </div>
 
-// ─────────────────────────────────────────────────────────────
-// MAIN ONBOARDING PAGE
-// ─────────────────────────────────────────────────────────────
+        {/* Footer note */}
+        <p style={{ textAlign: 'center', fontSize: 11.5, color: 'rgba(107,132,160,0.4)', marginTop: 14 }}>
+          No tool runs during setup · All details can be updated later in your profile
+        </p>
 
-export default function OnboardingPage() {
-  const supabase = createBrowserClient()
-  const router = useRouter()
-
-  const [step, setStep] = React.useState(1)
-  const [saving, setSaving] = React.useState(false)
-  const [state, setState] = React.useState<OnboardingState>(INITIAL_STATE)
-
-  // Load user name on mount
-  React.useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (user?.user_metadata?.full_name) {
-        const first = (user.user_metadata.full_name as string).split(' ')[0]
-        setState((s) => ({ ...s, firstName: first }))
-      }
-    })
-  }, [supabase])
-
-  const update = React.useCallback((key: keyof OnboardingState, value: any) => {
-    setState((s) => ({ ...s, [key]: value }))
-  }, [])
-
-  const toggleChallenge = (id: ChallengeId) => {
-    setState((s) => ({
-      ...s,
-      challenges: s.challenges.includes(id)
-        ? s.challenges.filter((c) => c !== id)
-        : [...s.challenges, id].slice(0, 3),
-    }))
-  }
-
-  // Save current step data to DB
-  const saveStep = async (stepNum: number) => {
-    if (saving) return
-    setSaving(true)
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) { setSaving(false); return }
-
-    const dbPayload: Record<string, any> = {}
-
-    if (stepNum === 2) {
-      Object.assign(dbPayload, {
-        business_name: state.businessName,
-        industry: state.industry,
-        city: state.city,
-        country: state.cityResult?.country ?? 'Nigeria',
-        years_in_business: state.yearsInBusiness ? parseInt(state.yearsInBusiness.split('_')[0]) : null,
-        description: state.description,
-        onboarding_step: 'step2_industry_audience',
-      })
-    } else if (stepNum === 3) {
-      Object.assign(dbPayload, {
-        target_customer: state.targetCustomer,
-        unique_advantage: state.uniqueAdvantage,
-        price_range: state.priceRange,
-        onboarding_step: 'step3_social_contact',
-      })
-    } else if (stepNum === 4) {
-      Object.assign(dbPayload, {
-        brand_voice: state.brandVoice,
-        language_preference: state.languagePreference,
-        primary_cta: state.primaryCta,
-        onboarding_step: 'step4_brand_voice',
-      })
-    } else if (stepNum === 5) {
-      Object.assign(dbPayload, {
-        whatsapp: state.whatsapp,
-        phone: state.phone,
-        email_contact: state.emailContact,
-        address: state.address,
-        instagram: state.instagram,
-        facebook: state.facebook,
-        linkedin: state.linkedin,
-        tiktok: state.tiktok,
-      })
-    } else if (stepNum === 6) {
-      Object.assign(dbPayload, {
-        logo_url: state.logoUrl,
-        brand_colour: state.brandColour,
-      })
-    } else if (stepNum === 7) {
-      Object.assign(dbPayload, {
-        marketing_challenges: state.challenges,
-        onboarding_step: 'magic_moment_completed',
-      })
-    }
-
-    if (Object.keys(dbPayload).length > 0) {
-      await supabase.from('profiles').update({ ...dbPayload, updated_at: new Date().toISOString() }).eq('id', user.id)
-    }
-
-    setSaving(false)
-  }
-
-  const goNext = async () => {
-
-    await saveStep(step)
-    setStep((s) => s + 1)
-    window.scrollTo({ top: 0, behavior: 'smooth' })
-  }
-
-  const goBack = () => {
-    setStep((s) => Math.max(1, s - 1))
-    window.scrollTo({ top: 0, behavior: 'smooth' })
-  }
-
-  const handleSkip = async () => {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (user) {
-      await supabase.from('profiles').update({
-        onboarding_complete: true,
-        onboarding_step: 'complete',
-      }).eq('id', user.id)
-    }
-    router.push('/dashboard')
-    router.refresh()
-  }
-
-
-  const handleComplete = async () => {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
-    await supabase.from('profiles').update({
-      onboarding_complete: true,
-      magic_moment_completed: true,
-      onboarding_step: 'complete',
-    }).eq('id', user.id)
-
-    router.push('/dashboard?welcome=1')
-    router.refresh()
-  }
-
-
-
-
-
-  // Total visual steps for the progress bar (7, excluding the challenge interlude)
-  const TOTAL_VISUAL_STEPS = 7
-  // Steps 1-6 = steps, between 6-7 = challenge, step 7 = magic moment
-  const progressStep =
-    step <= 6 ? step :
-      step === 7 ? 6 :   // Challenge is still "between" 6 and 7
-        7
-
-  return (
-    <div className="min-h-dvh bg-cerebre-ink">
-      {/* Step 1 has no progress bar */}
-      {step > 1 && (
-        <StepProgressBar
-          currentStep={progressStep}
-          totalSteps={TOTAL_VISUAL_STEPS}
-          firstName={state.firstName}
-        />
-      )}
-
-      {/* Content area */}
-      <div
-        className="max-w-lg mx-auto px-4 pb-16"
-        style={{ paddingTop: step > 1 ? '88px' : '2rem' }}
-      >
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={step}
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            transition={{ duration: 0.3 }}
-          >
-            {step === 1 && (
-              <Step1Welcome
-                firstName={state.firstName}
-                onNext={goNext}
-                onSkip={handleSkip}
-              />
-            )}
-
-            {step === 2 && (
-              <Step2Business state={state} update={update} onNext={goNext} onBack={goBack} />
-            )}
-
-            {step === 3 && (
-              <Step3Customers state={state} update={update} onNext={goNext} onBack={goBack} />
-            )}
-
-            {step === 4 && (
-              <Step4BrandVoice state={state} update={update} onNext={goNext} onBack={goBack} />
-            )}
-
-            {step === 5 && (
-              <Step5Contact state={state} update={update} onNext={goNext} onBack={goBack} />
-            )}
-
-            {step === 6 && (
-              <Step6Brand state={state} update={update} onNext={goNext} onBack={goBack} />
-            )}
-
-            {step === 7 && (
-              <ChallengeStep
-                selected={state.challenges}
-                onToggle={toggleChallenge}
-                onNext={goNext}
-                onBack={goBack}
-              />
-            )}
-
-            {step === 8 && (
-              <Step7MagicMoment
-                state={state}
-                businessName={state.businessName}
-                onComplete={handleComplete}
-              />
-            )}
-          </motion.div>
-        </AnimatePresence>
       </div>
     </div>
   )

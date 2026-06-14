@@ -32,11 +32,15 @@
   "crons": [
     {
       "path": "/api/cron/weekly-pulse",
-      "schedule": "0 6 * * 1"
+      "schedule": "0 7 * * 1"
     },
     {
       "path": "/api/cron/daily-ideas",
-      "schedule": "0 5 * * *"
+      "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/cron/coin-alerts",
+      "schedule": "0 8 * * *"
     },
     {
       "path": "/api/cron/expire-free-plans",

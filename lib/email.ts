@@ -32,6 +32,7 @@ import {
   TrialEndingSoonEmail,
   TrialExpiredEmail,
   UpgradeConfirmEmail,
+  AdminMessageEmail,
 } from '@/emails'
 
 // ── Resend singleton ──────────────────────────────────────────
@@ -61,6 +62,7 @@ export type EmailTemplate =
   | 'trial_ending_soon'     // 7 days and 3 days before trial expires
   | 'trial_expired'         // Day trial expires
   | 'upgrade_confirm'       // Any plan upgrade (Starter or Growth)
+  | 'admin_message'         // Admin broadcast message
 
 // ─────────────────────────────────────────────────────────────
 // EMAIL TRIGGERS — when each template fires
@@ -81,6 +83,7 @@ export const EMAIL_TRIGGERS: Record<EmailTemplate, string> = {
   trial_ending_soon:  'Cron: 7 days before free_expires_at AND 3 days before',
   trial_expired:      'Cron: On the day free_expires_at passes',
   upgrade_confirm:    'Immediately after any paid plan upgrade (verify-payment route)',
+  admin_message:      'Admin broadcast via messages API (admin console)',
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -253,6 +256,14 @@ function buildTemplate(
         planName:   d.planName,
         coins:      d.coins,
         validUntil: d.validUntil,
+      }),
+    },
+
+    admin_message: {
+      subject:   d.subject,
+      component: React.createElement(AdminMessageEmail, {
+        firstName: d.firstName,
+        message:   d.message,
       }),
     },
   }

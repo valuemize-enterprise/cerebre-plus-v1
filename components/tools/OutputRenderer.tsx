@@ -19,6 +19,7 @@ import {
   Clock, Target, Share2, DownloadCloud,
 } from 'lucide-react'
 import { parseToolOutput, type ParsedSection, type LayoutType } from '@/lib/tools/output-parsers'
+import { RatingWidget } from '@/components/tools/RatingWidget'
 
 // ─── Design tokens ──────────────────────────────────────────
 const N1    = '#0B1F3A'   // navy
@@ -267,7 +268,18 @@ function BigCopyBtn({ text, label = 'Copy', secondary = false }: { text:string; 
 }
 
 // ─── Bottom action bar ───────────────────────────────────────
-type ActProps = { onRegenerate?:()=>void; isSaved?:boolean; onSave?:()=>void; isStreaming?:boolean }
+type ActProps = {
+  onRegenerate?:  () => void
+  isSaved?:       boolean
+  onSave?:        () => void
+  isStreaming?:   boolean
+  // Rating context — passed from OutputRenderer down to OutputFooter
+  toolId?:        string
+  toolCategory?:  'text' | 'design' | 'whatsapp' | 'strategy' | 'calendar' | 'sequence'
+  coinsSpent?:    number
+  generationId?:  string
+  variantCount?:  number
+}
 
 function ActionBar({ allText, isStreaming, onRegenerate, isSaved, onSave }: { allText:string } & ActProps) {
   const { copied, run } = useCopy(allText)
@@ -310,6 +322,43 @@ function ActionBar({ allText, isStreaming, onRegenerate, isSaved, onSave }: { al
           <RefreshCw size={14} style={{animation:isStreaming?'or-spin 1s linear infinite':'none'}}/>
         </button>
       )}
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────
+// OUTPUT FOOTER — ActionBar + RatingWidget combined
+// Every layout renders this at the bottom.
+// ─────────────────────────────────────────────────────────────
+function OutputFooter({
+  allText, isStreaming, onRegenerate, isSaved, onSave,
+  toolId, toolCategory, coinsSpent, generationId, variantCount,
+}: { allText: string } & ActProps) {
+  const [rated, setRated] = useState(false)
+
+  return (
+    <div>
+      {/* Rating widget — appears above the sticky action bar, only when output exists */}
+      {allText && !isStreaming && !rated && toolId && (
+        <div style={{ padding:'10px 14px 0' }}>
+          <RatingWidget
+            toolId={toolId}
+            toolCategory={toolCategory ?? 'text'}
+            generationId={generationId}
+            coinsSpent={coinsSpent}
+            variantCount={variantCount}
+            compact={false}
+            onRated={(thumbs) => {
+              // After thumbs tap, allow the full widget to show but mark as initiated
+              if (thumbs === 'up') setTimeout(() => setRated(true), 4000)
+            }}
+          />
+        </div>
+      )}
+      <ActionBar
+        allText={allText} isStreaming={isStreaming}
+        onRegenerate={onRegenerate} isSaved={isSaved} onSave={onSave}
+      />
     </div>
   )
 }
@@ -439,7 +488,7 @@ function CarouselLayout({ copy, guidance, allText, isStreaming, toolName, ...ap 
         ))}
       </div>
 
-      <ActionBar allText={allText} isStreaming={isStreaming} {...ap}/>
+      <OutputFooter allText={allText} isStreaming={isStreaming} {...ap}/>
     </div>
   )
 }
@@ -529,7 +578,7 @@ function WhatsAppLayout({ copy, guidance, allText, isStreaming, ...ap }: {
         {guidance.map(g=><StrategyPanel key={g.id} text={g.text} label={g.label}/>)}
       </div>
 
-      <ActionBar allText={allText} isStreaming={isStreaming} {...ap}/>
+      <OutputFooter allText={allText} isStreaming={isStreaming} {...ap}/>
     </div>
   )
 }
@@ -573,8 +622,7 @@ function StrategyLayout({ copy, guidance, allText, isStreaming, ...ap }: {
         {guidance.map(g=><StrategyPanel key={g.id} text={g.text} label={g.label}/>)}
       </div>
 
-      <ActionBar allText={allText} isStreaming={isStreaming} {...ap}
-      />
+      <OutputFooter allText={allText} isStreaming={isStreaming} {...ap}/>
     </div>
   )
 }
@@ -634,7 +682,7 @@ function SequenceLayout({ copy, guidance, allText, isStreaming, ...ap }: {
         </button>
       </div>
 
-      <ActionBar allText={allText} isStreaming={isStreaming} {...ap}/>
+      <OutputFooter allText={allText} isStreaming={isStreaming} {...ap}/>
     </div>
   )
 }
@@ -724,7 +772,7 @@ function CalendarLayout({ copy, guidance, allText, isStreaming, ...ap }: {
         {guidance.map(g=><StrategyPanel key={g.id} text={g.text} label={g.label}/>)}
       </div>
 
-      <ActionBar allText={allText} isStreaming={isStreaming} {...ap}/>
+      <OutputFooter allText={allText} isStreaming={isStreaming} {...ap}/>
     </div>
   )
 }
@@ -764,7 +812,7 @@ function DocumentLayout({ copy, guidance, allText, isStreaming, ...ap }: {
         {guidance.map(g=><StrategyPanel key={g.id} text={g.text} label={g.label}/>)}
         {copy.length > 2 && <div style={{ marginTop:8 }}><BigCopyBtn text={allText} label="Copy full document" secondary/></div>}
       </div>
-      <ActionBar allText={allText} isStreaming={isStreaming} {...ap}/>
+      <OutputFooter allText={allText} isStreaming={isStreaming} {...ap}/>
     </div>
   )
 }
@@ -789,7 +837,7 @@ function ReportLayout({ copy, guidance, allText, isStreaming, ...ap }: {
         ))}
         {guidance.map(g=><StrategyPanel key={g.id} text={g.text} label={g.label}/>)}
       </div>
-      <ActionBar allText={allText} isStreaming={isStreaming} {...ap}/>
+      <OutputFooter allText={allText} isStreaming={isStreaming} {...ap}/>
     </div>
   )
 }
@@ -810,7 +858,7 @@ function PlainLayout({ copy, guidance, allText, isStreaming, ...ap }: {
         ))}
         {guidance.map(g=><StrategyPanel key={g.id} text={g.text} label={g.label}/>)}
       </div>
-      <ActionBar allText={allText} isStreaming={isStreaming} {...ap}/>
+      <OutputFooter allText={allText} isStreaming={isStreaming} {...ap}/>
     </div>
   )
 }
@@ -825,7 +873,9 @@ export interface OutputRendererProps {
   toolId?:        string
   toolName?:      string
   outputSections?: string[]   // ← pass from tool definition (tool.outputSections)
+  toolCategory?:  'text' | 'design' | 'whatsapp' | 'strategy' | 'calendar' | 'sequence'
   generationId?:  string
+  coinsSpent?:    number
   isSaved?:       boolean
   onSave?:        () => void
   onRegenerate?:  () => void
@@ -834,7 +884,8 @@ export interface OutputRendererProps {
 
 export function OutputRenderer({
   content, text, isStreaming, toolId, toolName,
-  outputSections = [], isSaved, onSave, onRegenerate,
+  outputSections = [], toolCategory = 'text', coinsSpent, generationId,
+  isSaved, onSave, onRegenerate,
 }: OutputRendererProps) {
   const raw = content ?? text ?? ''
 
@@ -848,7 +899,10 @@ export function OutputRenderer({
   const allText  = parsed?.allCopyText ?? raw
   const layout   = parsed?.layout ?? 'plain'
 
-  const ap: ActProps = { onRegenerate, isSaved, onSave, isStreaming }
+  const ap: ActProps = {
+    onRegenerate, isSaved, onSave, isStreaming,
+    toolId, toolCategory, coinsSpent, generationId,
+  }
   const lp = { copy, guidance, allText, isStreaming, toolName }
 
   return (
@@ -872,7 +926,7 @@ export function OutputRenderer({
                 <div style={{ flex:1, overflowY:'auto', padding:'14px' }}>
                   <UseCopyBlock text={clean(raw)} badge="YOUR OUTPUT"/>
                 </div>
-                <ActionBar allText={raw} {...ap}/>
+                <OutputFooter allText={raw} {...ap}/>
               </div>
             )
           }

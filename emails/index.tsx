@@ -471,6 +471,17 @@ export function TrialExpiredEmail({ firstName }: { firstName: string }) {
 // ═══════════════════════════════════════════════════════════════
 // 13. UPGRADE CONFIRMATION  (trigger: any plan upgrade: Starter or Growth)
 // ═══════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════
+// 14. ADMIN MESSAGE  (trigger: admin sends broadcast via /api/admin/messages)
+// ═══════════════════════════════════════════════════════════════
+export function AdminMessageEmail({ firstName, message }: { firstName: string; message: string }) {
+  return (
+    <EmailLayout preview={`Message from Cerebre Plus`}>
+      <Text style={{ color: DIM, fontSize: 14, lineHeight: 1.7, margin: 0, whiteSpace: 'pre-wrap' }}>{message}</Text>
+    </EmailLayout>
+  )
+}
+
 export function UpgradeConfirmEmail({ firstName, planName, coins, validUntil }: {
   firstName: string; planName: string; coins: number; validUntil: string
 }) {
