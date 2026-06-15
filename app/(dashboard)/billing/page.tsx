@@ -500,8 +500,12 @@ export default function BillingPage() {
     initPaystack('plan_upgrade', { planId }), [initPaystack]);
 
 
-  const handleBulk = useCallback((packId: string) =>
-    initPaystack('topup_bulk', { packId }), [initPaystack]);
+  const handleBulk = useCallback((pack: typeof BULK_PACKS[number]) =>
+    initPaystack('topup_bulk', {
+      packId: pack.id,
+      amount: pack.price,
+      coins: pack.coins,
+    }), [initPaystack]);
 
   const handleCustom = useCallback((qty: number, price: number) =>
     initPaystack('topup_custom', { coinQty: qty, price }), [initPaystack]);
@@ -662,7 +666,7 @@ export default function BillingPage() {
                       <p style={{ fontSize: 11, fontWeight: 700, color: TEAL, marginBottom: 4 }}>Save {pack.savingPct}%</p>
                       <p style={{ fontSize: 10, color: MUTED, marginBottom: 14 }}>₦{pack.perCoin}/coin</p>
                       <button
-                        onClick={() => handleBulk(pack.id)}
+                        onClick={() => handleBulk(pack)}
                         disabled={paying !== null}
                         style={{ width: '100%', padding: '10px', borderRadius: 8, background: `linear-gradient(135deg,${GOLD},${GL})`, color: VOID, fontWeight: 800, fontSize: 12.5, border: 'none', cursor: paying !== null ? 'not-allowed' : 'pointer', fontFamily: 'inherit', opacity: paying !== null ? .6 : 1 }}
                       >

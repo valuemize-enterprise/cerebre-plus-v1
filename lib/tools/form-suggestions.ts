@@ -27,6 +27,8 @@ type FieldSemantic =
   | 'competitor'
   | 'cta_text'
   | 'greeting'
+  | 'social_proof'
+  | 'price_range'
   | 'none'
 
 export function detectFieldSemantic(fieldId: string, fieldLabel = ''): FieldSemantic {
@@ -34,37 +36,43 @@ export function detectFieldSemantic(fieldId: string, fieldLabel = ''): FieldSema
   const lbl = fieldLabel.toLowerCase()
   const combined = id + ' ' + lbl
 
-  if (/audience|target.?(customer|audience|market|who)|who.*buy|who.*read|who.*is|who.*are|ideal.?customer|customer.?profile|subscriber/.test(combined)) {
+  // Target audience — also catches target_customer (onboarding/profile key)
+  if (/audience|target.?(customer|audience|market|who)|who.*buy|who.*read|who.*is|who.*are|ideal.?customer|customer.?profile|subscriber|target_customer/.test(combined)) {
     return 'target_audience'
   }
-  if (/product|service|offer.*sell|what.*sell|what.*promot|what.*launch|what.*advertis|being.*sold|being.*advertis|product_name|industry_context/.test(combined)) {
+  // Product / service — also catches description & "what does your business do" (onboarding/profile)
+  if (/product|service|offer.*sell|what.*sell|what.*promot|what.*launch|what.*advertis|being.*sold|product_name|industry_context|^description|what.*does.*business|what.*do.*you|about.*business|what.*business.*do/.test(combined)) {
     return 'product_service'
   }
-  // Design-tool content fields — post_topic, story_message, video_topic, key_message, video_title
   if (/topic|post.?about|what.*post|video.*about|article|carousel|story.?topic|content.*about|what.*this.*video|what.*this.*post|blog|post_topic|story_message|video_topic|key_message|video_title/.test(combined)) {
     return 'content_topic'
   }
   if (/situation|challenge|current.*market|biggest.*challenge|what.*struggle|problem|obstacle|current.*state|what.*is.*your.*market/.test(combined)) {
     return 'business_situation'
   }
-  // tagline maps to USP — also catches logo generator tagline field
-  if (/usp|unique|differ|advantage|what.*makes.*you|why.*choose|why.*should.*buy|what.*best|tagline/.test(combined)) {
+  // USP — also catches unique_advantage (onboarding/profile key)
+  if (/usp|unique|differ|advantage|what.*makes.*you|why.*choose|why.*should.*buy|what.*best|tagline|unique_advantage/.test(combined)) {
     return 'usp_differentiator'
   }
-  // offer_text, key_details (flyer details), key_message (promo)
   if (/offer.?detail|offer.?text|promo.?detail|deal|discount|what.*deal|specific.*offer|key.?detail|key.?info|key_details/.test(combined)) {
     return 'offer_deal'
   }
   if (/competitor|competi/.test(combined)) {
     return 'competitor'
   }
-  // CTA fields — cta, cta_text, call.*action, thumbnail_text, headline_text, headline
   if (/\bcta\b|cta_text|call.?to.?action|thumbnail.?text|headline/.test(combined)) {
     return 'cta_text'
   }
-  // Greeting fields — greeting_msg for festive banners
   if (/greeting|greeting_msg|festive.?message|holiday.?message/.test(combined)) {
     return 'greeting'
+  }
+  // Social proof — key stats, achievements, testimonial figures (onboarding/profile)
+  if (/social.?proof|social_proof|key.*stat|key.*achievement|track.*record|testimonial.*stat|achievement|milestone|how.*many.*client|satisfied.*client/.test(combined)) {
+    return 'social_proof'
+  }
+  // Price range — what you charge (onboarding/profile)
+  if (/price.?range|price_range|pricing|what.*charge|your.*price|typical.*cost|how.*much|cost.*of|fee|rate/.test(combined)) {
+    return 'price_range'
   }
   return 'none'
 }
@@ -73,15 +81,17 @@ export function detectFieldSemantic(fieldId: string, fieldLabel = ''): FieldSema
 // Templates use {businessName}, {city}, {targetCustomer} as placeholders.
 
 const INDUSTRY_DATA: Record<string, {
-  audiences:  string[]
-  products:   string[]
-  topics:     string[]
-  situations: string[]
-  usps:       string[]
-  offers:     string[]
-  ctas:       string[]
-  headlines:  string[]
-  greetings:  string[]
+  audiences:    string[]
+  products:     string[]
+  topics:       string[]
+  situations:   string[]
+  usps:         string[]
+  offers:       string[]
+  ctas:         string[]
+  headlines:    string[]
+  greetings:    string[]
+  socialProofs: string[]
+  priceRanges:  string[]
 }> = {
   fashion_clothing: {
     audiences: [
@@ -134,6 +144,16 @@ const INDUSTRY_DATA: Record<string, {
       'Wishing you a blessed celebration from all of us at {businessName}',
       'From our family to yours — happy celebrations and beautiful moments ahead',
       'This season, dress the part. Wishing you joy from {businessName}',
+    ],
+    socialProofs: [
+      'Over 500 custom outfits delivered to Lagos and Abuja clients since 2021',
+      '4.9/5 rating from 300+ verified customers — zero late deliveries',
+      'Featured in 3 Nigerian fashion publications and worn at 50+ high-profile events',
+    ],
+    priceRanges: [
+      'Ready-to-wear from ₦15,000 · Custom designs from ₦45,000',
+      'Casual pieces from ₦8,000 · Event outfits from ₦30,000 upwards',
+      'Starter sets from ₦12,000 · Premium bespoke collections from ₦80,000',
     ],
   },
 
@@ -189,6 +209,16 @@ const INDUSTRY_DATA: Record<string, {
       'Happy holidays from {businessName}. May your table always be full',
       'Season\'s greetings from {businessName} — food, family, and joy',
     ],
+    socialProofs: [
+      'Catered 150+ events across Lagos — from intimate dinners to 500-guest celebrations',
+      'Serving 200+ daily lunch orders with 98% on-time delivery rate',
+      `4.8/5 on Google Maps from 400+ reviews — 'Best jollof in Victoria Island'`,
+    ],
+    priceRanges: [
+      'Daily lunch packs from ₦2,500 · Event catering from ₦3,500 per head',
+      'Small chops packages from ₦45,000 · Full event catering from ₦250,000',
+      'Weekly meal plans from ₦15,000 · Individual meals from ₦2,000',
+    ],
   },
 
   beauty_cosmetics: {
@@ -242,6 +272,16 @@ const INDUSTRY_DATA: Record<string, {
       'Happy celebrations from {businessName} — glow all season long',
       'This festive season, shine from {businessName} to you',
       'Wishing you beauty, joy and great skin from {businessName}',
+    ],
+    socialProofs: [
+      'Transformed 800+ clients — 95% return rate for repeat bookings',
+      'Bridal beauty specialist with 200+ weddings completed across Lagos and Abuja',
+      '4.9 rating on Instagram from 1,000+ tagged client posts in 2 years',
+    ],
+    priceRanges: [
+      'Skincare consultations from ₦5,000 · Full bridal packages from ₦80,000',
+      'Express services from ₦3,500 · Premium packages from ₦25,000',
+      'Monthly skincare sets from ₦18,000 · Single products from ₦4,500',
     ],
   },
 
@@ -297,6 +337,16 @@ const INDUSTRY_DATA: Record<string, {
       'Happy holidays from {businessName} — here\'s to a more digital 2025',
       'Season\'s greetings from {businessName}. Thank you for trusting us with your business',
     ],
+    socialProofs: [
+      'Built and deployed software for 60+ Nigerian businesses — zero failed launches',
+      'Saved clients an average of ₦2.5M per year in operational inefficiencies',
+      'ISO-certified team with 5 years average experience building for African markets',
+    ],
+    priceRanges: [
+      'Website from ₦150,000 · Custom software from ₦500,000 · Monthly SaaS from ₦25,000',
+      'MVP development from ₦300,000 · Annual support packages from ₦80,000/month',
+      'Setup from ₦200,000 · Ongoing maintenance from ₦50,000/month',
+    ],
   },
 
   real_estate: {
@@ -350,6 +400,16 @@ const INDUSTRY_DATA: Record<string, {
       'Wishing you a home full of joy this season — from {businessName}',
       'Happy new year from {businessName}. May this year bring the home of your dreams',
       'Season\'s greetings from {businessName} — thank you for trusting us',
+    ],
+    socialProofs: [
+      '₦4.2B in property transactions completed — 300+ happy homeowners in Lagos',
+      '100% of properties sold with verified government titles — zero disputes in 6 years',
+      'Trusted by 500+ diaspora clients to invest in Nigerian property remotely',
+    ],
+    priceRanges: [
+      'Land from ₦3M · 2-bedroom apartments from ₦18M · Duplexes from ₦45M',
+      'Off-plan investments from ₦5M · Completed homes from ₦25M upwards',
+      'Short-let management from 10% commission · Sales commission from 5%',
     ],
   },
 
@@ -405,6 +465,16 @@ const INDUSTRY_DATA: Record<string, {
       'Season\'s greetings from {businessName}. Wishing you growth and new skills ahead',
       'A blessed celebration from the {businessName} family to yours',
     ],
+    socialProofs: [
+      '80% of graduates secured employment or new contracts within 90 days of completing',
+      'Trained 2,000+ students across Lagos and Abuja since 2019 — 4.8/5 satisfaction',
+      'Our graduates have gone on to earn an average of 40% more than before training',
+    ],
+    priceRanges: [
+      'Short courses from ₦15,000 · Bootcamps from ₦75,000 · Certification programmes from ₦120,000',
+      'Weekend workshops from ₦8,000 · 3-month programmes from ₦45,000',
+      'Online courses from ₦5,000 · In-person intensive from ₦60,000',
+    ],
   },
 
   logistics_delivery: {
@@ -458,6 +528,16 @@ const INDUSTRY_DATA: Record<string, {
       'Happy holidays from the {businessName} team — keeping your deliveries moving all season',
       'Season\'s greetings from {businessName}. Thank you for trusting us with your shipments',
       'Wishing you joy and smooth deliveries from {businessName}',
+    ],
+    socialProofs: [
+      '800,000+ packages delivered across Lagos with 98.7% on-time rate',
+      'Trusted by 200+ e-commerce businesses for their last-mile delivery',
+      'Zero lost shipment claims in 3 years of operation — 100% insured deliveries',
+    ],
+    priceRanges: [
+      'Within Lagos from ₦1,200 · Same-day island-to-mainland from ₦2,500',
+      'Monthly contracts from ₦80,000 · Per-delivery from ₦1,500',
+      'Bulk rates from ₦800 per delivery · Dedicated rider from ₦60,000/month',
     ],
   },
 
@@ -513,6 +593,16 @@ const INDUSTRY_DATA: Record<string, {
       'Season\'s greetings from {businessName}. Your health is our priority, always',
       'Happy holidays from the {businessName} team — stay healthy, stay happy',
     ],
+    socialProofs: [
+      '3,000+ patients served since 2020 — 92% patient satisfaction score',
+      'Early detection changed lives: 400+ patients diagnosed and successfully treated',
+      'Accredited clinic with board-certified doctors — 4.9/5 on Google and Zocdoc',
+    ],
+    priceRanges: [
+      'Consultations from ₦5,000 · Full health screening from ₦25,000',
+      'Annual wellness packages from ₦80,000 · Corporate HMO from ₦15,000/employee',
+      'Antenatal care package from ₦120,000 · Specialist consultations from ₦15,000',
+    ],
   },
 
   events_entertainment: {
@@ -566,6 +656,16 @@ const INDUSTRY_DATA: Record<string, {
       'Wishing you a joyful celebration from the {businessName} team',
       'Happy holidays from {businessName} — thank you for letting us be part of your special moments',
       'Season\'s greetings from {businessName}. Here\'s to more beautiful events ahead',
+    ],
+    socialProofs: [
+      '200+ flawless events — from intimate 20-person dinners to 1,500-guest weddings',
+      'Trusted by 5 Fortune 500 companies in Nigeria for their annual events since 2020',
+      'Zero cancelled events in 4 years — 100% delivery on contracted date and budget',
+    ],
+    priceRanges: [
+      'Birthday events from ₦350,000 · Weddings from ₦1.5M · Corporate events from ₦800,000',
+      'Decor-only packages from ₦150,000 · Full event management from ₦600,000',
+      'Consultation from ₦50,000 · Full-service events from ₦500,000 upwards',
     ],
   },
 
@@ -621,6 +721,16 @@ const INDUSTRY_DATA: Record<string, {
       'Season\'s greetings from {businessName}. Thank you for shopping with us',
       'Wishing you joy and great purchases from {businessName}',
     ],
+    socialProofs: [
+      '10,000+ orders fulfilled across Nigeria — 4.8/5 from 2,000+ verified reviews',
+      '₦120M in GMV processed in 2024 — fastest growing online store in our category',
+      '99.2% order accuracy rate — less than 0.8% returns across 15,000+ orders',
+    ],
+    priceRanges: [
+      'Products from ₦2,500 · Premium range from ₦15,000 · Bundle deals from ₦8,000',
+      'Entry-level from ₦1,500 · Mid-range from ₦8,000 · Premium from ₦25,000+',
+      'Everyday items from ₦3,000 · Gift sets from ₦12,000 · Wholesale from ₦50,000',
+    ],
   },
 
   finance_fintech: {
@@ -675,6 +785,16 @@ const INDUSTRY_DATA: Record<string, {
       'Happy new year from {businessName} — may this year be your most prosperous',
       'Season\'s greetings from {businessName}. Thank you for trusting us with your finances',
     ],
+    socialProofs: [
+      '₦2.8B in loans disbursed to 5,000+ Nigerian SMEs — 94% repayment rate',
+      'Managing ₦500M+ in client savings and investments — CBN-licensed and regulated',
+      'Saved clients an average of ₦180,000/year in banking fees and transaction costs',
+    ],
+    priceRanges: [
+      'Business loans from ₦500,000 · Processing fee 1.5% · Monthly rate from 3%',
+      'Investment plans from ₦10,000/month · Returns from 12% p.a.',
+      'Account management free · Transaction fees from ₦50 · FX from 0.5% spread',
+    ],
   },
 
   other: {
@@ -728,6 +848,16 @@ const INDUSTRY_DATA: Record<string, {
       'Happy celebrations from all of us at {businessName}',
       'Season\'s greetings from {businessName} — thank you for your trust and support',
       'Wishing you a joyful season from the {businessName} team',
+    ],
+    socialProofs: [
+      'Served 500+ satisfied clients across Lagos and Abuja since 2020',
+      '4.9/5 average rating from verified client reviews — 97% would recommend us',
+      'Consistent delivery record: 98% of projects completed on time and on budget',
+    ],
+    priceRanges: [
+      'Starter packages from ₦25,000 · Standard from ₦75,000 · Premium from ₦200,000',
+      'Hourly rate from ₦15,000 · Project-based from ₦50,000 · Retainer from ₦80,000/month',
+      'Basic package from ₦30,000 · Full service from ₦150,000 upwards',
     ],
   },
 }
@@ -831,6 +961,16 @@ export function getFieldSuggestions(
 
     case 'greeting': {
       pool = data.greetings
+      break
+    }
+
+    case 'social_proof': {
+      pool = data.socialProofs
+      break
+    }
+
+    case 'price_range': {
+      pool = data.priceRanges
       break
     }
 

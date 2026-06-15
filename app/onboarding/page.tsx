@@ -1,425 +1,228 @@
 'use client'
 // /app/(auth)/onboarding/page.tsx
-// Onboarding with contextual suggestion system.
-// Suggestions appear below text fields, pulsing gently to signal they exist.
-// Industry-aware: suggestions update the moment the user picks their industry.
-// Client-side only — no new API routes, no migrations, no new dependencies.
+// Redesigned onboarding — collects 100% of business profile data.
+// 3 steps + done screen. Suggestions on every field. Mobile-first.
+// Data saved to all profile columns so the profile page is pre-filled.
 
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createBrowserClient } from '@/lib/supabase/client'
-import { RefreshCw, Check, Sparkles } from 'lucide-react'
+import { RefreshCw, Check, Sparkles, ChevronRight } from 'lucide-react'
+import { SuggestionStrip, CitySuggestions } from '@/components/tools/SuggestionStrip'
+import { getFieldSuggestions } from '@/lib/tools/form-suggestions'
 
-// ── Design tokens ─────────────────────────────────────────────
+
+// ── Tokens ─────────────────────────────────────────────────────
 const N = '#0B1F3A'
+const N2 = '#0D2040'
 const GOLD = '#E09818'
 const GL = '#F5B830'
 const TEAL = '#12D4B4'
 const W = '#EBF2FC'
-const MUTED = 'rgba(205,217,236,0.4)'
-const B = 'rgba(255,255,255,0.08)'
 const DIM = 'rgba(205,217,236,0.65)'
+const MUTED = 'rgba(205,217,236,0.38)'
+const B = 'rgba(255,255,255,0.08)'
+const FAINT = 'rgba(255,255,255,0.04)'
 
-// ── Constant lists ─────────────────────────────────────────────
+// ── Static data ─────────────────────────────────────────────────
 const INDUSTRIES = [
-  'fashion_clothing', 'food_restaurants', 'beauty_cosmetics', 'technology_software',
-  'real_estate', 'education_training', 'logistics_delivery', 'healthcare_wellness',
-  'events_entertainment', 'ecommerce_retail', 'finance_fintech', 'other',
+  { value: 'fashion_clothing', label: 'Fashion / Clothing' },
+  { value: 'food_restaurants', label: 'Food & Restaurants' },
+  { value: 'beauty_cosmetics', label: 'Beauty & Cosmetics' },
+  { value: 'technology_software', label: 'Technology / Software' },
+  { value: 'real_estate', label: 'Real Estate' },
+  { value: 'education_training', label: 'Education & Training' },
+  { value: 'logistics_delivery', label: 'Logistics & Delivery' },
+  { value: 'healthcare_wellness', label: 'Healthcare & Wellness' },
+  { value: 'events_entertainment', label: 'Events & Entertainment' },
+  { value: 'ecommerce_retail', label: 'E-commerce / Retail' },
+  { value: 'finance_fintech', label: 'Finance / Fintech' },
+  { value: 'other', label: 'Other' },
 ]
-const INDUSTRY_LABELS: Record<string, string> = {
-  fashion_clothing: 'Fashion / Clothing',
-  food_restaurants: 'Food & Restaurants',
-  beauty_cosmetics: 'Beauty & Cosmetics',
-  technology_software: 'Technology / Software',
-  real_estate: 'Real Estate',
-  education_training: 'Education & Training',
-  logistics_delivery: 'Logistics & Delivery',
-  healthcare_wellness: 'Healthcare & Wellness',
-  events_entertainment: 'Events & Entertainment',
-  ecommerce_retail: 'E-commerce / Retail',
-  finance_fintech: 'Finance / Fintech',
-  other: 'Other',
-}
-const GOALS = [
-  'Get more customers',
-  'Improve my content quality',
-  'Understand my competitors',
-  'Build a stronger brand',
-  'Increase revenue / sales',
-  'Launch a new product or service',
+
+const BRAND_VOICES = [
+  { value: 'professional', label: 'Professional', sub: 'Authoritative, clear, credible' },
+  { value: 'warm_friendly', label: 'Warm & Friendly', sub: 'Approachable, caring, relatable' },
+  { value: 'bold_direct', label: 'Bold & Direct', sub: 'Confident, no-nonsense, powerful' },
+  { value: 'educational', label: 'Educational', sub: 'Informative, expert, helpful' },
+  { value: 'playful_energetic', label: 'Playful', sub: 'Fun, energetic, youthful' },
+  { value: 'luxury_premium', label: 'Luxury', sub: 'Exclusive, sophisticated, premium' },
+  { value: 'community_local', label: 'Community', sub: 'Local, grounded, people-first' },
 ]
+
 const CHALLENGES = [
-  "I don't have time for marketing",
-  "I don't know where to start",
-  "I can't afford a marketing team",
-  "I post but get no engagement",
-  "I don't know what my competitors are doing",
-  "My branding is inconsistent",
+  'Not generating enough leads',
+  'Converting enquiries to sales',
+  'Standing out from competitors',
+  'Social media content not working',
+  'Low ad ROI / wasted spend',
+  'Building brand trust',
+  'Creating consistent content',
+  'WhatsApp marketing effectiveness',
+  'Customer retention & repeat business',
+  'No clear marketing strategy',
 ]
-const CITIES = [
-  'Lagos', 'Abuja', 'Port Harcourt', 'Kano', 'Ibadan', 'Enugu',
-  'Owerri', 'Benin City', 'Calabar', 'Warri', 'Akure', 'Asaba',
-]
 
-// ── Suggestion data ────────────────────────────────────────────
-// All text is Nigerian-market specific. targetCustomers are one-line descriptions
-// a user can click to instantly fill that field on their onboarding form.
-const INDUSTRY_SUGGESTIONS: Record<string, {
-  targetCustomers: string[]
-  businessNameHints: string[]
-}> = {
-  fashion_clothing: {
-    targetCustomers: [
-      'Lagos women 25–40 seeking premium, locally-made fashion and bespoke styles',
-      'Corporate women who need stylish ready-to-wear pieces for work and events',
-      'Young professionals who prefer unique handcrafted designs over fast fashion',
-      'Brides and bridal parties seeking custom made-in-Nigeria aso-ebi and gowns',
-    ],
-    businessNameHints: [
-      "Amara's Stitch House",
-      'Lagos Thread Room',
-      'The Style Collective',
-      'Chic by Chi Couture',
-    ],
-  },
-  food_restaurants: {
-    targetCustomers: [
-      'Lagos office workers wanting quality hot lunch delivered within 30 minutes',
-      'Families in Abuja seeking authentic Nigerian cuisine for celebrations and events',
-      'Young professionals who want healthy, home-cooked meal alternatives on weekdays',
-      'Corporate clients who need reliable catering for meetings and company events',
-    ],
-    businessNameHints: [
-      "Mama Ada's Kitchen",
-      'The Pepper Spot Abuja',
-      'Lagos Bites & Co.',
-      'Naija Flavours Catering',
-    ],
-  },
-  beauty_cosmetics: {
-    targetCustomers: [
-      'Nigerian women 20–40 seeking premium skincare formulated for melanin-rich skin',
-      'Working Lagos women who want salon-quality services with shorter wait times',
-      'Brides and bridal parties needing complete beauty packages for their big day',
-      'Naturalists seeking organic, locally-sourced hair and skin products',
-    ],
-    businessNameHints: [
-      'GlowUp by Chi',
-      'The Beauty Bar Lagos',
-      'Flawless Skin Studio',
-      'Radiance Beauty Abuja',
-    ],
-  },
-  technology_software: {
-    targetCustomers: [
-      'Nigerian SMEs needing affordable software solutions with local support',
-      'Startups in Lagos and Abuja who need solid tech infrastructure from day one',
-      'Traditional businesses ready to digitise their operations and go online',
-      'Companies needing custom software built specifically for the African market',
-    ],
-    businessNameHints: [
-      'TechBridge Nigeria',
-      'Naija Dev Studio',
-      'Digital Gate NG',
-      'SoftCraft Solutions',
-    ],
-  },
-  real_estate: {
-    targetCustomers: [
-      'Lagos professionals earning ₦500K+/month looking for their first home purchase',
-      'Diaspora Nigerians investing in Lagos and Abuja real estate from abroad',
-      'Young couples seeking affordable land plots in emerging satellite towns',
-      'Investors seeking short-let property opportunities in Lagos Island or Lekki',
-    ],
-    businessNameHints: [
-      'Lagos Homes Collective',
-      'PrimeSpace Properties',
-      'Abuja Realty Partners',
-      'Capital Land NG',
-    ],
-  },
-  education_training: {
-    targetCustomers: [
-      'Nigerian youth 18–30 seeking practical, career-ready vocational skills',
-      'Working professionals who want to upskill without leaving their day jobs',
-      'Business owners wanting industry certifications and structured business training',
-      'Parents seeking quality STEM tutoring and after-school programmes for children',
-    ],
-    businessNameHints: [
-      'Naija Skills Academy',
-      'The Learning Hub Lagos',
-      'Future Builders Institute',
-      'Growth Mind School',
-    ],
-  },
-  logistics_delivery: {
-    targetCustomers: [
-      'Lagos SMEs needing reliable same-day delivery across the island and mainland',
-      'E-commerce sellers looking for affordable last-mile delivery partners',
-      'Restaurants and food businesses needing fast, professional delivery riders',
-      'Businesses needing cargo clearing, forwarding, and warehousing in Nigeria',
-    ],
-    businessNameHints: [
-      'SwiftMove Logistics',
-      'Lagos Dispatch Co.',
-      'FastLink Delivery NG',
-      'Haul Pro Nigeria',
-    ],
-  },
-  healthcare_wellness: {
-    targetCustomers: [
-      'Lagos residents 30–55 wanting accessible, affordable primary healthcare nearby',
-      'Corporate clients seeking HMO packages and employee wellness programmes',
-      'Pregnant women and new mothers needing quality maternal health support',
-      'Fitness-conscious Nigerians looking for personalised nutrition and wellness coaching',
-    ],
-    businessNameHints: [
-      'WellCare Nigeria',
-      'Lagos Health Plus',
-      'Vitalis Wellness Centre',
-      'Healing Springs Clinic',
-    ],
-  },
-  events_entertainment: {
-    targetCustomers: [
-      'Lagos professionals planning weddings with budgets from ₦5M upwards',
-      'Corporate clients needing professional event management for conferences',
-      'Families planning birthday, naming ceremony, and graduation celebrations',
-      'Brands seeking creative event activations and experiential marketing',
-    ],
-    businessNameHints: [
-      'Luxe Events Lagos',
-      'The Event Studio NG',
-      'Grand Occasions Abuja',
-      'Prestige Affairs Events',
-    ],
-  },
-  ecommerce_retail: {
-    targetCustomers: [
-      'Nigerian online shoppers 20–40 who value convenience and fast delivery',
-      'Budget-conscious buyers looking for genuine quality at competitive prices',
-      'Gift buyers searching for unique, locally-made Nigerian products and crafts',
-      'Bulk buyers and resellers sourcing products to sell through their own channels',
-    ],
-    businessNameHints: [
-      'ShopNaija Direct',
-      'Quality Finds NG',
-      'The Lagos Marketplace',
-      'DealsHub Nigeria',
-    ],
-  },
-  finance_fintech: {
-    targetCustomers: [
-      'Nigerian SMEs needing accessible business loans without traditional collateral',
-      'Salary earners wanting investment tools built for the Nigerian economic reality',
-      'Students and young professionals building their first savings and investment habits',
-      'Businesses needing faster, cheaper cross-border payment and FX solutions',
-    ],
-    businessNameHints: [
-      'MoneyBridge Nigeria',
-      'Lagos Capital Finance',
-      'WealthNaija Solutions',
-      'SmartSave NG',
-    ],
-  },
-  other: {
-    targetCustomers: [
-      'Nigerian business owners seeking reliable, affordable professional services',
-      'Lagos professionals who value quality work and excellent customer care',
-      'SMEs across Nigeria looking for solutions that understand the local market',
-      'Anyone who has been underserved or overcharged by existing market options',
-    ],
-    businessNameHints: [
-      '[Your Name] & Co.',
-      'The [Service] Hub Lagos',
-      '[Name] Professional Services',
-      'Quality [Service] Nigeria',
-    ],
-  },
-}
-
-// ── SuggestionStrip component ──────────────────────────────────
-// Renders below a field when there are relevant suggestions to show.
-// The container has a gentle pulsating glow animation — subtle enough
-// not to distract, but visible enough to signal the feature exists.
-interface SuggestionStripProps {
-  suggestions: string[]
-  label?: string
-  onSelect: (value: string) => void
-  visible: boolean
-}
-
-function SuggestionStrip({ suggestions, label, onSelect, visible }: SuggestionStripProps) {
-  const [justApplied, setJustApplied] = useState<string | null>(null)
-
-  const handleSelect = (s: string) => {
-    onSelect(s)
-    setJustApplied(s)
-    setTimeout(() => setJustApplied(null), 1500)
+// ── Text input component ────────────────────────────────────────
+function Field({
+  label, value, onChange, placeholder, required, hint, type = 'text',
+}: {
+  label: string; value: string; onChange: (v: string) => void
+  placeholder?: string; required?: boolean; hint?: string; type?: string
+}) {
+  const [focused, setFocused] = useState(false)
+  const inputStyle: React.CSSProperties = {
+    width: '100%', padding: '13px 14px', fontSize: 14, fontFamily: 'inherit',
+    background: focused ? 'rgba(255,255,255,0.09)' : 'rgba(255,255,255,0.06)',
+    border: `1.5px solid ${focused ? TEAL + '55' : B}`,
+    borderRadius: 11, color: W, outline: 'none', transition: 'all .18s',
+    boxSizing: 'border-box',
   }
-
-  if (!visible || suggestions.length === 0) return null
-
   return (
-    <div style={{
-      marginTop: 8,
-      padding: '12px 14px',
-      borderRadius: 12,
-      border: '1px solid rgba(18,212,180,0.22)',
-      background: 'rgba(18,212,180,0.04)',
-      // Pulsating animation applied to the container
-      animation: 'suggestionPulse 3s ease-in-out infinite',
-    }}>
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 9 }}>
-        <Sparkles size={11} style={{ color: TEAL, flexShrink: 0 }} />
-        <span style={{
-          fontSize: 10.5, fontWeight: 700, color: TEAL,
-          letterSpacing: '0.8px', textTransform: 'uppercase',
-        }}>
-          {label || 'Suggestions — tap to fill'}
-        </span>
-      </div>
+    <div style={{ marginBottom: 6 }}>
+      <label style={{ display: 'block', fontSize: 11.5, fontWeight: 700, color: MUTED, letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 8 }}>
+        {label}{required && <span style={{ color: GOLD, marginLeft: 3 }}>*</span>}
+      </label>
+      <input
+        type={type} value={value}
+        onChange={e => onChange(e.target.value)}
+        placeholder={placeholder}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
+        style={inputStyle}
+      />
+      {hint && <p style={{ fontSize: 11.5, color: MUTED, marginTop: 5, fontStyle: 'italic' }}>{hint}</p>}
+    </div>
+  )
+}
 
-      {/* Chips */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-        {suggestions.map((s, i) => {
-          const applied = justApplied === s
-          return (
-            <button
-              key={i}
-              type="button"
-              onClick={() => handleSelect(s)}
-              style={{
-                padding: '5px 12px',
-                borderRadius: 20,
-                fontSize: 12,
-                fontWeight: 500,
-                fontFamily: 'inherit',
-                cursor: 'pointer',
-                transition: 'all 0.18s',
-                background: applied ? 'rgba(34,197,94,0.14)' : 'rgba(18,212,180,0.1)',
-                border: `1px solid ${applied ? 'rgba(34,197,94,0.4)' : 'rgba(18,212,180,0.28)'}`,
-                color: applied ? '#22C55E' : TEAL,
-              }}
-              onMouseEnter={e => {
-                if (!applied) {
-                  ; (e.currentTarget as HTMLButtonElement).style.background = 'rgba(18,212,180,0.18)'
-                    ; (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(18,212,180,0.5)'
-                }
-              }}
-              onMouseLeave={e => {
-                if (!applied) {
-                  ; (e.currentTarget as HTMLButtonElement).style.background = 'rgba(18,212,180,0.1)'
-                    ; (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(18,212,180,0.28)'
-                }
-              }}
-            >
-              {applied ? '✓ Applied' : s}
-            </button>
-          )
-        })}
+function TextArea({
+  label, value, onChange, placeholder, required, rows = 3,
+}: {
+  label: string; value: string; onChange: (v: string) => void
+  placeholder?: string; required?: boolean; rows?: number
+}) {
+  const [focused, setFocused] = useState(false)
+  return (
+    <div style={{ marginBottom: 6 }}>
+      <label style={{ display: 'block', fontSize: 11.5, fontWeight: 700, color: MUTED, letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 8 }}>
+        {label}{required && <span style={{ color: GOLD, marginLeft: 3 }}>*</span>}
+      </label>
+      <textarea
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        placeholder={placeholder}
+        rows={rows}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
+        style={{
+          width: '100%', padding: '13px 14px', fontSize: 14, fontFamily: 'inherit',
+          background: focused ? 'rgba(255,255,255,0.09)' : 'rgba(255,255,255,0.06)',
+          border: `1.5px solid ${focused ? TEAL + '55' : B}`,
+          borderRadius: 11, color: W, outline: 'none', resize: 'vertical',
+          lineHeight: 1.65, transition: 'all .18s', boxSizing: 'border-box',
+        }}
+      />
+    </div>
+  )
+}
+
+// ── Step header pill ────────────────────────────────────────────
+function StepHeader({ step, total, label, icon }: { step: number; total: number; label: string; icon: string }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 22 }}>
+      <span style={{ fontSize: 22 }}>{icon}</span>
+      <div>
+        <p style={{ fontSize: 10.5, fontWeight: 700, color: TEAL, textTransform: 'uppercase', letterSpacing: '1px', margin: 0 }}>
+          Step {step} of {total}
+        </p>
+        <h2 style={{ fontFamily: "'Georgia',serif", fontSize: 18, fontWeight: 900, color: W, margin: 0 }}>{label}</h2>
       </div>
     </div>
   )
 }
 
-// ── City quick-select strip (distinct visual — amber accent) ───
-interface CityStripProps {
-  onSelect: (city: string) => void
-  visible: boolean
-  currentValue: string
-}
-
-function CityStrip({ onSelect, visible, currentValue }: CityStripProps) {
-  if (!visible) return null
+// ── Progress dots ───────────────────────────────────────────────
+function ProgressDots({ current, total }: { current: number; total: number }) {
   return (
-    <div style={{
-      marginTop: 8,
-      padding: '10px 12px',
-      borderRadius: 10,
-      border: '1px solid rgba(245,184,48,0.2)',
-      background: 'rgba(245,184,48,0.04)',
-      animation: 'suggestionPulse 3s ease-in-out infinite',
-    }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 7 }}>
-        <span style={{ fontSize: 11 }}>📍</span>
-        <span style={{ fontSize: 10.5, fontWeight: 700, color: GL, letterSpacing: '0.8px', textTransform: 'uppercase' }}>
-          Quick select
-        </span>
-      </div>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-        {CITIES.map(city => (
-          <button
-            key={city}
-            type="button"
-            onClick={() => onSelect(city)}
-            style={{
-              padding: '4px 11px', borderRadius: 16, fontSize: 12,
-              fontFamily: 'inherit', cursor: 'pointer', transition: 'all .15s',
-              background: currentValue === city ? 'rgba(245,184,48,0.2)' : 'rgba(255,255,255,0.05)',
-              border: `1px solid ${currentValue === city ? 'rgba(245,184,48,0.5)' : B}`,
-              color: currentValue === city ? GL : MUTED,
-              fontWeight: currentValue === city ? 700 : 400,
-            }}
-          >
-            {city}
-          </button>
-        ))}
-      </div>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 28 }}>
+      {Array.from({ length: total }).map((_, i) => (
+        <div key={i} style={{
+          width: i === current ? 24 : 8, height: 8, borderRadius: 4,
+          background: i < current ? TEAL : i === current ? GOLD : 'rgba(255,255,255,0.15)',
+          transition: 'all .3s',
+        }} />
+      ))}
     </div>
   )
 }
 
-// ── Main onboarding page ───────────────────────────────────────
-interface FormState {
-  businessName: string
+// ── Main component ──────────────────────────────────────────────
+interface FormData {
+  business_name: string
   industry: string
   city: string
-  targetCustomers: string
-  primaryGoal: string
-  primaryChallenge: string
+  years_in_business: string
+  whatsapp: string
+  description: string
+  target_customer: string
+  unique_advantage: string
+  social_proof: string
+  price_range: string
+  call_to_action: string
+  brand_voice: string
+  marketing_challenges: string[]
+}
+
+const EMPTY: FormData = {
+  business_name: '', industry: '', city: '', years_in_business: '', whatsapp: '',
+  description: '', target_customer: '', unique_advantage: '', social_proof: '',
+  price_range: '', call_to_action: '', brand_voice: '', marketing_challenges: [],
 }
 
 export default function OnboardingPage() {
   const router = useRouter()
   const supabase = createBrowserClient()
 
-  const [step, setStep] = useState(0)
-  const [d, setD] = useState<FormState>({
-    businessName: '', industry: '', city: '',
-    targetCustomers: '', primaryGoal: '', primaryChallenge: '',
-  })
+  const [step, setStep] = useState(0)   // 0,1,2 = 3 form steps; 3 = done
+  const [form, setForm] = useState<FormData>(EMPTY)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
-  const [focusedField, setFocusedField] = useState<string | null>(null)
+  const cardRef = useRef<HTMLDivElement>(null)
 
   // Pre-fill business name from signup session storage
   useEffect(() => {
     const biz = sessionStorage.getItem('signup_bizname')
-    if (biz) setD(p => ({ ...p, businessName: biz }))
+    if (biz) setForm(p => ({ ...p, business_name: biz }))
   }, [])
 
-  const set = useCallback((k: keyof FormState, v: string) =>
-    setD(p => ({ ...p, [k]: v })), [])
+  const set = useCallback((k: keyof FormData, v: any) =>
+    setForm(p => ({ ...p, [k]: v })), [])
 
-  // ── Suggestion visibility logic ──
-  const sug = INDUSTRY_SUGGESTIONS[d.industry] || null
+  // Scroll card to top on step change (mobile UX)
+  useEffect(() => {
+    cardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [step])
 
-  // Show name hints: industry is selected AND field is empty or very short
-  const showNameHints = !!sug && d.businessName.length < 4 && (focusedField === 'businessName' || d.businessName === '')
+  // Profile context for suggestion engine
+  const profileCtx = {
+    businessName: form.business_name,
+    industry: form.industry,
+    city: form.city,
+    targetCustomer: form.target_customer,
+    description: form.description,
+    uniqueAdvantage: form.unique_advantage,
+  }
 
-  // Show target customer suggestions: industry selected AND field under 25 chars
-  const showTargetSugs = !!sug && d.targetCustomers.length < 25 &&
-    (focusedField === 'targetCustomers' || d.targetCustomers.length === 0)
+  // Smart suggestion helper — returns 3 chips relevant to the field
+  const sug = (fieldId: string, fieldLabel: string) =>
+    getFieldSuggestions(fieldId, fieldLabel, profileCtx)
 
-  // Show cities: field has < 3 chars or is focused
-  const showCities = d.city.length < 3 || focusedField === 'city'
-
-  // ── Validation ──
-  const isValid = () => {
-    if (step === 0) return d.businessName.trim() && d.industry && d.city.trim()
-    if (step === 1) return d.primaryGoal && d.primaryChallenge
+  // ── Validation per step ──────────────────────────────────────
+  const stepValid = () => {
+    if (step === 0) return form.business_name.trim() && form.industry && form.city.trim()
+    if (step === 1) return form.description.trim() && form.target_customer.trim()
+    if (step === 2) return form.brand_voice && form.marketing_challenges.length > 0
     return true
   }
 
@@ -443,24 +246,62 @@ export default function OnboardingPage() {
     }
   }
 
-  // ── Save + complete ──
+
+  async function sendWelcomeEmail(firstName: string) {
+    try {
+      const res = await fetch('/api/email/welcome', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ firstName }),
+      });
+
+      const data = await res.json()
+    } catch (err) {
+      console.error('[onboarding reward] failed:', err)
+    }
+  }
+
+
+  // ── Toggle marketing challenge ───────────────────────────────
+  const toggleChallenge = (c: string) =>
+    set('marketing_challenges', form.marketing_challenges.includes(c)
+      ? form.marketing_challenges.filter(x => x !== c)
+      : [...form.marketing_challenges, c])
+
+  // ── Save all data to Supabase profiles table ─────────────────
   const saveAndFinish = async () => {
     setSaving(true); setError('')
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('Not authenticated')
+
+      const firstName = form.business_name.trim()
+
       const { error: e } = await supabase.from('profiles').update({
-        business_name: d.businessName.trim(),
-        industry: d.industry,
-        city: d.city.trim(),
-        target_customers: d.targetCustomers.trim(),
-        primary_goal: d.primaryGoal,
-        primary_challenge: d.primaryChallenge,
+        business_name: form.business_name.trim(),
+        industry: form.industry,
+        city: form.city.trim(),
+        years_in_business: form.years_in_business ? parseInt(form.years_in_business) : null,
+        whatsapp: form.whatsapp.trim(),
+        description: form.description.trim(),
+        target_customer: form.target_customer.trim(),
+        unique_advantage: form.unique_advantage.trim(),
+        social_proof: form.social_proof.trim(),
+        price_range: form.price_range.trim(),
+        primary_cta: form.call_to_action.trim(),
+        brand_voice: form.brand_voice,
+        marketing_challenges: form.marketing_challenges,
+        primary_goal: null,    // captured via challenges
+        primary_challenge: form.marketing_challenges[0] || null,
+        target_customers: form.target_customer.trim(),
         onboarding_complete: true,
+        updated_at: new Date().toISOString(),
       }).eq('id', user.id)
+
       if (e) throw new Error(e.message)
-      setStep(2)
+      setStep(3)
       handleGetReward()
+      sendWelcomeEmail(firstName)
       setTimeout(() => router.push('/dashboard'), 2200)
     } catch (err: any) {
       setError(err.message || 'Save failed. Please try again.')
@@ -469,351 +310,380 @@ export default function OnboardingPage() {
   }
 
   const next = () => {
-    if (step === 1) saveAndFinish()
+    if (step === 2) saveAndFinish()
     else setStep(s => s + 1)
   }
+  const back = () => setStep(s => s - 1)
 
-  // ── Shared input style ──
-  const inputStyle = (focused = false): React.CSSProperties => ({
-    width: '100%',
-    padding: '11px 14px',
-    background: 'rgba(255,255,255,0.07)',
-    border: `1.5px solid ${focused ? TEAL + '55' : B}`,
-    borderRadius: 10,
-    color: W,
-    fontFamily: 'inherit',
-    fontSize: 14,
-    outline: 'none',
-    boxSizing: 'border-box',
-    transition: 'border-color .18s',
-  })
-
-  const labelStyle: React.CSSProperties = {
-    display: 'block',
-    fontSize: 11,
-    fontWeight: 700,
-    color: MUTED,
-    letterSpacing: '1px',
-    textTransform: 'uppercase',
-    marginBottom: 7,
-  }
-
-  // ── Render ──
+  // ─────────────────────────────────────────────────────────────
+  // RENDER
+  // ─────────────────────────────────────────────────────────────
   return (
     <div style={{
-      minHeight: '100vh',
-      background: '#080F1F',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: '20px 16px',
+      minHeight: '100vh', background: '#080F1F',
+      display: 'flex', flexDirection: 'column', alignItems: 'center',
+      padding: '24px 16px 48px',
     }}>
-      {/* Global animation keyframes */}
       <style>{`
-        @keyframes suggestionPulse {
-          0%, 100% {
-            border-color: rgba(18,212,180,0.15);
-            box-shadow: 0 0 0 0 rgba(18,212,180,0);
-          }
-          50% {
-            border-color: rgba(18,212,180,0.38);
-            box-shadow: 0 0 0 5px rgba(18,212,180,0.04);
-          }
-        }
-        @keyframes spin { to { transform: rotate(360deg) } }
-        @keyframes fadeIn { from { opacity:0; transform:translateY(-4px) } to { opacity:1; transform:translateY(0) } }
+        @keyframes spin { to { transform:rotate(360deg) } }
+        @keyframes fadeUp { from { opacity:0;transform:translateY(12px) } to { opacity:1;transform:translateY(0) } }
+        @keyframes checkPop { 0%{transform:scale(0)} 60%{transform:scale(1.2)} 100%{transform:scale(1)} }
+        @media(max-width:480px){ .onb-inner{ padding:20px 16px !important } }
       `}</style>
 
-      <div style={{ width: '100%', maxWidth: 520 }}>
+      {/* Logo */}
+      <div style={{ textAlign: 'center', marginBottom: 28 }}>
+        <span style={{ fontFamily: "'Georgia',serif", fontSize: 22, fontWeight: 900, color: W, letterSpacing: 2 }}>CEREBRE</span>
+        <span style={{ fontFamily: "'Georgia',serif", fontSize: 22, fontWeight: 900, color: GL, letterSpacing: 2 }}> PLUS</span>
+      </div>
 
-        {/* Logo */}
-        <div style={{ textAlign: 'center', marginBottom: 28 }}>
-          <span style={{ fontFamily: "'Georgia',serif", fontSize: 22, fontWeight: 900, color: W, letterSpacing: 2 }}>CEREBRE</span>
-          <span style={{ fontFamily: "'Georgia',serif", fontSize: 22, fontWeight: 900, color: GL, letterSpacing: 2 }}> PLUS</span>
-        </div>
+      {/* Progress dots (only on form steps) */}
+      {step < 3 && <ProgressDots current={step} total={3} />}
 
-        {/* Step progress bar */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0, marginBottom: 24 }}>
-          {['Business', 'Your Goals', 'Done!'].map((label, i) => (
-            <React.Fragment key={label}>
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-                <div style={{
-                  width: 28, height: 28, borderRadius: '50%',
-                  background: i < step ? TEAL : i === step ? `linear-gradient(135deg,${GOLD},${GL})` : B,
-                  border: `2px solid ${i < step ? TEAL : i === step ? GL : B}`,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 11, fontWeight: 900,
-                  color: i < step ? '#fff' : i === step ? '#071528' : MUTED,
-                  transition: 'all .3s',
-                }}>
-                  {i < step ? '✓' : i + 1}
-                </div>
-                <span style={{ fontSize: 10, color: i === step ? GL : i < step ? TEAL : MUTED, fontWeight: i === step ? 700 : 400 }}>
-                  {label}
-                </span>
-              </div>
-              {i < 2 && (
-                <div style={{ flex: 1, height: 1.5, background: i < step ? TEAL + '50' : B, margin: '0 6px 14px', transition: 'background .3s' }} />
+      {/* Main card */}
+      <div
+        ref={cardRef}
+        className="onb-inner"
+        style={{
+          width: '100%', maxWidth: 520, background: N,
+          border: `1px solid ${B}`, borderRadius: 20,
+          padding: '28px 26px',
+          animation: 'fadeUp .4s ease',
+        }}
+      >
+
+        {/* ── DONE SCREEN ────────────────────────────────────── */}
+        {step === 3 && (
+          <div style={{ textAlign: 'center', padding: '24px 0' }}>
+            <div style={{
+              width: 64, height: 64, borderRadius: '50%',
+              background: 'rgba(34,197,94,0.15)', border: '2px solid rgba(34,197,94,0.4)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              margin: '0 auto 20px',
+              animation: 'checkPop .5s cubic-bezier(.17,.67,.83,.67)',
+            }}>
+              <Check size={30} style={{ color: '#22C55E' }} />
+            </div>
+            <h2 style={{ fontFamily: "'Georgia',serif", fontSize: 24, fontWeight: 900, color: W, marginBottom: 10 }}>
+              You're all set!
+            </h2>
+            <p style={{ fontSize: 14, color: MUTED, lineHeight: 1.7, marginBottom: 20 }}>
+              Your business profile is saved. Every tool on Cerebre Plus will now produce output tailored specifically to{' '}
+              <strong style={{ color: DIM }}>{form.business_name || 'your business'}</strong>.
+            </p>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, color: TEAL, fontSize: 13 }}>
+              <RefreshCw size={13} style={{ animation: 'spin .8s linear infinite' }} />
+              Taking you to your dashboard…
+            </div>
+          </div>
+        )}
+
+        {/* ── STEP 0: Your Business ───────────────────────────── */}
+        {step === 0 && (
+          <>
+            <StepHeader step={1} total={3} icon="🏢" label="Your Business" />
+
+            <Field
+              label="Business name" required
+              value={form.business_name}
+              onChange={v => set('business_name', v)}
+              placeholder="e.g. Amara's Fashion House"
+            />
+            <SuggestionStrip
+              suggestions={sug('businessNameHints', 'Business name examples')}
+              label={form.industry ? `Names for ${INDUSTRIES.find(i => i.value === form.industry)?.label} businesses` : 'Example business names'}
+              onSelect={v => set('business_name', v)}
+              visible={form.business_name.length < 4 && !!form.industry}
+            />
+
+            <div style={{ height: 14 }} />
+
+            <div style={{ marginBottom: 6 }}>
+              <label style={{ display: 'block', fontSize: 11.5, fontWeight: 700, color: MUTED, letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 8 }}>
+                Industry <span style={{ color: GOLD }}>*</span>
+              </label>
+              <select
+                value={form.industry}
+                onChange={e => set('industry', e.target.value)}
+                style={{
+                  width: '100%', padding: '13px 14px', fontSize: 14, fontFamily: 'inherit',
+                  background: 'rgba(255,255,255,0.06)', border: `1.5px solid ${B}`,
+                  borderRadius: 11, color: form.industry ? W : MUTED, outline: 'none',
+                  cursor: 'pointer', boxSizing: 'border-box', transition: 'all .18s',
+                }}
+              >
+                <option value="">Select your industry…</option>
+                {INDUSTRIES.map(i => <option className='bg-black' key={i.value} value={i.value}>{i.label}</option>)}
+              </select>
+              {form.industry && (
+                <p style={{ fontSize: 11.5, color: TEAL, marginTop: 6, display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <Sparkles size={11} />
+                  Suggestions are now personalised for {INDUSTRIES.find(i => i.value === form.industry)?.label} businesses
+                </p>
               )}
-            </React.Fragment>
-          ))}
-        </div>
+            </div>
 
-        {/* Card */}
-        <div style={{ background: N, border: `1px solid ${B}`, borderRadius: 18, padding: '28px 26px' }}>
+            <div style={{ height: 14 }} />
 
-          {/* ─────── STEP 2: Done ─────── */}
-          {step === 2 && (
-            <div style={{ textAlign: 'center', padding: '20px 0', animation: 'fadeIn .4s ease' }}>
-              <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'rgba(34,197,94,0.14)', border: '2px solid rgba(34,197,94,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
-                <Check size={26} style={{ color: '#22C55E' }} />
-              </div>
-              <h2 style={{ fontFamily: "'Georgia',serif", fontSize: 22, fontWeight: 900, color: W, marginBottom: 8 }}>Welcome to Cerebre Plus!</h2>
-              <p style={{ fontSize: 14, color: MUTED, lineHeight: 1.65 }}>
-                Your account is ready. Taking you to your dashboard — your first free tool is waiting there for you.
+            <Field
+              label="City / Location" required
+              value={form.city}
+              onChange={v => set('city', v)}
+              placeholder="e.g. Lagos"
+            />
+            <CitySuggestions
+              currentValue={form.city}
+              onSelect={v => set('city', v)}
+              visible={form.city.length < 3}
+            />
+
+            <div style={{ height: 14 }} />
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <Field
+                label="Years in business"
+                value={form.years_in_business}
+                onChange={v => set('years_in_business', v)}
+                placeholder="e.g. 3"
+                type="number"
+                hint="Optional"
+              />
+              <Field
+                label="WhatsApp number"
+                value={form.whatsapp}
+                onChange={v => set('whatsapp', v)}
+                placeholder="e.g. 08091234567"
+                hint="Optional"
+              />
+            </div>
+          </>
+        )}
+
+        {/* ── STEP 1: Your Brand Story ─────────────────────────── */}
+        {step === 1 && (
+          <>
+            <StepHeader step={2} total={3} icon="✍" label={`Tell us about ${form.business_name || 'your business'}`} />
+
+            <p style={{ fontSize: 13, color: MUTED, marginBottom: 20, lineHeight: 1.6, fontStyle: 'italic' }}>
+              Tap any suggestion to fill the field instantly. These will make every tool output sound like it was written just for {form.business_name || 'you'}.
+            </p>
+
+            {/* Description */}
+            <TextArea
+              label="What does your business do?" required rows={3}
+              value={form.description}
+              onChange={v => set('description', v)}
+              placeholder="Describe what you do, who you serve, and what makes your service stand out. 2–3 sentences is perfect."
+            />
+            <SuggestionStrip
+              suggestions={sug('description', 'What does your business do?')}
+              label="Tap to fill — edit to make it yours"
+              onSelect={v => set('description', v)}
+              visible={form.description.length < 30}
+            />
+
+            <div style={{ height: 16 }} />
+
+            {/* Target customer */}
+            <TextArea
+              label="Who are your customers?" required rows={2}
+              value={form.target_customer}
+              onChange={v => set('target_customer', v)}
+              placeholder="Describe your ideal customer — age, location, what they need, what they value."
+            />
+            <SuggestionStrip
+              suggestions={sug('target_customer', 'Who are your customers?')}
+              label="Customer profiles for your industry"
+              onSelect={v => set('target_customer', v)}
+              visible={form.target_customer.length < 25}
+            />
+
+            <div style={{ height: 16 }} />
+
+            {/* Unique advantage */}
+            <TextArea
+              label="What makes you different?" required rows={2}
+              value={form.unique_advantage}
+              onChange={v => set('unique_advantage', v)}
+              placeholder="Your competitive edge — what can you do that others can't? Speed, price, quality, expertise?"
+            />
+            <SuggestionStrip
+              suggestions={sug('unique_advantage', 'What makes you different?')}
+              label="Differentiators that work for your industry"
+              onSelect={v => set('unique_advantage', v)}
+              visible={form.unique_advantage.length < 25}
+            />
+
+            <div style={{ height: 16 }} />
+
+            {/* Social proof */}
+            <Field
+              label="Your key achievement or social proof"
+              value={form.social_proof}
+              onChange={v => set('social_proof', v)}
+              placeholder="e.g. '500+ clients served since 2021' or '4.9/5 rating from 300 reviews'"
+              hint="Optional — used in copy and ad tools for maximum credibility"
+            />
+            <SuggestionStrip
+              suggestions={sug('social_proof', 'Key achievement or social proof')}
+              label="Achievement examples for your industry"
+              onSelect={v => set('social_proof', v)}
+              visible={form.social_proof.length < 15}
+            />
+
+            <div style={{ height: 16 }} />
+
+            {/* Price range */}
+            <Field
+              label="Your typical price range"
+              value={form.price_range}
+              onChange={v => set('price_range', v)}
+              placeholder="e.g. 'Services from ₦15,000 · Premium from ₦80,000'"
+              hint="Optional — prevents ad tools from attracting the wrong audience"
+            />
+            <SuggestionStrip
+              suggestions={sug('price_range', 'Your typical price range')}
+              label="Pricing examples for your industry"
+              onSelect={v => set('price_range', v)}
+              visible={form.price_range.length < 10}
+            />
+
+            <div style={{ height: 16 }} />
+
+            {/* Call to action */}
+            <Field
+              label="How do customers take action?"
+              value={form.call_to_action}
+              onChange={v => set('call_to_action', v)}
+              placeholder="e.g. 'Send us a WhatsApp message' or 'Book a free consultation'"
+              hint="Optional — used as the CTA in every ad, post, and email"
+            />
+            <SuggestionStrip
+              suggestions={sug('call_to_action', 'How do customers take action?')}
+              label="CTAs that work for your industry"
+              onSelect={v => set('call_to_action', v)}
+              visible={form.call_to_action.length < 10}
+            />
+          </>
+        )}
+
+        {/* ── STEP 2: Voice & Challenges ───────────────────────── */}
+        {step === 2 && (
+          <>
+            <StepHeader step={3} total={3} icon="🎯" label="Your voice and goals" />
+
+            {/* Brand voice */}
+            <label style={{ display: 'block', fontSize: 11.5, fontWeight: 700, color: MUTED, letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 12 }}>
+              How does your brand speak? <span style={{ color: GOLD }}>*</span>
+            </label>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 22 }}>
+              {BRAND_VOICES.map(v => {
+                const selected = form.brand_voice === v.value
+                return (
+                  <button
+                    key={v.value}
+                    type="button"
+                    onClick={() => set('brand_voice', v.value)}
+                    style={{
+                      padding: '12px 14px', borderRadius: 12, fontFamily: 'inherit',
+                      textAlign: 'left', cursor: 'pointer', transition: 'all .15s',
+                      background: selected ? `${TEAL}15` : FAINT,
+                      border: `1.5px solid ${selected ? TEAL + '50' : B}`,
+                    }}
+                  >
+                    <p style={{ fontSize: 13, fontWeight: 700, color: selected ? TEAL : DIM, margin: '0 0 3px' }}>
+                      {selected && '✓ '}{v.label}
+                    </p>
+                    <p style={{ fontSize: 11, color: MUTED, margin: 0 }}>{v.sub}</p>
+                  </button>
+                )
+              })}
+            </div>
+
+            {/* Marketing challenges */}
+            <label style={{ display: 'block', fontSize: 11.5, fontWeight: 700, color: MUTED, letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 6 }}>
+              Biggest marketing challenges <span style={{ color: GOLD }}>*</span>
+            </label>
+            <p style={{ fontSize: 12, color: MUTED, marginBottom: 12, fontStyle: 'italic' }}>
+              Select all that apply — these help us prioritise the right tools for you.
+            </p>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              {CHALLENGES.map(c => {
+                const sel = form.marketing_challenges.includes(c)
+                return (
+                  <button
+                    key={c}
+                    type="button"
+                    onClick={() => toggleChallenge(c)}
+                    style={{
+                      padding: '8px 14px', borderRadius: 20, fontFamily: 'inherit',
+                      fontSize: 12.5, fontWeight: sel ? 700 : 500, cursor: 'pointer', transition: 'all .15s',
+                      background: sel ? `${GOLD}18` : FAINT,
+                      border: `1.5px solid ${sel ? GOLD + '50' : B}`,
+                      color: sel ? GL : MUTED,
+                    }}
+                  >
+                    {sel && '✓ '}{c}
+                  </button>
+                )
+              })}
+            </div>
+            {form.marketing_challenges.length > 0 && (
+              <p style={{ fontSize: 11.5, color: TEAL, marginTop: 10 }}>
+                ✦ {form.marketing_challenges.length} challenge{form.marketing_challenges.length !== 1 ? 's' : ''} selected
               </p>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 18, color: TEAL, fontSize: 13 }}>
-                <RefreshCw size={14} style={{ animation: 'spin 0.8s linear infinite' }} />
-                Going to dashboard…
-              </div>
-            </div>
-          )}
+            )}
+          </>
+        )}
 
-          {/* ─────── STEP 0: Business Details ─────── */}
-          {step === 0 && (
-            <div style={{ animation: 'fadeIn .35s ease' }}>
-              <h2 style={{ fontFamily: "'Georgia',serif", fontSize: 20, fontWeight: 900, color: W, marginBottom: 6 }}>
-                Set up your business
-              </h2>
-              <p style={{ fontSize: 13, color: MUTED, marginBottom: 22, fontStyle: 'italic' }}>
-                Takes under 2 minutes. Every Cerebre Plus tool uses this to personalise your results.
-              </p>
+        {/* ── Error ───────────────────────────────────────────── */}
+        {error && step < 3 && (
+          <div style={{ padding: '10px 14px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)', borderRadius: 10, marginTop: 14, fontSize: 13, color: '#FCA5A5' }}>
+            {error}
+          </div>
+        )}
 
-
-              {/* Industry */}
-              <div style={{ marginBottom: 18 }}>
-                <label style={labelStyle}>Industry <span style={{ color: GOLD }}>*</span></label>
-                <select
-                  value={d.industry}
-                  onChange={e => set('industry', e.target.value)}
-                  style={{ ...inputStyle(), color: d.industry ? W : MUTED, cursor: 'pointer' }}
-                >
-                  <option value="">Select your industry…</option>
-                  {INDUSTRIES.map(id => (
-                    <option key={id} className='bg-black' value={id}>{INDUSTRY_LABELS[id]}</option>
-                  ))}
-                </select>
-                {/* Inline industry hint appears right after selecting */}
-                {d.industry && (
-                  <p style={{ fontSize: 11.5, color: TEAL, marginTop: 6, display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <span>✦</span>
-                    Suggestions for {INDUSTRY_LABELS[d.industry]} businesses are now active below.
-                  </p>
-                )}
-              </div>
-
-              {/* Business name */}
-              <div style={{ marginBottom: 18 }}>
-                <label style={labelStyle}>Business name <span style={{ color: GOLD }}>*</span></label>
-                <input
-                  type="text"
-                  value={d.businessName}
-                  onChange={e => set('businessName', e.target.value)}
-                  onFocus={() => setFocusedField('businessName')}
-                  onBlur={() => setFocusedField(null)}
-                  placeholder="e.g. Amara's Fashion House"
-                  style={inputStyle(focusedField === 'businessName')}
-                />
-                {/* Business name hints — only shown when industry is selected */}
-                {showNameHints && sug && (
-                  <SuggestionStrip
-                    suggestions={sug.businessNameHints}
-                    label="Example business names for your industry"
-                    onSelect={v => set('businessName', v)}
-                    visible
-                  />
-                )}
-              </div>
-
-
-
-              {/* City */}
-              <div style={{ marginBottom: 18 }}>
-                <label style={labelStyle}>City / Location <span style={{ color: GOLD }}>*</span></label>
-                <input
-                  type="text"
-                  value={d.city}
-                  onChange={e => set('city', e.target.value)}
-                  onFocus={() => setFocusedField('city')}
-                  onBlur={() => setTimeout(() => setFocusedField(f => f === 'city' ? null : f), 200)}
-                  placeholder="e.g. Lagos"
-                  style={inputStyle(focusedField === 'city')}
-                />
-                <CityStrip
-                  visible={showCities}
-                  currentValue={d.city}
-                  onSelect={v => { set('city', v); setFocusedField(null) }}
-                />
-              </div>
-
-              {/* Target customers */}
-              <div style={{ marginBottom: 4 }}>
-                <label style={labelStyle}>
-                  Who are your customers?
-                  <span style={{ fontSize: 10, fontWeight: 400, textTransform: 'none', marginLeft: 6 }}>(optional — improves every tool)</span>
-                </label>
-                <textarea
-                  value={d.targetCustomers}
-                  onChange={e => set('targetCustomers', e.target.value)}
-                  onFocus={() => setFocusedField('targetCustomers')}
-                  onBlur={() => setTimeout(() => setFocusedField(f => f === 'targetCustomers' ? null : f), 200)}
-                  rows={2}
-                  placeholder={
-                    d.industry
-                      ? 'Tap a suggestion below, or describe in your own words…'
-                      : 'e.g. Nigerian women 25–40 who value premium quality fashion'
-                  }
-                  style={{ ...inputStyle(focusedField === 'targetCustomers'), resize: 'vertical' as const, lineHeight: 1.6 }}
-                />
-                {/* Customer suggestions — the most impactful suggestions in the whole form */}
-                {showTargetSugs && sug && (
-                  <SuggestionStrip
-                    suggestions={sug.targetCustomers}
-                    label={d.industry ? `Ideas for ${INDUSTRY_LABELS[d.industry]} businesses` : 'Suggestions'}
-                    onSelect={v => set('targetCustomers', v)}
-                    visible
-                  />
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* ─────── STEP 1: Goals & Challenges ─────── */}
-          {step === 1 && (
-            <div style={{ animation: 'fadeIn .35s ease' }}>
-              <h2 style={{ fontFamily: "'Georgia',serif", fontSize: 20, fontWeight: 900, color: W, marginBottom: 6 }}>
-                What are you trying to achieve?
-              </h2>
-              <p style={{ fontSize: 13, color: MUTED, marginBottom: 20, fontStyle: 'italic' }}>
-                We use this to prioritise the tools that matter most for your situation.
-              </p>
-
-              {/* Primary goal */}
-              <div style={{ marginBottom: 18 }}>
-                <label style={labelStyle}>Primary goal <span style={{ color: GOLD }}>*</span></label>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
-                  {GOALS.map(g => (
-                    <button
-                      key={g}
-                      type="button"
-                      onClick={() => set('primaryGoal', g)}
-                      style={{
-                        padding: '10px 14px',
-                        borderRadius: 10,
-                        fontFamily: 'inherit',
-                        fontSize: 13,
-                        fontWeight: d.primaryGoal === g ? 700 : 500,
-                        cursor: 'pointer',
-                        background: d.primaryGoal === g ? `${GL}15` : B,
-                        border: `1.5px solid ${d.primaryGoal === g ? GL + '50' : B}`,
-                        color: d.primaryGoal === g ? GL : MUTED,
-                        textAlign: 'left',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 8,
-                        transition: 'all .15s',
-                      }}
-                    >
-                      {d.primaryGoal === g && <Check size={13} style={{ color: GL, flexShrink: 0 }} />}
-                      {g}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Primary challenge */}
-              <div>
-                <label style={labelStyle}>Biggest marketing challenge <span style={{ color: GOLD }}>*</span></label>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
-                  {CHALLENGES.map(c => (
-                    <button
-                      key={c}
-                      type="button"
-                      onClick={() => set('primaryChallenge', c)}
-                      style={{
-                        padding: '10px 14px',
-                        borderRadius: 10,
-                        fontFamily: 'inherit',
-                        fontSize: 13,
-                        fontWeight: d.primaryChallenge === c ? 700 : 500,
-                        cursor: 'pointer',
-                        background: d.primaryChallenge === c ? 'rgba(18,212,180,0.1)' : B,
-                        border: `1.5px solid ${d.primaryChallenge === c ? TEAL + '40' : B}`,
-                        color: d.primaryChallenge === c ? TEAL : MUTED,
-                        textAlign: 'left',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 8,
-                        transition: 'all .15s',
-                      }}
-                    >
-                      {d.primaryChallenge === c && <Check size={13} style={{ color: TEAL, flexShrink: 0 }} />}
-                      {c}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Error message */}
-          {error && (
-            <div style={{ padding: '10px 14px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)', borderRadius: 10, marginTop: 14, fontSize: 13, color: '#FCA5A5' }}>
-              {error}
-            </div>
-          )}
-
-          {/* Navigation button */}
-          {step < 2 && (
+        {/* ── Navigation ──────────────────────────────────────── */}
+        {step < 3 && (
+          <div style={{ marginTop: 24, display: 'flex', flexDirection: 'column', gap: 10 }}>
             <button
               onClick={next}
-              disabled={!isValid() || saving}
+              disabled={!stepValid() || saving}
               style={{
-                width: '100%',
-                marginTop: step === 0 ? 20 : 20,
-                padding: '14px',
-                borderRadius: 12,
-                fontFamily: 'inherit',
-                fontWeight: 800,
-                fontSize: 15,
-                background: !isValid() || saving
-                  ? B
-                  : `linear-gradient(135deg,${GOLD},${GL})`,
-                border: `1px solid ${!isValid() || saving ? B : GOLD + '50'}`,
-                color: !isValid() || saving ? MUTED : '#071528',
-                cursor: !isValid() || saving ? 'not-allowed' : 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 8,
+                width: '100%', padding: '14px', borderRadius: 12, fontFamily: 'inherit',
+                fontWeight: 800, fontSize: 15, cursor: !stepValid() || saving ? 'not-allowed' : 'pointer',
+                background: !stepValid() || saving ? FAINT : `linear-gradient(135deg,${GOLD},${GL})`,
+                border: `1px solid ${!stepValid() || saving ? B : GOLD + '50'}`,
+                color: !stepValid() || saving ? MUTED : '#071528',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
                 transition: 'all .2s',
               }}
             >
               {saving
-                ? <><RefreshCw size={15} style={{ animation: 'spin 1s linear infinite' }} />Saving…</>
-                : step === 1
-                  ? 'Finish & go to dashboard →'
-                  : 'Continue →'
+                ? <><RefreshCw size={14} style={{ animation: 'spin 1s linear infinite' }} />Saving your profile…</>
+                : step === 2
+                  ? <><Check size={14} />Finish & open dashboard →</>
+                  : <>Continue <ChevronRight size={14} /></>
               }
             </button>
-          )}
-        </div>
 
-        {/* Footer note */}
-        <p style={{ textAlign: 'center', fontSize: 11.5, color: 'rgba(107,132,160,0.4)', marginTop: 14 }}>
-          No tool runs during setup · All details can be updated later in your profile
-        </p>
+            {step > 0 && (
+              <button
+                onClick={back}
+                disabled={saving}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: MUTED, fontFamily: 'inherit', padding: '4px' }}
+              >
+                ← Back
+              </button>
+            )}
 
+            {step === 0 && (
+              <p style={{ textAlign: 'center', fontSize: 11.5, color: 'rgba(107,132,160,0.45)', margin: 0 }}>
+                Takes about 3 minutes · All details can be updated later
+              </p>
+            )}
+          </div>
+        )}
       </div>
     </div>
   )
