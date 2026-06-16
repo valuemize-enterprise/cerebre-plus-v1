@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
   const supabase = await createServerClient()
 
   const body = await request.json()
-  const { email, code } = body
+  const { email, code, referralCode } = body
 
   if (!email || !code) {
     return NextResponse.json({ error: 'Email and code are required' }, { status: 400 })
@@ -79,6 +79,16 @@ export async function POST(request: NextRequest) {
     const { data: profile } = await admin.from('profiles').select('coin_balances(balance)').eq('id', user.id).single()
     const balance = (profile as any)?.coin_balances?.balance ?? 50
     sendWelcomeEmail(user.id, balance).catch(() => {})
+    // Record referral if a referral code was provided
+    if (referralCode) {
+      await (admin as any)
+        .rpc("record_referral", {
+          p_referred_user_id: user.id,
+          p_referred_email: user.email,
+          p_referral_code: referralCode,
+        })
+        .catch(() => {}); // Non-fatal — referral fails silently
+    }
   }
 
   return NextResponse.json({ success: true, verified: true })

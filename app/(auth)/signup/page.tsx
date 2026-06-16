@@ -3,7 +3,7 @@
 
 import React, { useState } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Eye, EyeOff, RefreshCw } from 'lucide-react'
 import { createBrowserClient } from '@/lib/supabase/client'
 // import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
@@ -32,7 +32,9 @@ function Input({ label, type='text', value, onChange, placeholder, error, requir
 
 export default function SignupPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const supabase = createBrowserClient()
+  const refCode = searchParams.get('ref')
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -56,9 +58,14 @@ export default function SignupPage() {
     if (Object.keys(validation).length) { setErrors(validation); return }
     setErrors({}); setApiError(''); setLoading(true)
     try {
+      const metadata: Record<string, string> = { full_name: name.trim(), business_name: bizName.trim() }
+      if (refCode) {
+        metadata.referral_code = refCode
+        sessionStorage.setItem('signup_ref', refCode)
+      }
       const { error: signupErr } = await supabase.auth.signUp({
         email: email.toLowerCase().trim(), password,
-        options: { data: { full_name: name.trim(), business_name: bizName.trim() } },
+        options: { data: metadata },
       })
       if (signupErr) throw new Error(signupErr.message)
       sessionStorage.setItem('signup_name', name.trim())
@@ -70,7 +77,10 @@ export default function SignupPage() {
       })
       const otpData = await otpRes.json()
       if (!otpRes.ok) throw new Error(otpData.error || 'Failed to send verification code')
-      router.push(`/verify?email=${encodeURIComponent(email.toLowerCase().trim())}`)
+        
+      const verifyParams = new URLSearchParams({ email: email.toLowerCase().trim() })
+      if (refCode) verifyParams.set('ref', refCode)
+      router.push(`/verify?${verifyParams.toString()}`)
     } catch (err: any) {
       const msg = err.message || 'Signup failed. Please try again.'
       if (msg.toLowerCase().includes('email')) setErrors(p => ({...p, email: msg}))

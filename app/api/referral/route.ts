@@ -10,8 +10,8 @@ import { sendEmail }                 from '@/lib/email'
 
 // Coin rewards per plan tier referred
 const REFERRAL_REWARDS: Record<string, number> = {
-  starter: 50,
-  growth:  100,
+  starter: 5,
+  growth:  10,
 }
 
 // ─────────────────────────────────────────────────────────────

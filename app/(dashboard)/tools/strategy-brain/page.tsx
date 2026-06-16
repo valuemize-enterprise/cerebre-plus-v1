@@ -9,8 +9,10 @@ import {
   ArrowLeft, ArrowRight, Sparkles, RefreshCw,
   Target, Zap, TrendingUp, Map, PenTool, BarChart3,
 } from 'lucide-react'
-import { OutputRenderer } from '@/components/tools/OutputRenderer'
-import { SPRINT_BLUEPRINT_OUTPUT_SECTIONS } from '@/lib/tools/blueprints/sprint-blueprint-prompt'
+import { OutputRenderer }                      from '@/components/tools/OutputRenderer'
+import { SPRINT_BLUEPRINT_OUTPUT_SECTIONS }    from '@/lib/tools/blueprints/sprint-blueprint-prompt'
+import { AISuggestionStrip, AI_ELIGIBLE_SEMANTICS } from '@/components/tools/AISuggestionStrip'
+import { detectFieldSemantic }                 from '@/lib/tools/form-suggestions'
 
 // ── Tokens ─────────────────────────────────────────────────────
 const N2  = '#0D2040'
@@ -88,69 +90,76 @@ const STEPS = [
 ]
 
 // ── Form field renderer ───────────────────────────────────────
-function FormField({ field, value, onChange }: { field: any; value: any; onChange: (v: any) => void }) {
+// ── Field renderer (input only) ──────────────────────────────
+function FieldInput({ field, value, onChange }: { field: any; value: any; onChange: (v: any) => void }) {
   const base = {
     background:'rgba(255,255,255,0.07)', border:`1.5px solid ${B}`, borderRadius:10,
     color:W, fontFamily:'inherit', fontSize:13.5, outline:'none', width:'100%',
     boxSizing:'border-box' as const, transition:'border-color .15s',
   }
-
   if (field.type === 'textarea') return (
-    <textarea
-      value={value || ''}
-      onChange={e => onChange(e.target.value)}
-      rows={field.rows || 3}
-      placeholder={field.placeholder}
-      style={{ ...base, padding:'10px 14px', resize:'vertical' as const, lineHeight:1.65 }}
-    />
+    <textarea value={value||''} onChange={e=>onChange(e.target.value)}
+      rows={field.rows||3} placeholder={field.placeholder}
+      style={{...base,padding:'10px 14px',resize:'vertical' as const,lineHeight:1.65}}/>
   )
-
   if (field.type === 'select') return (
-    <select
-      value={value || ''}
-      onChange={e => onChange(e.target.value)}
-      style={{ ...base, padding:'10px 14px', cursor:'pointer' }}
-    >
+    <select value={value||''} onChange={e=>onChange(e.target.value)}
+      style={{...base,padding:'10px 14px',cursor:'pointer'}}>
       <option value="">Select…</option>
-      {(field.options || []).map((o: string) => <option key={o} value={o}>{o}</option>)}
+      {(field.options||[]).map((o:string)=><option key={o} value={o}>{o}</option>)}
     </select>
   )
-
   if (field.type === 'multicheck') {
-    const selected: string[] = Array.isArray(value) ? value : []
+    const sel: string[] = Array.isArray(value)?value:[]
     return (
-      <div style={{ display:'flex', flexWrap:'wrap', gap:7 }}>
-        {(field.options || []).map((o: string) => {
-          const sel = selected.includes(o)
+      <div style={{display:'flex',flexWrap:'wrap',gap:7}}>
+        {(field.options||[]).map((o:string)=>{
+          const s=sel.includes(o)
           return (
-            <button
-              key={o}
-              type="button"
-              onClick={() => onChange(sel ? selected.filter(x => x !== o) : [...selected, o])}
-              style={{
-                padding:'6px 14px', borderRadius:20, fontFamily:'inherit',
-                fontSize:12.5, fontWeight:600, cursor:'pointer', transition:'all .15s',
-                background: sel ? `${TEAL}18` : FAINT,
-                border: `1.5px solid ${sel ? TEAL + '50' : B}`,
-                color: sel ? TEAL : MUTED,
-              }}
-            >
-              {sel ? '✓ ' : ''}{o}
+            <button key={o} type="button" onClick={()=>onChange(s?sel.filter(x=>x!==o):[...sel,o])}
+              style={{padding:'6px 14px',borderRadius:20,fontFamily:'inherit',fontSize:12.5,
+                fontWeight:600,cursor:'pointer',transition:'all .15s',
+                background:s?`${TEAL}18`:FAINT,border:`1.5px solid ${s?TEAL+'50':B}`,color:s?TEAL:MUTED}}>
+              {s?'✓ ':''}{o}
             </button>
           )
         })}
       </div>
     )
   }
+  return (
+    <input type="text" value={value||''} onChange={e=>onChange(e.target.value)}
+      placeholder={field.placeholder} style={{...base,padding:'10px 14px'}}/>
+  )
+}
+
+// ── Full FormField — input + AI suggestion strip ──────────────
+function FormField({ field, value, onChange, profile, existingInputs }: {
+  field: any; value: any; onChange: (v: any) => void
+  profile: Record<string,string>; existingInputs: Record<string,string>
+}) {
+  const isText = field.type === 'text' || field.type === 'textarea'
+  const fieldVal = isText ? String(value||'') : ''
+  const show = isText && fieldVal.length < 30
+  const semantic = isText ? detectFieldSemantic(field.key, field.label||'') : ''
+  const isAI = show && AI_ELIGIBLE_SEMANTICS.has(semantic)
 
   return (
-    <input
-      type="text"
-      value={value || ''}
-      onChange={e => onChange(e.target.value)}
-      placeholder={field.placeholder}
-      style={{ ...base, padding:'10px 14px' }}
-    />
+    <div>
+      <FieldInput field={field} value={value} onChange={onChange}/>
+      {isAI && (
+        <AISuggestionStrip
+          fieldId={field.key}
+          fieldLabel={field.label||''}
+          fieldSemantic={semantic}
+          toolId="strategy-brain"
+          toolName="StrategyBrain"
+          existingInputs={existingInputs}
+          onSelect={onChange}
+          visible={show}
+        />
+      )}
+    </div>
   )
 }
 
@@ -158,7 +167,7 @@ function FormField({ field, value, onChange }: { field: any; value: any; onChang
 export default function StrategyBrainPage() {
   const [step,       setStep]       = useState(0)
   const [formData,   setFormData]   = useState<Record<string, any>>({})
-  const [profile,    setProfile]    = useState({ businessName:'', industry:'', city:'', targetCustomers:'', primaryGoal:'' })
+  const [profile,    setProfile]    = useState({ businessName:'', industry:'', city:'', targetCustomers:'', primaryGoal:'', description:'', priceRange:'' })
   const [generating, setGenerating] = useState(false)
   const [completion, setCompletion] = useState('')
   const [genId,      setGenId]      = useState<string | null>(null)
@@ -176,6 +185,8 @@ export default function StrategyBrainPage() {
           city:            d.profile.city             || '',
           targetCustomers: d.profile.target_customers || '',
           primaryGoal:     d.profile.primary_goal     || '',
+          description:     d.profile.description     || '',
+          priceRange:      d.profile.price_range     || '',
         })
       })
       .catch(() => {})
@@ -201,8 +212,9 @@ export default function StrategyBrainPage() {
       currentMonthlyRevenue: formData.currentMonthlyRevenue || '₦0',
       revenueTarget60d:      formData.revenueTarget60d      || '',
       whatWinningLooksLike:  formData.whatWinningLooksLike  || '',
-      mainProduct:           formData.mainProduct           || '',
-      pricePoint:            formData.pricePoint            || '',
+      // Auto-fill from profile if the user skipped these fields
+      mainProduct:           formData.mainProduct           || profile.description || '',
+      pricePoint:            formData.pricePoint            || profile.priceRange  || '',
       whyBuyNow:             formData.whyBuyNow             || '',
       currentObjDescript:    formData.currentObjDescript    || '',
       whereCustomersAre:     Array.isArray(formData.whereCustomersAre)
@@ -421,6 +433,18 @@ export default function StrategyBrainPage() {
               field={field}
               value={formData[field.key]}
               onChange={v => setField(field.key, v)}
+              profile={{
+                businessName:    profile.businessName,
+                industry:        profile.industry,
+                city:            profile.city,
+                targetCustomer:  profile.targetCustomers,
+                description:     profile.description,
+                priceRange:      profile.priceRange,
+              }}
+              existingInputs={Object.fromEntries(
+                Object.entries(formData)
+                  .filter(([k, v]) => k !== field.key && typeof v === 'string' && String(v).length > 0)
+              ) as Record<string, string>}
             />
           </div>
         ))}

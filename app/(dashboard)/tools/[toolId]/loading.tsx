@@ -1,0 +1,11 @@
+export default function Loading(){return(<><style>{`@keyframes pulse{0%,100%{opacity:.35}50%{opacity:.65}}.sk{background:rgba(255,255,255,0.07);border-radius:8px;animation:pulse 1.7s ease-in-out infinite}`}</style>
+<div style={{maxWidth:960}}>
+  <div className="sk" style={{height:13,width:"80px",marginBottom:20}}/>
+  <div style={{display:"flex",gap:12,marginBottom:24}}><div className="sk" style={{height:32,width:"32",borderRadius:"50%"}}/><div className="sk" style={{height:24,width:"32%",animationDelay:"0.05s"}}/></div>
+  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:20}}>
+    <div style={{background:"#0D2040",border:"1px solid rgba(255,255,255,0.07)",borderRadius:14,padding:18,marginBottom:12}}><div className="sk" style={{height:11,width:"38%"}}/><div className="sk" style={{height:36,width:"100%"}}/><div className="sk" style={{height:0,width:"0"}}/><div className="sk" style={{height:11,width:"38%",animationDelay:"0.07s"}}/><div className="sk" style={{height:36,width:"100%",animationDelay:"0.09s"}}/><div className="sk" style={{height:0,width:"0"}}/><div className="sk" style={{height:11,width:"38%",animationDelay:"0.14s"}}/><div className="sk" style={{height:36,width:"100%",animationDelay:"0.18s"}}/><div className="sk" style={{height:0,width:"0"}}/><div className="sk" style={{height:11,width:"38%",animationDelay:"0.21s"}}/><div className="sk" style={{height:36,width:"100%",animationDelay:"0.27s"}}/><div className="sk" style={{height:0,width:"0"}}/><div className="sk" style={{height:11,width:"38%",animationDelay:"0.28s"}}/><div className="sk" style={{height:36,width:"100%",animationDelay:"0.36s"}}/><div className="sk" style={{height:0,width:"0"}}/><div className="sk" style={{height:38,width:"100%",animationDelay:"0.30s",borderRadius:10}}/></div>
+    <div style={{background:"#0D2040",borderRadius:14,border:"1px solid rgba(255,255,255,0.07)",minHeight:420,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:14,padding:24}}>
+      <div className="sk" style={{height:38,width:"38",animationDelay:"0.40s",borderRadius:"50%"}}/><div className="sk" style={{height:14,width:"42%",animationDelay:"0.50s"}}/><div className="sk" style={{height:12,width:"60%",animationDelay:"0.55s"}}/><div className="sk" style={{height:12,width:"50%",animationDelay:"0.60s"}}/>
+    </div>
+  </div>
+</div></>)}

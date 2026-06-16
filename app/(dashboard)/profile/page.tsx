@@ -17,9 +17,11 @@ import {
 import { createBrowserClient }  from '@/lib/supabase/client'
 import { useUser }              from '@/lib/hooks/useUser'
 import { useToast }             from '@/components/ui/ModalToastSelect'
-import { SuggestionStrip }      from '@/components/tools/SuggestionStrip'
+import { SuggestionStrip }                         from '@/components/tools/SuggestionStrip'
+import { AISuggestionStrip, AI_ELIGIBLE_SEMANTICS }  from '@/components/tools/AISuggestionStrip'
 import {
   getFieldSuggestions,
+  detectFieldSemantic,
   type ProfileContext,
 } from '@/lib/tools/form-suggestions'
 
@@ -487,9 +489,16 @@ export default function ProfilePage() {
               maxLength={500}
               helpText="This is the most used field — the AI reads this for every output."
             />
-            <SuggestionStrip
-              suggestions={getFieldSuggestions('description', 'What does your business do?', profileCtx)}
-              label="Tap to fill — edit to make it yours"
+            <AISuggestionStrip
+              fieldId="description"
+              fieldLabel="What does your business do?"
+              fieldSemantic="product_service"
+              toolId="profile"
+              toolName="Business Profile"
+              existingInputs={{
+                industry:  form.industry  as string || '',
+                city:      form.city      as string || '',
+              }}
               onSelect={(v) => { setField('description', v); setTimeout(autoSave, 300) }}
               visible={(form.description as string || '').length < 30}
             />
@@ -503,9 +512,17 @@ export default function ProfilePage() {
               rows={3}
               maxLength={300}
             />
-            <SuggestionStrip
-              suggestions={getFieldSuggestions('unique_advantage', 'What makes you different?', profileCtx)}
-              label="Differentiators that work for your industry"
+            <AISuggestionStrip
+              fieldId="unique_advantage"
+              fieldLabel="What makes you different?"
+              fieldSemantic="usp_differentiator"
+              toolId="profile"
+              toolName="Business Profile"
+              existingInputs={{
+                description: form.description as string || '',
+                industry:    form.industry    as string || '',
+                city:        form.city        as string || '',
+              }}
               onSelect={(v) => { setField('unique_advantage', v); setTimeout(autoSave, 300) }}
               visible={(form.unique_advantage as string || '').length < 25}
             />
@@ -520,9 +537,17 @@ export default function ProfilePage() {
               maxLength={200}
               helpText="Used in trust signals throughout your outputs — be specific."
             />
-            <SuggestionStrip
-              suggestions={getFieldSuggestions('social_proof', 'Your key achievement or social proof', profileCtx)}
-              label="Achievement examples for your industry"
+            <AISuggestionStrip
+              fieldId="social_proof"
+              fieldLabel="Your key achievement or social proof"
+              fieldSemantic="social_proof"
+              toolId="profile"
+              toolName="Business Profile"
+              existingInputs={{
+                description:     form.description     as string || '',
+                industry:        form.industry        as string || '',
+                unique_advantage:form.unique_advantage as string || '',
+              }}
               onSelect={(v) => { setField('social_proof', v); setTimeout(autoSave, 300) }}
               visible={(form.social_proof as string || '').length < 15}
             />

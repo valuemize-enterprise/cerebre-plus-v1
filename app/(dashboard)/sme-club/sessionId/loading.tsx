@@ -1,0 +1,7 @@
+export default function Loading(){return(<><style>{`@keyframes pulse{0%,100%{opacity:.35}50%{opacity:.65}}.sk{background:rgba(255,255,255,0.07);border-radius:8px;animation:pulse 1.7s ease-in-out infinite}`}</style>
+<div style={{maxWidth:860}}>
+  <div className="sk" style={{height:13,width:"80px",marginBottom:20}}/>
+  <div className="sk" style={{height:26,width:"48%",animationDelay:"0.05s",marginBottom:8}}/><div style={{display:"flex",gap:10,marginBottom:18}}><div className="sk" style={{height:10,width:"58px"}}/><div className="sk" style={{height:10,width:"78px",animationDelay:"0.10s"}}/></div>
+  <div className="sk" style={{height:480,width:"100%",animationDelay:"0.15s",borderRadius:12,marginBottom:18}}/>
+  <div style={{background:"#0D2040",border:"1px solid rgba(255,255,255,0.07)",borderRadius:14,padding:18,marginBottom:12}}><div className="sk" style={{height:12,width:"88%"}}/><div className="sk" style={{height:12,width:"0%"}}/><div className="sk" style={{height:12,width:"88%",animationDelay:"0.07s"}}/><div className="sk" style={{height:12,width:"0%"}}/><div className="sk" style={{height:12,width:"88%",animationDelay:"0.14s"}}/><div className="sk" style={{height:12,width:"0%"}}/><div className="sk" style={{height:12,width:"88%",animationDelay:"0.21s"}}/><div className="sk" style={{height:12,width:"0%"}}/><div className="sk" style={{height:12,width:"88%",animationDelay:"0.28s"}}/><div className="sk" style={{height:12,width:"0%"}}/></div>
+</div></>)}
