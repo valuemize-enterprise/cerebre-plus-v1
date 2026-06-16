@@ -29,6 +29,10 @@ type FieldSemantic =
   | 'greeting'
   | 'social_proof'
   | 'price_range'
+  | 'key_message'
+  | 'objection'
+  | 'winning'
+  | 'hook'
   | 'none'
 
 export function detectFieldSemantic(fieldId: string, fieldLabel = ''): FieldSemantic {
@@ -44,7 +48,7 @@ export function detectFieldSemantic(fieldId: string, fieldLabel = ''): FieldSema
   if (/product|service|offer.*sell|what.*sell|what.*promot|what.*launch|what.*advertis|being.*sold|product_name|industry_context|^description|what.*does.*business|what.*do.*you|about.*business|what.*business.*do/.test(combined)) {
     return 'product_service'
   }
-  if (/topic|post.?about|what.*post|video.*about|article|carousel|story.?topic|content.*about|what.*this.*video|what.*this.*post|blog|post_topic|story_message|video_topic|key_message|video_title/.test(combined)) {
+  if (/topic|post.?about|what.*post|video.*about|article|carousel|story.?topic|content.*about|what.*this.*video|what.*this.*post|blog|post_topic|story_message|video_topic|key_message|video_title|whatworking|what.*working|currently.*working/.test(combined)) {
     return 'content_topic'
   }
   if (/situation|challenge|current.*market|biggest.*challenge|what.*struggle|problem|obstacle|current.*state|what.*is.*your.*market/.test(combined)) {
@@ -67,12 +71,28 @@ export function detectFieldSemantic(fieldId: string, fieldLabel = ''): FieldSema
     return 'greeting'
   }
   // Social proof — key stats, achievements, testimonial figures (onboarding/profile)
-  if (/social.?proof|social_proof|key.*stat|key.*achievement|track.*record|testimonial.*stat|achievement|milestone|how.*many.*client|satisfied.*client/.test(combined)) {
+  if (/social.?proof|social_proof|key.*stat|key.*achievement|track.*record|testimonial.*stat|achievement|milestone|how.*many.*client|satisfied.*client|trust_signal|credentials/.test(combined)) {
     return 'social_proof'
   }
   // Price range — what you charge (onboarding/profile)
-  if (/price.?range|price_range|pricing|what.*charge|your.*price|typical.*cost|how.*much|cost.*of|fee|rate/.test(combined)) {
+  if (/price.?range|price_range|pricing|what.*charge|your.*price|typical.*cost|how.*much|cost.*of|fee|rate|normal_price|promo_price/.test(combined)) {
     return 'price_range'
+  }
+  // Key message / hook — the core one-liner for this campaign, post, or ad
+  if (/key.?message|key_message|key_benefit|core.*message|main.*message|subscriber.?context|what.*emotion|target.?emotion|value.?add/.test(combined)) {
+    return 'key_message'
+  }
+  // Objections — why customers hesitate (Sprint Blueprint, sales tools)
+  if (/objection|hesitat|main.?reason|don.?t.?buy|currentobjdescript|obstacle|pushback|why.*not/.test(combined)) {
+    return 'objection'
+  }
+  // Winning / success — what does success look like for this business
+  if (/what.*winning|winning.*looks|success.*like|whatwinning|what.*success|result.*want|goal.*achieve/.test(combined)) {
+    return 'winning'
+  }
+  // Hook / opening line
+  if (/hook|opening.?line|first.?line|announcement.?detail|lead.?context/.test(combined)) {
+    return 'hook'
   }
   return 'none'
 }
@@ -975,12 +995,67 @@ export function getFieldSuggestions(
     }
 
     case 'competitor': {
-      // Generic competitor description framework
       pool = [
         `Large national brands with bigger budgets but less personalised service than ${ctx.businessName || 'us'}`,
         `Informal local providers in ${ctx.city || 'our market'} who compete mainly on price`,
         'International platforms adapted for Nigeria — they lack local market understanding',
         'Individual freelancers who cannot offer the consistency and reliability a business needs',
+      ]
+      break
+    }
+
+    case 'key_message': {
+      // Key messages derived from the user's core advantage
+      const advantage = ctx.uniqueAdvantage?.trim()
+      const biz = ctx.businessName || 'we'
+      const cust = ctx.targetCustomer || 'our customers'
+      pool = [
+        ...(advantage ? [`${advantage} — that is why ${cust} keep coming back`] : []),
+        ...data.usps.slice(0, 2),
+        ...data.ctas.slice(0, 1),
+      ].filter(Boolean)
+      break
+    }
+
+    case 'objection': {
+      // Common objections for the industry
+      const objections: Record<string, string[]> = {
+        fashion_clothing:     [`"It's too expensive for what it is"`, `"I'll check other options first"`, `"I'm not sure about the quality before I pay"`],
+        food_restaurants:     [`"I'm not sure the food will still be hot on arrival"`, `"It's cheaper to buy from somewhere closer"`, `"I've had bad experiences with food delivery before"`],
+        beauty_cosmetics:     [`"Let me see results on someone else first"`, `"I'll wait until after payday"`, `"I can get cheaper products at the market"`],
+        technology_software:  [`"We tried software before and it didn't work for us"`, `"It's too complex for my team to learn"`, `"We're worried about our data security"`],
+        real_estate:          [`"The documentation might not be genuine"`, `"I want to see the property in person first"`, `"The price might drop if I wait"`],
+        education_training:   [`"I don't have time with my current job"`, `"How do I know this certification is valuable?"`, `"I'll do it next year when things calm down"`],
+        logistics_delivery:   [`"My last delivery partner kept losing packages"`, `"The price is higher than what I currently pay"`, `"I need to test you before committing"`],
+        healthcare_wellness:  [`"I'll only go if it gets worse"`, `"I don't trust private hospitals with their bills"`, `"I want to check your doctor's qualifications first"`],
+        events_entertainment: [`"Can you guarantee everything will run on time?"`, `"I've been let down by event planners before"`, `"Your quote is higher than others I've seen"`],
+        ecommerce_retail:     [`"What if the product is different from the photo?"`, `"How do I return it if I don't like it?"`, `"I don't trust paying online without seeing the seller"`],
+        finance_fintech:      [`"How do I know my money is safe with you?"`, `"The interest rate sounds too low to be real"`, `"I've seen too many fintech scams in Nigeria"`],
+        other:                [`"Let me think about it and get back to you"`, `"It's a bit outside my budget right now"`, `"I want to compare more options first"`],
+      }
+      pool = objections[ctx.industry || 'other'] || objections.other
+      break
+    }
+
+    case 'winning': {
+      // What winning looks like for this specific business
+      const biz = ctx.businessName || 'the business'
+      const cust = ctx.targetCustomer ? ctx.targetCustomer.split(' ').slice(0,6).join(' ') : 'ideal customers'
+      pool = [
+        `20 new paying clients in 60 days — each referral brings another without paid ads`,
+        `${biz} becomes the first name ${cust} mention when recommending our category in ${ctx.city || 'the city'}`,
+        `A fully booked calendar for the next 3 months with a waiting list for the month after`,
+      ]
+      break
+    }
+
+    case 'hook': {
+      // Opening hook or announcement hook
+      const biz = ctx.businessName || 'we'
+      pool = [
+        `Most ${ctx.industry?.replace(/_/g,' ')||'Nigerian'} businesses make this mistake — here is how ${biz} fixed it`,
+        `The real reason ${ctx.targetCustomer||'Nigerian buyers'} keep coming back to ${biz} (it is not what you think)`,
+        `${biz} just changed how ${ctx.city||'Lagos'} ${ctx.industry?.replace(/_/g,' ')||'businesses'} operate — here is what happened`,
       ]
       break
     }

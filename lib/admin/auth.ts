@@ -4,7 +4,8 @@
 
 import { cookies }          from 'next/headers'
 import { createAdminClient } from '@/lib/supabase/admin'
-import type { AdminRole }   from './permissions'
+import  type { AdminRole } from './permissions'
+
 
 export interface AdminSession {
   adminId:   string
@@ -28,10 +29,10 @@ export async function getAdminSession(
   if (!sessionMatch) return null
   const sessionId = decodeURIComponent(sessionMatch[1])
 
-  const admin = createAdminClient() as any
+  const admin = createAdminClient()
 
   const { data: session } = await admin
-    .from('admin_sessions')
+    .from('admin_sessions' as any)
     .select(`
       id, admin_id, ip_address, last_active_at, is_active,
       admin_profiles!inner(id, user_id, email, name, role, is_active)
@@ -48,12 +49,12 @@ export async function getAdminSession(
   // Check 2-hour inactivity timeout
   const lastActive = new Date(session.last_active_at)
   if (Date.now() - lastActive.getTime() > 2 * 60 * 60 * 1000) {
-    await admin.from('admin_sessions').update({ is_active: false, logged_out_at: new Date().toISOString() }).eq('id', sessionId)
+    await admin.from('admin_sessions' as any).update({ is_active: false, logged_out_at: new Date().toISOString() }).eq('id', sessionId)
     return null
   }
 
   // Extend session activity
-  await admin.from('admin_sessions').update({ last_active_at: new Date().toISOString() }).eq('id', sessionId)
+  await admin.from('admin_sessions' as any).update({ last_active_at: new Date().toISOString() }).eq('id', sessionId)
 
   const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
              || request.headers.get('x-real-ip')

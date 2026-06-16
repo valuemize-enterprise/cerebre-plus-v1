@@ -119,17 +119,17 @@ export default function UsersPage() {
             <div key={u.id} style={{ display:'grid', gridTemplateColumns:'2fr 1.4fr 80px 80px 80px 36px', gap:8, alignItems:'center', padding:'12px 18px', borderTop: i > 0 ? `1px solid ${B}` : 'none' }}>
               <div style={{ display:'flex', alignItems:'center', gap:10, minWidth:0 }}>
                 <div style={{ width:30, height:30, borderRadius:'50%', background:`${GOLD}18`, border:`1px solid ${GOLD}25`, display:'flex', alignItems:'center', justifyContent:'center', fontWeight:900, color:GL, fontSize:12, flexShrink:0 }}>
-                  {(u.full_name || u.email)?.[0]?.toUpperCase() || '?'}
+                  {(u.first_name || u.email)?.[0]?.toUpperCase() || '?'}
                 </div>
                 <div style={{ minWidth:0 }}>
-                  <p style={{ fontSize:13.5, fontWeight:600, color:'#EBF2FC', margin:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{u.full_name ? u.full_name : '—'}</p>
+                  <p style={{ fontSize:13.5, fontWeight:600, color:'#EBF2FC', margin:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{u.first_name ? `${u.first_name} ${u.last_name||''}`.trim() : '—'}</p>
                   <p style={{ fontSize:11, color:MUTED, margin:0 }}>{new Date(u.created_at).toLocaleDateString('en-NG')}</p>
                 </div>
               </div>
               <p style={{ fontSize:12.5, color:DIM, margin:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{u.email}</p>
               <PlanBadge plan={u.subscription_tier || 'free'} />
               <span style={{ fontSize:13, fontWeight:700, color:GL, fontFamily:'monospace' }}>{(u.coin_balance ?? 0).toLocaleString()}</span>
-              <StatusBadge status={u.plan_tier || 'active'} />
+              <StatusBadge status={u.account_status || 'active'} />
               <Link href={`/cerebre-admin/users/${u.id}`} style={{ display:'flex', alignItems:'center', justifyContent:'center', color:MUTED }}>
                 <ArrowRight size={15} />
               </Link>

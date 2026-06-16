@@ -29,11 +29,13 @@ import { CoinDisplay }     from '@/components/ui/CardBadgeSkeleton'
 import { useUser }         from '@/lib/hooks/useUser'
 import { useToast }        from '@/components/ui/ModalToastSelect'
 import { SuggestionStrip } from '@/components/tools/SuggestionStrip'
+import { AISuggestionStrip, AI_ELIGIBLE_SEMANTICS } from '@/components/tools/AISuggestionStrip'
 import {
   getFieldSuggestions,
+  detectFieldSemantic,
   fieldIsEligibleForSuggestions,
   type ProfileContext,
-} from '@/lib/tools/form-suggestions'
+} from './form-suggestions'
 
 // ─────────────────────────────────────────────────────────────
 // CONSTANTS
@@ -343,7 +345,6 @@ export default function ToolPage({ tool, coinBalance, prefill, onCoinDeducted }:
       } catch { /* ignore */ }
     },
     onError: (err) => {
-      console.log('[onError] raw:', err.message)
       let msg = 'Generation failed. No coins were deducted.'
       try {
         const parsed = JSON.parse(err.message)
@@ -465,10 +466,32 @@ export default function ToolPage({ tool, coinBalance, prefill, onCoinDeducted }:
       <div className="flex-1 space-y-5 px-5 py-4">
         {/* Primary fields (always visible) */}
         {primaryFields.map((field) => {
-          const sugs = fieldIsEligibleForSuggestions(field.type)
-            ? getFieldSuggestions(field.key, field.label || '', profileCtx)
-            : []
-          const fieldVal = String(form[field.key] ?? '')
+          if (!fieldIsEligibleForSuggestions(field.type)) {
+            return (
+              <div key={field.key} className="space-y-1.5">
+                <label className="flex items-center gap-1.5 text-sm font-medium text-white/80">
+                  {field.label}
+                  {field.required && <span className="text-[#E09818] text-xs">*</span>}
+                  {field.helpText && (
+                    <span className="text-white/30 text-xs font-normal">— {field.helpText}</span>
+                  )}
+                </label>
+                <FormField
+                  field={field}
+                  value={form[field.key] ?? (field.type === 'multiselect' ? [] : field.type === 'toggle' ? false : '')}
+                  onChange={handleFormChange}
+                />
+              </div>
+            )
+          }
+
+          const semantic  = detectFieldSemantic(field.key, field.label || '')
+          const fieldVal  = String(form[field.key] ?? '')
+          const showStrip = fieldVal.length < 30
+          const existingInputs = Object.fromEntries(
+            Object.entries(form).filter(([k]) => k !== field.key && typeof form[k] === 'string' && String(form[k]).length > 0)
+          ) as Record<string, string>
+
           return (
             <div key={field.key} className="space-y-1.5">
               <label className="flex items-center gap-1.5 text-sm font-medium text-white/80">
@@ -480,16 +503,27 @@ export default function ToolPage({ tool, coinBalance, prefill, onCoinDeducted }:
               </label>
               <FormField
                 field={field}
-                value={form[field.key] ?? (field.type === 'multiselect' ? [] : field.type === 'toggle' ? false : '')}
+                value={form[field.key] ?? ''}
                 onChange={handleFormChange}
               />
-              {sugs.length > 0 && (
-                <SuggestionStrip
-                  suggestions={sugs}
+              {showStrip && AI_ELIGIBLE_SEMANTICS.has(semantic) ? (
+                <AISuggestionStrip
+                  fieldId={field.key}
+                  fieldLabel={field.label || ''}
+                  fieldSemantic={semantic}
+                  toolId={tool.id}
+                  toolName={tool.name}
+                  existingInputs={existingInputs}
                   onSelect={v => handleFormChange(field.key, v)}
-                  visible={fieldVal.length < 25}
+                  visible={showStrip}
                 />
-              )}
+              ) : showStrip ? (
+                <SuggestionStrip
+                  suggestions={getFieldSuggestions(field.key, field.label || '', profileCtx)}
+                  onSelect={v => handleFormChange(field.key, v)}
+                  visible={showStrip}
+                />
+              ) : null}
             </div>
           )
         })}
@@ -538,13 +572,18 @@ export default function ToolPage({ tool, coinBalance, prefill, onCoinDeducted }:
                             value={form[field.key] ?? (field.type === 'multiselect' ? [] : field.type === 'toggle' ? false : '')}
                             onChange={handleFormChange}
                           />
-                          {sugs.length > 0 && (
-                            <SuggestionStrip
-                              suggestions={sugs}
-                              onSelect={v => handleFormChange(field.key, v)}
-                              visible={fieldVal.length < 25}
-                            />
-                          )}
+                          {(() => {
+                            const sem = detectFieldSemantic(field.key, field.label || '')
+                            const fv  = String(form[field.key] || '')
+                            const show= fv.length < 30
+                            const ei  = Object.fromEntries(Object.entries(form).filter(([k])=>k!==field.key&&typeof form[k]==='string'&&String(form[k]).length>0)) as Record<string,string>
+                            if (!show) return null
+                            return AI_ELIGIBLE_SEMANTICS.has(sem) ? (
+                              <AISuggestionStrip fieldId={field.key} fieldLabel={field.label||''} fieldSemantic={sem} toolId={tool.id} toolName={tool.name} existingInputs={ei} onSelect={v=>handleFormChange(field.key,v)} visible={show}/>
+                            ) : (
+                              <SuggestionStrip suggestions={getFieldSuggestions(field.key,field.label||'',profileCtx)} onSelect={v=>handleFormChange(field.key,v)} visible={show}/>
+                            )
+                          })()}
                         </div>
                       )
                     })}

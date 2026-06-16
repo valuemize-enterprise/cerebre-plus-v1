@@ -8,7 +8,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import {
   LayoutDashboard, Users, CreditCard, Crown, Coins,
   Brain, ClipboardList, ShieldCheck, LogOut, Menu, X,
-  ChevronRight, MessageSquare, Bell, Star,
+  ChevronRight, MessageSquare, Bell, Star, Server,
 } from 'lucide-react'
 import { hasPermission, ROLE_LABELS, ROLE_COLORS, type AdminRole, type Permission } from '@/lib/admin/permissions'
 
@@ -22,16 +22,17 @@ const MUTED = 'rgba(205,217,236,0.35)'
 const BORDER= 'rgba(255,255,255,0.07)'
 
 const NAV = [
-  { href:'/cerebre-admin/dashboard',  label:'Dashboard',   Icon:LayoutDashboard, perm:null },
-  { href:'/cerebre-admin/users',       label:'Users',       Icon:Users,            perm:'view_users'       as Permission },
-  { href:'/cerebre-admin/billing',     label:'Billing',     Icon:CreditCard,       perm:'view_billing'     as Permission },
-  { href:'/cerebre-admin/sme-club',    label:'SME Club',    Icon:Crown,            perm:'view_sme_club'    as Permission },
-  { href:'/cerebre-admin/coins',       label:'Coins',       Icon:Coins,            perm:'grant_coins'      as Permission },
-  { href:'/cerebre-admin/ai-insights', label:'AI Insights', Icon:Brain,            perm:'view_ai_insights' as Permission },
-  { href:'/cerebre-admin/ratings',     label:'Ratings',     Icon:Star,             perm:'view_ai_insights' as Permission },
-  { href:'/cerebre-admin/messages',    label:'Messages',    Icon:MessageSquare,    perm:'send_user_email'  as Permission },
-  { href:'/cerebre-admin/logs',        label:'Audit Log',   Icon:ClipboardList,    perm:'view_audit_log'   as Permission },
-  { href:'/cerebre-admin/team',        label:'Admin Team',  Icon:ShieldCheck,      perm:'view_admin_team'  as Permission },
+  { href:'/cerebre-admin/dashboard',   label:'Dashboard',   Icon:LayoutDashboard, perm:null },
+  { href:'/cerebre-admin/users',        label:'Users',       Icon:Users,           perm:'view_users'         as Permission },
+  { href:'/cerebre-admin/billing',      label:'Billing',     Icon:CreditCard,      perm:'view_billing'       as Permission },
+  { href:'/cerebre-admin/sme-club',     label:'SME Club',    Icon:Crown,           perm:'view_sme_club'      as Permission },
+  { href:'/cerebre-admin/coins',        label:'Coins',       Icon:Coins,           perm:'grant_coins'        as Permission },
+  { href:'/cerebre-admin/ai-insights',  label:'AI Insights', Icon:Brain,           perm:'view_ai_insights'   as Permission },
+  { href:'/cerebre-admin/ratings',      label:'Ratings',     Icon:Star,            perm:'view_ratings'       as Permission },
+  { href:'/cerebre-admin/messages',     label:'Messages',    Icon:MessageSquare,   perm:'view_messages'      as Permission },
+  { href:'/cerebre-admin/logs',         label:'Audit Log',   Icon:ClipboardList,   perm:'view_audit_log'     as Permission },
+  { href:'/cerebre-admin/system',       label:'System',      Icon:Server,          perm:'view_system_health' as Permission },
+  { href:'/cerebre-admin/team',         label:'Admin Team',  Icon:ShieldCheck,     perm:'view_admin_team'    as Permission },
 ]
 
 function NavItem({ href, label, Icon, active }: { href:string; label:string; Icon:any; active:boolean }) {
