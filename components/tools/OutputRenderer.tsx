@@ -348,10 +348,10 @@ function OutputFooter({
             coinsSpent={coinsSpent}
             variantCount={variantCount}
             compact={false}
-            onRated={(thumbs) => {
-              // After thumbs tap, allow the full widget to show but mark as initiated
-              if (thumbs === 'up') setTimeout(() => setRated(true), 4000)
-            }}
+            // onRated={(thumbs) => {
+            //   // After thumbs tap, allow the full widget to show but mark as initiated
+            //   if (thumbs === 'up') setTimeout(() => setRated(true), 4000)
+            // }}
           />
         </div>
       )}

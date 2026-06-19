@@ -169,7 +169,7 @@ interface FormData {
   unique_advantage:     string
   social_proof:         string
   price_range:          string
-  call_to_action:       string
+  primary_cta:       string
   brand_voice:          string
   marketing_challenges: string[]
 }
@@ -177,7 +177,7 @@ interface FormData {
 const EMPTY: FormData = {
   business_name:'', industry:'', city:'', years_in_business:'', whatsapp:'',
   description:'', target_customer:'', unique_advantage:'', social_proof:'',
-  price_range:'', call_to_action:'', brand_voice:'', marketing_challenges:[],
+  price_range:'', primary_cta:'', brand_voice:'', marketing_challenges:[],
 }
 
 export default function OnboardingPage() {
@@ -250,7 +250,7 @@ export default function OnboardingPage() {
         unique_advantage:      form.unique_advantage.trim(),
         social_proof:          form.social_proof.trim(),
         price_range:           form.price_range.trim(),
-        call_to_action:        form.call_to_action.trim(),
+        primary_cta:           form.primary_cta.trim(),
         brand_voice:           form.brand_voice,
         marketing_challenges:  form.marketing_challenges,
         primary_goal:          null,    // captured via challenges
@@ -541,16 +541,16 @@ export default function OnboardingPage() {
             {/* Call to action */}
             <Field
               label="How do customers take action?"
-              value={form.call_to_action}
-              onChange={v => set('call_to_action', v)}
+              value={form.primary_cta}
+              onChange={v => set('primary_cta', v)}
               placeholder="e.g. 'Send us a WhatsApp message' or 'Book a free consultation'"
               hint="Optional — used as the CTA in every ad, post, and email"
             />
             <SuggestionStrip
-              suggestions={sug('call_to_action', 'How do customers take action?')}
+              suggestions={sug('primary_cta', 'How do customers take action?')}
               label="CTAs that work for your industry"
-              onSelect={v => set('call_to_action', v)}
-              visible={form.call_to_action.length < 10}
+              onSelect={v => set('primary_cta', v)}
+              visible={form.primary_cta.length < 10}
             />
           </>
         )}

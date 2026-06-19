@@ -636,7 +636,7 @@ export default function ProfilePage() {
               helpText="This appears at the end of most tool outputs."
             />
             <SuggestionStrip
-              suggestions={getFieldSuggestions('call_to_action', 'How do customers take action?', profileCtx)}
+              suggestions={getFieldSuggestions('cta_text', 'How do customers take action?', profileCtx)}
               label="CTA examples for your industry"
               onSelect={(v) => { setField('primary_cta', v); setTimeout(autoSave, 300) }}
               visible={(form.primary_cta as string || '').length < 10}

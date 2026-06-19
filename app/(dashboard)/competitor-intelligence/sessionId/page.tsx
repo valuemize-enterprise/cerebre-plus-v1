@@ -452,7 +452,7 @@ export default function SessionPage({ params }: { params: Promise<{ sessionId: s
             toolCategory="text"
             coinsSpent={session.coins_spent}
             generationId={session.id}
-            onRated={() => setTimeout(() => setRated(true), 5000)}
+            // onRated={() => setTimeout(() => setRated(true), 5000)}
           />
         </div>
       )}
