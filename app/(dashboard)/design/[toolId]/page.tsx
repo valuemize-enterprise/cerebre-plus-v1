@@ -4,7 +4,7 @@
 //   1. Preview  — generates at low quality, free, not stored
 //   2. Save     — generates full quality, deducts coins, stored in R2
 
-import React, { useState, use, useMemo, useCallback } from 'react'
+import React, { useState, useMemo, useCallback, } from 'react'
 import Link from 'next/link'
 import {
   ArrowLeft, Sparkles, Zap, RefreshCw, Download,
@@ -220,9 +220,9 @@ function ImageCard({
 export default function DesignToolPage({
   params,
 }: {
-  params: Promise<{ toolId: string }>
+  params: { toolId: string }
 }) {
-  const { toolId }   = use(params)
+  const { toolId }   = params
   const tool         = getDesignTool(toolId)
   const { profile }  = useUser()
 
