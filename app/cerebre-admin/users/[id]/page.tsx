@@ -68,7 +68,7 @@ export default function UserProfile() {
         </div>
         <div style={{ flex:1 }}>
           <h1 style={{ fontFamily:"'Georgia',serif", fontSize:22, fontWeight:900, color:'#fff', marginBottom:4 }}>
-            {user.first_name ? `${user.first_name} ${user.last_name||''}`.trim() : 'No name set'}
+            {user.full_name ? `${user.full_name}`.trim() : 'No name set'}
           </h1>
           <p style={{ fontSize:14, color:DIM, marginBottom:8 }}>{user.email}</p>
           <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
@@ -146,7 +146,17 @@ export default function UserProfile() {
           <p style={{ fontSize:13, color:MUTED, marginBottom:14, lineHeight:1.5 }}>
             {user.sme_club_member ? 'This user is an SME Club member.' : 'This user is not in the SME Club.'}
           </p>
-          <button onClick={() => action(user.sme_club_member ? 'remove_sme_club' : 'add_sme_club', {})} disabled={saving==='add_sme_club'||saving==='remove_sme_club'} style={{ width:'100%', padding:'10px', background: user.sme_club_member ? `${CORAL}10` : `${GL}10`, border:`1px solid ${user.sme_club_member ? CORAL : GL}28`, color: user.sme_club_member ? CORAL : GL, fontWeight:700, fontSize:13, borderRadius:8, cursor:'pointer', fontFamily:'inherit' }}>
+          <button onClick={async () => {
+            setSaving(user.sme_club_member ? 'remove_sme_club' : 'add_sme_club')
+            const res = await fetch('/api/admin/sme-club/members', {
+              method:'POST', headers:{'Content-Type':'application/json'},
+              body: JSON.stringify({ user_id: id, action: user.sme_club_member ? 'remove' : 'add' }),
+            })
+            const d = await res.json()
+            if (res.ok) { showToast(d.message || 'Done'); load() }
+            else        { showToast('Error: ' + (d.error || 'Unknown')) }
+            setSaving(null)
+          }} disabled={saving==='add_sme_club'||saving==='remove_sme_club'} style={{ width:'100%', padding:'10px', background: user.sme_club_member ? `${CORAL}10` : `${GL}10`, border:`1px solid ${user.sme_club_member ? CORAL : GL}28`, color: user.sme_club_member ? CORAL : GL, fontWeight:700, fontSize:13, borderRadius:8, cursor:'pointer', fontFamily:'inherit' }}>
             {user.sme_club_member ? 'Remove from SME Club' : 'Add to SME Club'}
           </button>
         </div>

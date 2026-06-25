@@ -14,13 +14,13 @@ const PLAN_TABS = ['all','free','starter','growth']
 function PlanBadge({ plan }: { plan: string }) {
   const m: any = { free:{bg:'rgba(139,168,200,0.1)',c:'#8BA8C8'}, starter:{bg:'rgba(18,212,180,0.1)',c:'#12D4B4'}, growth:{bg:'rgba(245,184,48,0.12)',c:'#F5B830'} }
   const s = m[plan] ?? m.free
-  return <span style={{ fontSize:10, fontWeight:700, padding:'2px 8px', borderRadius:20, background:s.bg, color:s.c, textTransform:'capitalize' }}>{plan}</span>
+  return <span  className='text-center' style={{ fontSize:10, fontWeight:700, padding:'2px 8px', borderRadius:20, background:s.bg, color:s.c, textTransform:'capitalize' }}>{plan}</span>
 }
 
 function StatusBadge({ status }: { status: string }) {
   const m: any = { active:{bg:'rgba(34,197,94,0.1)',c:'#22C55E'}, suspended:{bg:'rgba(232,72,48,0.1)',c:'#E84830'}, expired:{bg:'rgba(139,168,200,0.08)',c:'#8BA8C8'} }
   const s = m[status] ?? m.active
-  return <span style={{ fontSize:10, fontWeight:700, padding:'2px 8px', borderRadius:20, background:s.bg, color:s.c, textTransform:'capitalize' }}>{status}</span>
+  return <span className='text-center'  style={{ fontSize:10, fontWeight:700, padding:'2px 8px', borderRadius:20, background:s.bg, color:s.c, textTransform:'capitalize' }}>{status}</span>
 }
 
 export default function UsersPage() {
@@ -60,6 +60,7 @@ export default function UsersPage() {
     const a    = document.createElement('a')
     a.href = url; a.download = `users-${Date.now()}.csv`; a.click()
   }
+
 
   return (
     <div style={{ maxWidth:1100 }}>
@@ -122,13 +123,13 @@ export default function UsersPage() {
                   {(u.first_name || u.email)?.[0]?.toUpperCase() || '?'}
                 </div>
                 <div style={{ minWidth:0 }}>
-                  <p style={{ fontSize:13.5, fontWeight:600, color:'#EBF2FC', margin:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{u.first_name ? `${u.first_name} ${u.last_name||''}`.trim() : '—'}</p>
+                  <p style={{ fontSize:13.5, fontWeight:600, color:'#EBF2FC', margin:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{u.full_name ? `${u.full_name}`.trim() : '—'}</p>
                   <p style={{ fontSize:11, color:MUTED, margin:0 }}>{new Date(u.created_at).toLocaleDateString('en-NG')}</p>
                 </div>
               </div>
               <p style={{ fontSize:12.5, color:DIM, margin:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{u.email}</p>
               <PlanBadge plan={u.subscription_tier || 'free'} />
-              <span style={{ fontSize:13, fontWeight:700, color:GL, fontFamily:'monospace' }}>{(u.coin_balance ?? 0).toLocaleString()}</span>
+              <span className='text-center'  style={{ fontSize:13, fontWeight:700, color:GL, fontFamily:'monospace' }}>{(u.coin_balance ?? 0).toLocaleString()}</span>
               <StatusBadge status={u.account_status || 'active'} />
               <Link href={`/cerebre-admin/users/${u.id}`} style={{ display:'flex', alignItems:'center', justifyContent:'center', color:MUTED }}>
                 <ArrowRight size={15} />

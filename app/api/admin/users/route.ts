@@ -26,10 +26,10 @@ export async function GET(request: NextRequest) {
   let q = admin
     .from('profiles')
     .select(`
-      id, email, first_name, last_name, industry, city, created_at,
+      id, email, full_name, industry, city, created_at,
       subscriptions!left(plan_tier, status, current_period_end, free_expires_at),
       coin_balances!left(balance),
-      account_status
+      plan_tier
     `, { count: 'exact' })
     .order('created_at', { ascending: false })
 
@@ -37,7 +37,11 @@ export async function GET(request: NextRequest) {
     q = q.or(`email.ilike.%${search}%,first_name.ilike.%${search}%,last_name.ilike.%${search}%`)
   }
   if (plan && plan !== 'all') {
-    q = q.eq('subscriptions.plan_tier', plan)
+    if (plan === 'free') {
+      q = q.or('plan_tier.eq.free,plan_tier.is.null')
+    } else {
+      q = q.eq('plan_tier', plan)
+    }
   }
   if (filter === 'expiring') {
     const in7 = new Date(Date.now() + 7 * 86400_000).toISOString()
@@ -47,21 +51,23 @@ export async function GET(request: NextRequest) {
   if (!isCSV) q = q.range(offset, offset + limit - 1)
 
   const { data, count, error } = await q
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) {
+
+   return NextResponse.json({ error: error.message }, { status: 500 })
+  } 
 
   const users = (data || []).map((u: any) => ({
     id:               u.id,
     email:            u.email,
-    first_name:       u.first_name,
-    last_name:        u.last_name,
+    full_name:       u.full_name,
     industry:         u.industry,
     city:             u.city,
     created_at:       u.created_at,
     account_status:   u.account_status || 'active',
-    subscription_tier: u.subscriptions?.[0]?.plan_tier || 'free',
-    sub_status:       u.subscriptions?.[0]?.status,
-    coin_balance:     u.coin_balances?.[0]?.balance || 0,
-    expires_at:       u.subscriptions?.[0]?.current_period_end || u.subscriptions?.[0]?.free_expires_at,
+    subscription_tier: u.plan_tier || 'free',
+    sub_status:       u.subscriptions?.status,
+    coin_balance:     u.coin_balances?.balance || 0,
+    expires_at:       u.subscriptions?.current_period_end || u.subscriptions?.[0]?.free_expires_at,
   }))
 
   if (isCSV) {

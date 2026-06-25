@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
   const now   = new Date()
 
   // Build query based on segment
-  let query = (admin as any).from('profiles').select('id, email, first_name')
+  let query = (admin as any).from('profiles').select('id, email, full_name')
 
   if (segment === 'free') {
     // Free trial users

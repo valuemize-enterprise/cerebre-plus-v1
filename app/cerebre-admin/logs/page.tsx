@@ -58,9 +58,9 @@ export default function LogsPage() {
         </div>
         <div style={{ display:'flex', gap:8, alignItems:'center' }}>
           <Filter size={14} style={{ color:MUTED }}/>
-          <select value={actionFilter} onChange={e => { setActionFilter(e.target.value); setPage(1) }} style={{ background:'rgba(255,255,255,0.07)', border:`1px solid ${B}`, borderRadius:8, padding:'7px 10px', color:DIM, fontSize:12, fontFamily:'inherit', outline:'none' }}>
-            <option value="">All actions</option>
-            {Object.entries(ACTION_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+          <select className='bg-black' value={actionFilter} onChange={e => { setActionFilter(e.target.value); setPage(1) }} style={{ background:'rgba(255,255,255,0.07)', border:`1px solid ${B}`, borderRadius:8, padding:'7px 10px', color:DIM, fontSize:12, fontFamily:'inherit', outline:'none' }}>
+            <option className='bg-black' value="">All actions</option>
+            {Object.entries(ACTION_LABELS).map(([k, v]) => <option  className='bg-black' key={k} value={k}>{v}</option>)}
           </select>
         </div>
       </div>

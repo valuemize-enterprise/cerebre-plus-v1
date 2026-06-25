@@ -897,7 +897,7 @@ export function DashboardClient({
           balance={coins.balance}
           planTier={subscription.planTier}
           daysToRenewal={subscription.daysToRenewal}
-          onTopUp={() => router.push('/coins')}
+          onTopUp={() => router.push('/billing')}
         />
 
         {/* ── SECTION 3: Today's marketing moment ───────────── */}

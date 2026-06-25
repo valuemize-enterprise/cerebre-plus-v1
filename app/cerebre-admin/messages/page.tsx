@@ -18,10 +18,10 @@ const SEGMENTS = [
 ]
 
 const TEMPLATES = [
-  { label:'New feature announcement', subject:'New in Cerebre Plus: [Feature Name]', body:'Hi [first_name],\n\nGreat news! We just launched [feature] — and it\'s available on your plan right now.\n\nHere\'s what it does: [description]\n\nTry it at cerebreplus.com\n\nThe Cerebre Plus Team' },
-  { label:'Founding member price closing', subject:'Last chance — founding price closes this week', body:'Hi [first_name],\n\nQuick heads up: the founding member price (₦20,000/yr for Starter) closes when we reach 1,000 subscribers.\n\nWe\'re getting close.\n\nIf you\'ve been thinking about upgrading, now is the time.\n\ncerebreplus.com/billing\n\nWale\nCerebre Plus' },
-  { label:'Re-engagement nudge', subject:'We noticed you haven\'t been back', body:'Hi [first_name],\n\nI noticed you haven\'t used Cerebre Plus in a while — and I wanted to check in personally.\n\nIs there something we can improve? A feature that\'s not working for your business?\n\nReply to this message directly. I read every response.\n\nWale\nCerebre Plus' },
-  { label:'SME Club masterclass', subject:'This week\'s SME Club masterclass — [Topic]', body:'Hi [first_name],\n\nYour weekly SME Club masterclass is ready.\n\nThis week: [Topic]\n\n[Summary of key insights]\n\nFull recording in your dashboard under SME Club.\n\nThe Cerebre Plus Team' },
+  { label:'New feature announcement', subject:'New in Cerebre Plus: [Feature Name]', body:'Hi [full_name],\n\nGreat news! We just launched [feature] — and it\'s available on your plan right now.\n\nHere\'s what it does: [description]\n\nTry it at cerebreplus.com\n\nThe Cerebre Plus Team' },
+  { label:'Founding member price closing', subject:'Last chance — founding price closes this week', body:'Hi [full_name],\n\nQuick heads up: the founding member price (₦20,000/yr for Starter) closes when we reach 1,000 subscribers.\n\nWe\'re getting close.\n\nIf you\'ve been thinking about upgrading, now is the time.\n\ncerebreplus.com/billing\n\nWale\nCerebre Plus' },
+  { label:'Re-engagement nudge', subject:'We noticed you haven\'t been back', body:'Hi [full_name],\n\nI noticed you haven\'t used Cerebre Plus in a while — and I wanted to check in personally.\n\nIs there something we can improve? A feature that\'s not working for your business?\n\nReply to this message directly. I read every response.\n\nWale\nCerebre Plus' },
+  { label:'SME Club masterclass', subject:'This week\'s SME Club masterclass — [Topic]', body:'Hi [full_name],\n\nYour weekly SME Club masterclass is ready.\n\nThis week: [Topic]\n\n[Summary of key insights]\n\nFull recording in your dashboard under SME Club.\n\nThe Cerebre Plus Team' },
 ]
 
 export default function MessagesPage() {
@@ -109,7 +109,7 @@ export default function MessagesPage() {
 
             <div style={{ marginBottom:14 }}>
               <label style={{ fontSize:11, fontWeight:700, color:MUTED, textTransform:'uppercase', letterSpacing:'1px', display:'block', marginBottom:7 }}>Message body</label>
-              <p style={{ fontSize:11, color:MUTED, marginBottom:6 }}>Use [first_name] as a personalisation token — it's replaced with each user's name.</p>
+              <p style={{ fontSize:11, color:MUTED, marginBottom:6 }}>Use [full_name] as a personalisation token — it's replaced with each user's name.</p>
               <textarea
                 value={body} onChange={e => setBody(e.target.value)}
                 rows={9}

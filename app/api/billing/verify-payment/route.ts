@@ -31,8 +31,7 @@ export async function POST(request: NextRequest) {
   }
   const PLAN_PRICES: Record<string, number> = {
     starter: 20000,
-    growth: 50000,
-    premium: 150000,
+    growth: 80000,
   };
 
   // Idempotency: check if we've already processed this reference
@@ -46,12 +45,19 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true, message: "Already processed" });
 
   if (isTopUp && topUpCoins) {
-    await supabase.rpc("credit_coins", {
+    const { error: creditError } = await supabase.rpc("credit_coins", {
       p_user_id: user.id,
       p_amount: topUpCoins,
-      p_type: "topup_purchase",
+      p_type: "topup",
       p_description: `paystack:${reference}`,
     });
+    if (creditError) {
+      console.error("[verify-payment] credit_coins RPC failed:", creditError);
+      return NextResponse.json(
+        { success: false, error: "Failed to credit coins. Contact support." },
+        { status: 500 },
+      );
+    }
     await invalidateBalance(user.id);
     return NextResponse.json({ success: true, coins_added: topUpCoins });
   }

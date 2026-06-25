@@ -18,6 +18,8 @@ export default function ToolPageClient({ tool, coinBalance: initialBalance }: Pr
   const [balance, setBalance]   = useState(initialBalance)
   const [prefill, setPrefill]   = useState<Record<string, string> | null>(null)
 
+ 
+
   // Load idea prefill from localStorage (set by ideas page "Use This Idea")
   useEffect(() => {
     const fromIdea = params.get('from') === 'idea'
@@ -39,6 +41,8 @@ export default function ToolPageClient({ tool, coinBalance: initialBalance }: Pr
       localStorage.setItem('cerebre_last_coin_update', String(Date.now()))
     } catch {}
   }, [])
+
+
 
   return (
     <ToolPage

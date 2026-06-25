@@ -55,12 +55,16 @@ export async function POST(request: NextRequest) {
 
         if (isTopUp && topUpCoins) {
           // Credit coins for top-up
-          await supabase.rpc("credit_coins", {
+          const { error: creditErr } = await supabase.rpc("credit_coins", {
             p_user_id: userId,
             p_amount: topUpCoins,
-            p_type: "topup_purchase",
+            p_type: "topup",
             p_description: `Top-up: ${topUpCoins} coins`,
           });
+          if (creditErr) {
+            console.error("[paystack-webhook] credit_coins failed:", creditErr);
+            break;
+          }
           await invalidateBalance(userId);
 
           // Notify user
