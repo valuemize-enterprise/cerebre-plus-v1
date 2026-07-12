@@ -1,4 +1,7 @@
 // /lib/tools/form-suggestions.ts
+// NOTE: The INDUSTRIES constant has moved to /lib/tools/industries.ts
+// Industry-to-suggestion-data mapping is in INDUSTRY_SUGGESTION_MAP there.
+import { INDUSTRY_SUGGESTION_MAP } from '@/lib/tools/industries'
 // Pure suggestion engine. Given a field descriptor and the user's saved profile,
 // returns an array of contextual, business-relevant suggestion strings.
 // No API calls. No side effects. Runs entirely client-side.
@@ -817,6 +820,342 @@ const INDUSTRY_DATA: Record<string, {
     ],
   },
 
+
+  // ── NEW: Construction & Trades ──────────────────────────────
+  construction: {
+    audiences: [
+      'Nigerian homeowners in Lagos, Abuja and Port Harcourt building or renovating their first property',
+      'Property developers and real estate companies sourcing reliable tradespeople for ongoing projects',
+      'Middle-class families tired of substandard work, missed deadlines, and contractors who disappear with deposits',
+      'Corporate clients — offices, schools, churches — needing quality commercial construction or maintenance',
+    ],
+    products: [
+      'Professional construction and renovation delivered on schedule — never a half-finished building',
+      'Electrical, plumbing or AC installation with a 12-month workmanship guarantee',
+      'Full project management from site preparation to final inspection — one contact, zero stress',
+      'Emergency repair and maintenance service across Lagos — same-day response to urgent jobs',
+    ],
+    topics: [
+      'The 5 things Nigerian homeowners should check BEFORE signing with any contractor in {city}',
+      'Why 70% of building projects go over budget — and how we prevent it for our clients',
+      'Client project reveal: the {city} renovation we just completed — before and after photos',
+      'How to verify a contractor\'s COREN registration before giving them your deposit',
+      'Common electrical mistakes in Nigerian buildings that create fire risks — and how to spot them',
+      'The truth about solar installations: what they can and cannot do for your home in {city}',
+    ],
+    situations: [
+      'We do excellent work but clients only find us through word of mouth — we need consistent online visibility',
+      'Potential clients fear being scammed by contractors who collect deposits and vanish',
+      'We\'re competing with cheaper but lower-quality providers who undercut our prices',
+    ],
+    usps: [
+      'Every project includes a written contract with milestone payments — you only pay for work completed',
+      'COREN-registered engineers and licensed electricians on every job — not apprentices or temporary workers',
+      'We\'ve completed {count}+ projects in {city} with a zero-abandonment record — references available',
+      'Fixed-price quotation before any work starts — what we quote is what you pay',
+    ],
+    offers: [
+      'Free site assessment and detailed quotation this week — no obligation, no pressure',
+      'Pay in 3 milestones: foundation, structure, finishing — protecting your investment throughout',
+      'Book any major project this month and receive a complimentary 6-month maintenance checkup',
+    ],
+    ctas: [
+      'Call or WhatsApp us for a free site visit',
+      'DM us your project details for a quote',
+      'Visit our portfolio — 50+ completed projects in {city}',
+      'Book your free assessment today',
+    ],
+    headlines: [
+      'QUALITY WORK. ON TIME. NO EXCUSES.',
+      'BUILD IT RIGHT THE FIRST TIME',
+      'TRUSTED TRADESPEOPLE IN {city}',
+      'YOUR PROJECT. OUR COMMITMENT.',
+    ],
+    greetings: [
+      'Wishing you a blessed season from the team at {businessName}',
+      'Happy celebrations from all of us at {businessName} — thank you for trusting us with your projects',
+      'Seasons greetings from {businessName}: may your home and workspace be everything you deserve',
+    ],
+    socialProofs: [
+      'Completed 200+ residential and commercial projects in {city} since 2018',
+      '98% of our clients come back for their next project or refer a friend within 12 months',
+      'Zero abandoned projects in our 6-year operating history — we finish what we start',
+    ],
+    priceRanges: [
+      'Residential renovation from ₦500,000 · New builds from ₦3,000,000 · Emergency repairs from ₦15,000',
+      'Electrical installation from ₦80,000 · Solar systems from ₦350,000 · AC installation from ₦45,000',
+      'Tiling from ₦1,800/sqm · Painting from ₦350/sqm · Complete interior finishing quoted per project',
+    ],
+  },
+
+  // ── NEW: Agriculture ──────────────────────────────────────────
+  agriculture: {
+    audiences: [
+      'Nigerian families who want to buy fresh, traceable farm produce directly from the source at fair prices',
+      'Lagos restaurants, hotels and caterers who need reliable, consistent produce supply year-round',
+      'Corporate buyers and bulk purchasers looking for quality poultry, fish or vegetables at wholesale prices',
+      'Health-conscious Nigerians in urban areas who want organic, antibiotic-free, naturally grown food',
+    ],
+    products: [
+      'Fresh farm produce sourced and delivered within 24 hours of harvest — from our farm to your kitchen',
+      'Live broilers, dressed chicken, and fresh eggs produced using best-practice animal husbandry',
+      'Catfish and tilapia raised in clean water ponds — sold live, fresh or smoked to your specification',
+      'Organic vegetables grown without synthetic pesticides — verified clean, safe, and nutritious',
+    ],
+    topics: [
+      'Why buying directly from a {city}-area farm saves you 30-40% compared to open market prices',
+      'How we raise our birds: feed quality, medication record, and mortality rate — full transparency',
+      'Farm visit open day — come see where your food comes from this Saturday at {businessName}',
+      'The problem with frozen imports: why fresh, Nigerian-raised products are simply better',
+      'How we\'re helping young Nigerians see agriculture as a profitable career, not a last resort',
+      'Our harvest cycle: when to order for guaranteed availability of each produce type',
+    ],
+    situations: [
+      'We produce consistent quality but struggle to sell directly to consumers and institutions at fair prices',
+      'Urban buyers don\'t trust that what they buy from "farms" is genuinely fresh and locally grown',
+      'We lose revenue every season because we can\'t move produce fast enough before it spoils',
+    ],
+    usps: [
+      'Every order harvested to order — we don\'t sell old stock or frozen produce as fresh',
+      'Farm-to-delivery in 24 hours for {city} customers — full cold-chain compliance for perishables',
+      'Transparent farming records: feed source, medication log, harvest date — available on request',
+      'We supply {count}+ Lagos restaurants, event caterers and families every week — zero complaints on freshness',
+    ],
+    offers: [
+      'Subscribe to our weekly produce box — guaranteed fresh delivery every Monday, no market queues',
+      'Bulk order discount: buy 10 crates of eggs or 50 birds and save 15% — standing order available',
+      'First-time farm supply customers: place your first order and receive 5% off plus free delivery in {city}',
+    ],
+    ctas: [
+      'WhatsApp us your order — we deliver within 24 hours',
+      'Join our weekly produce subscription',
+      'Call to discuss bulk supply arrangements',
+      'Visit the farm — we welcome buyers every Saturday',
+    ],
+    headlines: [
+      'FRESH FROM THE FARM — DIRECT TO YOU',
+      'REAL FOOD. REAL FARMING. REAL TRUST.',
+      'THE FRESHEST PRODUCE IN {city}',
+      'FARM TO TABLE — WITHOUT THE MIDDLEMAN',
+    ],
+    greetings: [
+      'Happy celebrations from {businessName} — may your season be as abundant as a good harvest',
+      'Festive greetings from our farm family to yours — thank you for choosing locally grown Nigerian food',
+      'Wishing you and yours a joyful season from all of us at {businessName}',
+    ],
+    socialProofs: [
+      'Supplying {count}+ Lagos homes and restaurants with fresh produce every week',
+      '4.8/5 average rating from verified buyers — 96% reorder within 2 weeks',
+      'Zero food-safety complaints in 4 years of supply — our farming records are always available',
+    ],
+    priceRanges: [
+      'Broiler chickens from ₦4,500 per bird · Dressed from ₦6,500 · Bulk order pricing available',
+      'Fresh catfish from ₦2,800/kg · Smoked fish from ₦3,500/kg · Weekly box subscription from ₦12,000',
+      'Organic vegetable box from ₦5,000/week · Farm tomatoes from ₦800/basket · Eggs from ₦2,800/crate',
+    ],
+  },
+
+  // ── NEW: Media & Content ──────────────────────────────────────
+  media_content: {
+    audiences: [
+      'Nigerian brands and businesses who need content that actually connects with their target audience',
+      'Event organisers and entertainers looking for professional media coverage that tells the full story',
+      'SMEs who know they need to be online but don\'t know how to create content people actually watch',
+      'Creative agencies and production houses looking for reliable talent or technical collaborators',
+    ],
+    products: [
+      'Professional video production that turns your brand story into content that converts — in {city} and beyond',
+      'Photography that makes products and people look genuinely world-class — not like a phone camera snap',
+      'Content strategy and creation: monthly packages where we handle everything from idea to final edit',
+      'Animation and motion graphics that explain complex ideas in 60 seconds — for social and presentations',
+    ],
+    topics: [
+      'Before and after: the difference between phone-camera content and professional production for {city} brands',
+      'Why Nigerian brands are finally investing in storytelling — and the ROI they\'re seeing',
+      'Behind the scenes: how we produced a brand video for a {city} business in 48 hours',
+      'The 3 types of content that consistently get the most engagement for Nigerian audiences on Instagram',
+      'How to brief a content creator or photographer for your product launch — a checklist for brand owners',
+      'Client feature: the {city} brand whose Instagram engagement tripled after working with us',
+    ],
+    situations: [
+      'We produce great work but most clients don\'t understand why professional content costs more than a phone snap',
+      'Potential clients want to see a portfolio before committing but are hesitant to be the first to invest',
+      'We\'re competing with freelancers who undercharge and produce inconsistent work, devaluing the industry',
+    ],
+    usps: [
+      'We combine world-class production values with deep understanding of Nigerian audiences and culture',
+      'Fast turnaround without compromising quality — 48-hour content delivery available for standard projects',
+      'Every project comes with usage rights and a content strategy guide — not just the files',
+      'Our work has been used by {count}+ Nigerian brands — we understand what converts here',
+    ],
+    offers: [
+      'Brand content audit this week: we\'ll review your current social media and tell you exactly what to fix',
+      'Monthly content retainer from ₦150,000: 8 pieces of premium content delivered every month',
+      'Photography + short video package for product launch — one shoot, multiple deliverables, one flat fee',
+    ],
+    ctas: [
+      'DM us your project brief',
+      'WhatsApp us to discuss your next production',
+      'View our portfolio before deciding',
+      'Book a free creative consultation',
+    ],
+    headlines: [
+      'CONTENT THAT ACTUALLY CONVERTS',
+      'YOUR STORY. TOLD PROFESSIONALLY.',
+      'WORLD-CLASS CONTENT FOR NIGERIAN BRANDS',
+      'CONTENT PEOPLE STOP SCROLLING FOR',
+    ],
+    greetings: [
+      'Happy celebrations from {businessName} — may your season be full of stories worth telling',
+      'Festive greetings from the {businessName} team — thank you for trusting us with your brand\'s image',
+      'Wishing you a joyful season from {businessName}: see you in the new year with more great content',
+    ],
+    socialProofs: [
+      'Created content for {count}+ Nigerian brands — from SMEs to national names',
+      '4.9/5 average rating across all client projects — most rehire within 60 days',
+      'Our videos have collectively accumulated 10M+ views across client accounts',
+    ],
+    priceRanges: [
+      'Photography from ₦50,000 per session · Video production from ₦150,000 · Monthly retainer from ₦250,000',
+      'Logo and branding from ₦80,000 · Social media graphics from ₦15,000/month · Printing from ₦5,000',
+      'Podcast production from ₦35,000/episode · Animation from ₦120,000 per minute · Influencer campaigns from ₦200,000',
+    ],
+  },
+
+  // ── NEW: Auto Services ────────────────────────────────────────
+  auto_services: {
+    audiences: [
+      'Car owners in {city} who are tired of mechanics that diagnose wrong, overcharge, and delay repairs',
+      'Corporate fleet managers who need reliable, accountable maintenance for company vehicles',
+      'People who recently bought a used car and need a trustworthy workshop for a full inspection',
+      'Budget-conscious drivers who want quality service at transparent prices — no surprise extras',
+    ],
+    products: [
+      'Full vehicle servicing using genuine parts with a 3-month warranty on all labour',
+      'Diagnostic scan and honest assessment — we tell you exactly what\'s wrong and what can wait',
+      'Car wash and interior detailing that restores your car\'s look in under 2 hours in {city}',
+      'Tokunbo (used) cars inspected, certified, and sold with full history disclosure — no hidden faults',
+    ],
+    topics: [
+      'The 5 signs your car needs attention that most Nigerian drivers ignore until it\'s too late',
+      'Genuine vs. fake spare parts in {city}: how to tell the difference and why it matters',
+      'Client story: how we fixed what 3 other workshops in {city} got wrong — in one day',
+      'Why your car AC is blowing warm air in Nigerian heat — and the proper fix that lasts',
+      'Full car service checklist: what a proper 10,000km service includes (and what to question)',
+      'How to buy a used car in Nigeria without getting scammed — our inspection process explained',
+    ],
+    situations: [
+      'Car owners don\'t trust mechanics because of bad past experiences with overcharging and shoddy work',
+      'We do quality work but have no way to prove it to first-time customers beyond word of mouth',
+      'Competing with roadside mechanics who charge less but use substandard parts and no guarantees',
+    ],
+    usps: [
+      'Written job card before any work starts — you approve every item before we touch your car',
+      'We use only genuine parts with receipt proof — no fake or low-quality substitutes',
+      '3-month guarantee on all mechanical repairs — if it fails, we fix it for free',
+      'Served {count}+ cars in {city} — come visit to see our work and speak to any of our customers',
+    ],
+    offers: [
+      'Free comprehensive diagnosis this week — no hidden charges, no pressure to proceed',
+      'Vehicle inspection package for ₦15,000 — full report including engine, suspension, brakes and electrics',
+      'Book a full service this month and get a free car wash and interior vacuum included',
+    ],
+    ctas: [
+      'Drive in — no appointment needed for diagnosis',
+      'WhatsApp us your car issue for a free advice',
+      'Book your service slot today',
+      'Visit us at [address] — we\'re open 7 days',
+    ],
+    headlines: [
+      'THE WORKSHOP {city} DRIVERS TRUST',
+      'HONEST MECHANICS. REAL PARTS. GUARANTEED WORK.',
+      'YOUR CAR. OUR COMMITMENT.',
+      'QUALITY AUTO SERVICE — ZERO SURPRISES',
+    ],
+    greetings: [
+      'Happy celebrations from {businessName} — wishing you smooth roads and a reliable car this season',
+      'Festive greetings from the {businessName} team: drive safely and have a wonderful celebration',
+      'Season\'s greetings from {businessName} — thank you for trusting us with your vehicle all year',
+    ],
+    socialProofs: [
+      'Serviced {count}+ vehicles in {city} with a 4.8/5 customer satisfaction score',
+      '94% of our customers recommend us to at least one friend within the first month',
+      'Zero unresolved complaints in 5 years — our work is backed by a 3-month guarantee',
+    ],
+    priceRanges: [
+      'Standard service from ₦25,000 · Full service from ₦60,000 · Engine overhaul from ₦150,000',
+      'Car wash from ₦3,000 · Full detailing from ₦15,000 · AC gas refill from ₦8,000',
+      'Tyre from ₦18,000 · Wheel alignment from ₦5,000 · Brake pads from ₦12,000 fitted',
+    ],
+  },
+
+  // ── NEW: Home Services ────────────────────────────────────────
+  home_services: {
+    audiences: [
+      'Lagos working professionals who don\'t have time to clean but won\'t compromise on a spotless home',
+      'Property managers, landlords, and Airbnb hosts who need reliable cleaning and fumigation between tenants',
+      'Corporate offices and retail spaces in {city} that need consistent professional cleaning on contract',
+      'Families with young children who need pest control and fumigation done safely and thoroughly',
+    ],
+    products: [
+      'Deep residential cleaning service that covers every surface, corner, and appliance — not just a surface wipe',
+      'Monthly commercial cleaning contract for offices and retail spaces in {city} with dedicated cleaning team',
+      'Professional fumigation and pest control using safe, approved chemicals with 3-month re-infestation guarantee',
+      'Express laundry and dry-cleaning service: collected, cleaned, and returned within 48 hours in {city}',
+    ],
+    topics: [
+      'Why regular professional cleaning is cheaper in the long run than replacing furniture and appliances early',
+      'How we clean an Airbnb property in {city} to a 5-star standard in under 3 hours — our process',
+      'The 7 places in your home that harbour the most bacteria (and how our cleaning service handles each one)',
+      'Cockroaches in a Lagos flat: why they keep coming back and what a proper treatment actually involves',
+      'Client feature: the {city} office that reduced sick days by 30% after switching to our monthly cleaning contract',
+      'Post-construction cleaning: why you need professionals before you move into a newly built home',
+    ],
+    situations: [
+      'Potential clients worry about trusting strangers in their home — security and reliability are their biggest concern',
+      'We\'re competing with individual cleaners who charge less but have no training, no equipment, and no accountability',
+      'We do great work but have no way to demonstrate our standard before the first appointment',
+    ],
+    usps: [
+      'Every team member is background-checked, uniformed, and trained — documented and verifiable',
+      'We bring all our own professional equipment and eco-safe products — nothing extra for you to provide',
+      '100% satisfaction guarantee: if any area isn\'t cleaned to standard, we return and redo it for free',
+      '{count}+ happy homes and offices in {city} — ask for references from clients near you',
+    ],
+    offers: [
+      'First-time clients: book a deep clean and receive 20% off your first appointment this month',
+      'Monthly cleaning contract: pay for 3 months upfront and get the 4th month free',
+      'Refer a client whose property we clean: receive ₦5,000 off your next service as a thank-you',
+    ],
+    ctas: [
+      'WhatsApp us to book your first clean',
+      'Call to get a quote for your property',
+      'DM us your property size and requirements',
+      'Book online — we respond within 1 hour',
+    ],
+    headlines: [
+      'YOUR CLEAN HOME STARTS HERE',
+      'PROFESSIONAL CLEANING YOU CAN TRUST',
+      '{city}\'S MOST RELIABLE HOME SERVICE',
+      'SPOTLESS. SAFE. SAME DAY.',
+    ],
+    greetings: [
+      'Happy celebrations from {businessName} — wishing you a clean, comfortable and joyful season',
+      'Festive greetings from the {businessName} team: thank you for keeping us busy all year',
+      'Season\'s wishes from {businessName} — may your home be as fresh as after one of our visits',
+    ],
+    socialProofs: [
+      'Cleaned {count}+ homes and offices across {city} — 4.9/5 average rating from verified clients',
+      '97% client retention rate — once people experience our standard, they don\'t go back to regular cleaners',
+      'Zero theft or property damage incidents in 5 years of operation — our team is fully vetted and insured',
+    ],
+    priceRanges: [
+      'Studio/1-bed deep clean from ₦15,000 · 3-bed from ₦25,000 · Post-construction from ₦60,000',
+      'Monthly office cleaning from ₦40,000/month · Fumigation from ₦20,000 · Laundry from ₦500/piece',
+      'Deep clean from ₦20,000 · Regular weekly clean from ₦12,000/visit · Carpet cleaning from ₦8,000',
+    ],
+  },
+
   other: {
     audiences: [
       'Nigerian business owners who want reliable, professional services at fair prices',
@@ -899,8 +1238,10 @@ export function getFieldSuggestions(
   const semantic  = detectFieldSemantic(fieldId, fieldLabel)
   if (semantic === 'none') return []
 
-  const industry  = profile.industry || 'other'
-  const data      = INDUSTRY_DATA[industry] || INDUSTRY_DATA.other
+  const industry    = profile.industry || 'other'
+  // Map granular industry value to suggestion data key (e.g. hair_salon → beauty_cosmetics)
+  const dataKey     = INDUSTRY_SUGGESTION_MAP[industry] || industry
+  const data        = INDUSTRY_DATA[dataKey] || INDUSTRY_DATA.other
   const ctx       = profile
 
   let pool: string[] = []

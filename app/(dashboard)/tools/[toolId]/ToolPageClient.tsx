@@ -7,6 +7,7 @@ import React, { useState, useEffect, useCallback } from 'react'
 import { useSearchParams } from 'next/navigation'
 import type { ToolDefinition } from '@/lib/tools/registry'
 import ToolPage from '@/components/tools/ToolPage'
+import { useCoinBalance } from '@/app/(dashboard)/DashboardShell'
 
 interface Props {
   tool:        ToolDefinition
@@ -14,9 +15,10 @@ interface Props {
 }
 
 export default function ToolPageClient({ tool, coinBalance: initialBalance }: Props) {
-  const params   = useSearchParams()
+  const params      = useSearchParams()
   const [balance, setBalance]   = useState(initialBalance)
   const [prefill, setPrefill]   = useState<Record<string, string> | null>(null)
+  const { deduct }  = useCoinBalance()
 
  
 
@@ -36,11 +38,12 @@ export default function ToolPageClient({ tool, coinBalance: initialBalance }: Pr
 
   const handleCoinDeducted = useCallback((cost: number) => {
     setBalance((prev) => Math.max(0, prev - cost))
+    deduct(cost)
     // Track in localStorage for offline display
     try {
       localStorage.setItem('cerebre_last_coin_update', String(Date.now()))
     } catch {}
-  }, [])
+  }, [deduct])
 
 
 

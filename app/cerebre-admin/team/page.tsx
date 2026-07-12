@@ -469,8 +469,8 @@ export default function AdminTeamPage() {
         {/* Role filter */}
         <select value={roleFilter} onChange={e => setRoleFilter(e.target.value as any)}
           style={{ padding: '8px 12px', background: 'rgba(255,255,255,0.06)', border: `1px solid ${B}`, borderRadius: 10, color: MUTED, fontFamily: 'inherit', fontSize: 12, outline: 'none', cursor: 'pointer' }}>
-          <option value="all">All roles</option>
-          {ALL_ROLES.map(r => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}
+          <option value="all" className='bg-black'>All roles</option>
+          {ALL_ROLES.map(r => <option key={r} value={r} className='bg-black' >{ROLE_LABELS[r]}</option>)}
         </select>
 
         <button onClick={loadTeam} style={{ padding: '8px 12px', background: FAINT, border: `1px solid ${B}`, borderRadius: 10, cursor: 'pointer', color: MUTED, lineHeight: 0 }}>

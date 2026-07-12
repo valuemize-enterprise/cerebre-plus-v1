@@ -237,7 +237,7 @@ export async function POST(request: NextRequest) {
   }
 
   // Fetch profile
-  const { data: profile } = await supabase.from('profiles').select('*').eq('user_id', userId).single()
+  const { data: profile } = await supabase.from('profiles').select('*').eq('id', userId).single()
 
   const prompt = transform.prompt(content, profile || {})
   const encoder = new TextEncoder()

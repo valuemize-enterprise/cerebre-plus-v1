@@ -109,7 +109,7 @@ export default function UserProfile() {
             <CreditCard size={14} style={{ marginRight:7, verticalAlign:'middle' }} />Change plan
           </h3>
           <select value={newPlan || plan} onChange={e => setNewPlan(e.target.value)} style={{ width:'100%', background:'rgba(255,255,255,0.07)', border:`1px solid ${B}`, borderRadius:8, padding:'9px 12px', color:'#EBF2FC', fontSize:13, fontFamily:'inherit', marginBottom:10 }}>
-            {PLANS.map(p => <option key={p} value={p} style={{ background:'#0B1F3A' }}>{p.charAt(0).toUpperCase()+p.slice(1)}</option>)}
+            {PLANS.map(p => <option key={p} value={p} className='bg-black' >{p.charAt(0).toUpperCase()+p.slice(1)}</option>)}
           </select>
           <button onClick={() => action('change_plan', { plan: newPlan || plan })} disabled={saving==='change_plan' || (newPlan||plan) === plan} style={{ width:'100%', padding:'10px', background:`${GOLD}18`, border:`1px solid ${GOLD}30`, color:GL, fontWeight:700, fontSize:13, borderRadius:8, cursor:'pointer', fontFamily:'inherit' }}>
             {saving==='change_plan' ? 'Updating…' : `Set to ${(newPlan||plan)}`}

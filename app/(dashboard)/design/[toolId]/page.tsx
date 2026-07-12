@@ -4,7 +4,7 @@
 //   1. Preview  — generates at low quality, free, not stored
 //   2. Save     — generates full quality, deducts coins, stored in R2
 
-import React, { useState, useMemo, useCallback, } from 'react'
+import React, { useState, useMemo, useCallback } from 'react'
 import Link from 'next/link'
 import {
   ArrowLeft, Sparkles, Zap, RefreshCw, Download,
@@ -13,9 +13,12 @@ import {
 import { getDesignTool }   from '@/lib/tools/design-registry'
 import { RatingWidget }    from '@/components/tools/RatingWidget'
 import { useUser }         from '@/lib/hooks/useUser'
+import { DesignOutput }    from '@/components/design/DesignOutput'
 import { SuggestionStrip } from '@/components/tools/SuggestionStrip'
+import { AISuggestionStrip, AI_ELIGIBLE_SEMANTICS } from '@/components/tools/AISuggestionStrip'
 import {
   getFieldSuggestions,
+  detectFieldSemantic,
   fieldIsEligibleForSuggestions,
   type ProfileContext,
 } from '@/lib/tools/form-suggestions'
@@ -79,9 +82,9 @@ function FormField({
       value={value} onChange={e => onChange(e.target.value)}
       style={{ ...base, padding: '10px 14px', cursor: 'pointer' }}
     >
-      <option value="">Select…</option>
+      <option  value="" className='bg-black'>Select…</option>
       {(field.options || []).map((o: any) => (
-        <option key={o.value || o} value={o.value || o}>{o.label || o}</option>
+        <option className='bg-black' key={o.value || o} value={o.value || o}>{o.label || o}</option>
       ))}
     </select>
   )
@@ -408,13 +411,59 @@ export default function DesignToolPage({
             </div>
           </div>
 
+          {/* Format selector — shown for tools with 2+ formats that don't have a format formBlock */}
+          {tool.formats.length > 1 && !tool.formBlocks.some((f: { key: string }) => f.key === 'format') && (
+            <div style={{ background: N2, border: `1px solid ${B}`, borderRadius: 14, padding: 16, marginBottom: 14 }}>
+              <p style={{ fontSize: 11, fontWeight: 800, letterSpacing: '1.5px', textTransform: 'uppercase', color: MUTED, margin: '0 0 10px' }}>
+                Format
+              </p>
+              <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>
+                {tool.formats.map((fmt: string) => {
+                  const FORMAT_META: Record<string, { label: string; ratio: string; w: number; h: number }> = {
+                    square:     { label: 'Square',     ratio: '1:1',    w: 28, h: 28 },
+                    portrait:   { label: 'Portrait',   ratio: '4:5',    w: 22, h: 28 },
+                    landscape:  { label: 'Landscape',  ratio: '16:9',   w: 36, h: 20 },
+                    story:      { label: 'Story',      ratio: '9:16',   w: 16, h: 28 },
+                    thumbnail:  { label: 'Thumbnail',  ratio: '16:9',   w: 36, h: 20 },
+                    banner:     { label: 'Banner',     ratio: '4:1',    w: 40, h: 10 },
+                    a4portrait: { label: 'A4 Portrait','ratio': 'A4',   w: 20, h: 28 },
+                  }
+                  const meta    = FORMAT_META[fmt] ?? { label: fmt, ratio: '—', w: 24, h: 24 }
+                  const isActive = (formData.format || tool.formats[0]) === fmt
+                  return (
+                    <button key={fmt} onClick={() => setField('format', fmt)} style={{
+                      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+                      padding: '10px 12px', borderRadius: 10, cursor: 'pointer', fontFamily: 'inherit',
+                      border: `1.5px solid ${isActive ? GOLD + '55' : B}`,
+                      background: isActive ? `${GOLD}0d` : FAINT,
+                      transition: 'all .15s', minWidth: 64,
+                    }}>
+                      {/* Aspect ratio visual */}
+                      <div style={{
+                        width: meta.w, height: meta.h, borderRadius: 3,
+                        background: isActive ? `${GOLD}35` : 'rgba(255,255,255,.12)',
+                        border: `1.5px solid ${isActive ? GOLD : 'rgba(255,255,255,.2)'}`,
+                      }}/>
+                      <div>
+                        <p style={{ fontSize: 11.5, fontWeight: 700, color: isActive ? GL : MUTED, margin: '0 0 1px', textAlign: 'center' }}>{meta.label}</p>
+                        <p style={{ fontSize: 10, color: isActive ? MUTED : 'rgba(205,217,236,.22)', margin: 0, textAlign: 'center' }}>{meta.ratio}</p>
+                      </div>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
           {/* Form fields */}
           <div style={{ background: N2, border: `1px solid ${B}`, borderRadius: 14, padding: 18 }}>
             {tool.formBlocks.map(field => {
-              const sugs = fieldIsEligibleForSuggestions(field.type)
-                ? getFieldSuggestions(field.key, field.label || '', profileCtx)
-                : []
-              const fieldVal = formData[field.key] || ''
+              const fieldVal  = formData[field.key] || ''
+              const showStrip = fieldIsEligibleForSuggestions(field.type) && fieldVal.length < 30
+              const semantic  = showStrip ? detectFieldSemantic(field.key, field.label || '') : 'none'
+              const existingInputs = Object.fromEntries(
+                Object.entries(formData).filter(([k]) => k !== field.key && String(formData[k] || '').length > 0)
+              ) as Record<string, string>
               return (
                 <div key={field.key} style={{ marginBottom: 16 }}>
                   <label style={{
@@ -430,13 +479,24 @@ export default function DesignToolPage({
                       {fieldVal.length}/{field.maxLength}
                     </p>
                   )}
-                  {sugs.length > 0 && (
-                    <SuggestionStrip
-                      suggestions={sugs}
+                  {showStrip && AI_ELIGIBLE_SEMANTICS.has(semantic) ? (
+                    <AISuggestionStrip
+                      fieldId={field.key}
+                      fieldLabel={field.label || ''}
+                      fieldSemantic={semantic}
+                      toolId={tool.id}
+                      toolName={tool.name}
+                      existingInputs={existingInputs}
                       onSelect={v => setField(field.key, v)}
-                      visible={fieldVal.length < 25}
+                      visible={showStrip}
                     />
-                  )}
+                  ) : showStrip ? (
+                    <SuggestionStrip
+                      suggestions={getFieldSuggestions(field.key, field.label || '', profileCtx)}
+                      onSelect={v => setField(field.key, v)}
+                      visible={showStrip}
+                    />
+                  ) : null}
                 </div>
               )
             })}
@@ -515,146 +575,93 @@ export default function DesignToolPage({
             )}
           </div>
 
-          {/* Brand DNA notice */}
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: 8, marginTop: 12,
-            padding: '10px 14px', background: 'rgba(18,212,180,0.06)',
-            border: '1px solid rgba(18,212,180,0.18)', borderRadius: 10,
-          }}>
-            <Shield size={13} style={{ color: TEAL, flexShrink: 0 }}/>
-            <p style={{ fontSize: 11.5, color: TEAL, margin: 0 }}>
-              Brand DNA applied — your colours, font style, and logo on every saved design.
-            </p>
-          </div>
+          {/* Brand DNA notice — shows setup nudge if colors not configured */}
+          {(profile as any)?.brand_primary_color ? (
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 8, marginTop: 12,
+              padding: '10px 14px', background: 'rgba(18,212,180,0.06)',
+              border: '1px solid rgba(18,212,180,0.18)', borderRadius: 10,
+            }}>
+              <Shield size={13} style={{ color: TEAL, flexShrink: 0 }}/>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1 }}>
+                <div style={{ width: 12, height: 12, borderRadius: 3, background: (profile as any).brand_primary_color, flexShrink: 0 }}/>
+                <p style={{ fontSize: 11.5, color: TEAL, margin: 0 }}>
+                  Brand DNA active — {(profile as any).brand_primary_color} applied to every design.
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 10, marginTop: 12,
+              padding: '11px 14px', background: 'rgba(224,152,24,0.06)',
+              border: '1.5px dashed rgba(224,152,24,0.4)', borderRadius: 10,
+            }}>
+              <span style={{ fontSize: 16, flexShrink: 0 }}>🎨</span>
+              <div style={{ flex: 1 }}>
+                <p style={{ fontSize: 12, fontWeight: 700, color: GL, margin: '0 0 2px' }}>Brand DNA not set up</p>
+                <p style={{ fontSize: 11.5, color: MUTED, margin: 0 }}>
+                  Set your brand colours, font and logo for consistent designs.
+                </p>
+              </div>
+              <a href="/brand-settings" style={{
+                padding: '6px 12px', borderRadius: 8, textDecoration: 'none',
+                fontSize: 12, fontWeight: 700,
+                background: 'rgba(224,152,24,0.14)', border: '1px solid rgba(224,152,24,0.4)',
+                color: GL, whiteSpace: 'nowrap', flexShrink: 0,
+              }}>
+                Set up →
+              </a>
+            </div>
+          )}
         </div>
 
-        {/* ── RIGHT: Output ────────────────────────────────── */}
+        {/* ── RIGHT: Output — DesignOutput component ──────── */}
         <div style={{ position: 'sticky', top: 20 }}>
+          <DesignOutput
+            toolId={toolId}
+            toolName={tool.name}
+            preview={preview ? {
+              previewDataUrl: preview.previewDataUrl,
+              coinCost:       preview.coinCost,
+              engine:         preview.engine as 'standard' | 'premium',
+              brandApplied:   preview.brandApplied,
+            } : null}
+            saved={saved ? {
+              imageUrls:    saved.imageUrls,
+              coinCost:     saved.coinCost,
+              engine:       saved.engine as 'standard' | 'premium',
+              generationId: saved.generationId,
+              brandApplied: saved.brandApplied,
+              urls:         (saved as any).urls,
+              svgs:         (saved as any).svgs,
+            } : null}
+            isGenerating={pageState === 'previewing'}
+            isSaving={pageState === 'saving'}
+            loadingMessage={loadingMsg}
+            engine={engine}
+            onPreview={generatePreview}
+            onSave={saveDesign}
+            onRegenerate={generatePreview}
+          />
 
-          {/* Idle placeholder */}
-          {pageState === 'idle' && (
-            <div style={{
-              background: N2, border: `1px dashed ${B}`, borderRadius: 14,
-              padding: 48, textAlign: 'center',
-              display: 'flex', flexDirection: 'column', alignItems: 'center',
-              justifyContent: 'center', minHeight: 300,
-            }}>
-              <span style={{ fontSize: 44, marginBottom: 14 }}>{tool.icon}</span>
-              <p style={{ fontSize: 13.5, color: MUTED, maxWidth: 240 }}>
-                Fill in the form and click <strong style={{ color: DIM }}>Preview Design</strong> to see your design for free before spending any coins.
-              </p>
-            </div>
-          )}
-
-          {/* Previewing loading */}
-          {pageState === 'previewing' && (
-            <LoadingPanel
-              message={loadingMsg || 'Generating preview…'}
-              sub="Fast preview — no coins spent"
-            />
-          )}
-
-          {/* Preview image */}
-          {pageState === 'preview' && preview?.previewDataUrl && (
-            <>
-              <div style={{
-                padding: '10px 14px', background: `${GOLD}08`,
-                border: `1px solid ${GOLD}25`, borderRadius: '12px 12px 0 0',
-                display: 'flex', alignItems: 'center', gap: 8,
-              }}>
-                <Sparkles size={13} style={{ color: GOLD }}/>
-                <p style={{ fontSize: 12.5, color: GL, fontWeight: 700, margin: 0 }}>
-                  Looking good? Save it for {coinCost} coins — or regenerate for free.
-                </p>
-              </div>
-              <ImageCard
-                src={preview.previewDataUrl}
-                label="Preview"
-                isPreview
-                onExpand={() => openLightbox(preview.previewDataUrl, 'Preview')}
+          {/* Rating widget (only after save) */}
+          {pageState === 'saved' && saved && (
+            <div style={{ marginTop: 14 }}>
+              <RatingWidget
+                toolId={toolId}
+                toolCategory="design"
+                engine={engine}
+                coinsSpent={saved.coinCost}
+                generationId={saved.generationId ?? undefined}
+                variantCount={saved.imageUrls.length}
+                hadBrandProfile={!!saved.brandApplied?.primaryColor}
               />
-            </>
-          )}
-
-          {/* Saving loading */}
-          {pageState === 'saving' && (
-            <LoadingPanel
-              message={loadingMsg || 'Saving your design…'}
-              sub={`Generating full quality · deducting ${coinCost} coins`}
-            />
-          )}
-
-          {/* Saved result */}
-          {pageState === 'saved' && savedImages.length > 0 && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              {/* Success banner */}
-              <div style={{
-                padding: '10px 14px', background: 'rgba(34,197,94,0.1)',
-                border: `1px solid rgba(34,197,94,0.3)`, borderRadius: 12,
-                display: 'flex', alignItems: 'center', gap: 8,
-              }}>
-                <Check size={14} style={{ color: GREEN }}/>
-                <p style={{ fontSize: 12.5, color: GREEN, fontWeight: 700, margin: 0 }}>
-                  Saved! {coinCost} coins deducted · {savedImages.length} variant{savedImages.length !== 1 ? 's' : ''} ready to download.
-                </p>
-              </div>
-
-              {savedImages.map((url, i) => (
-                <div key={i}>
-                  <ImageCard
-                    src={url}
-                    label={`Variant ${i + 1}`}
-                    isPreview={false}
-                    onExpand={() => openLightbox(url, `Variant ${i + 1}`)}
-                  />
-                  {/* Download row */}
-                  <div style={{ padding: '8px 14px', background: N2, borderRadius: '0 0 14px 14px', display: 'flex', justifyContent: 'flex-end', borderTop: `1px solid ${B}` }}>
-                    <a
-                      href={url} download={`${toolId}-v${i+1}.png`}
-                      target="_blank" rel="noreferrer"
-                      style={{
-                        display: 'flex', alignItems: 'center', gap: 5,
-                        padding: '6px 14px', borderRadius: 8,
-                        background: `${GL}15`, border: `1px solid ${GL}35`,
-                        color: GL, fontSize: 12, fontWeight: 700, textDecoration: 'none',
-                      }}
-                    >
-                      <Download size={11}/> Download
-                    </a>
-                  </div>
-                </div>
-              ))}
-
-              {/* Brand applied */}
-              {saved?.brandApplied && (
-                <div style={{
-                  padding: '10px 14px', background: 'rgba(18,212,180,0.06)',
-                  border: '1px solid rgba(18,212,180,0.18)', borderRadius: 10,
-                }}>
-                  <p style={{ fontSize: 11.5, color: TEAL, margin: 0 }}>
-                    ✓ Brand color {saved.brandApplied.primaryColor} applied
-                    {saved.brandApplied.logoOverlaid ? ' · ✓ Logo overlaid' : ''}
-                    {saved.brandApplied.footerApplied ? ' · ✓ Footer strip applied' : ''}
-                  </p>
-                </div>
-              )}
-
-              {/* Rating widget */}
-              <div style={{ marginTop: 4 }}>
-                <RatingWidget
-                  toolId={toolId}
-                  toolCategory="design"
-                  engine={engine}
-                  coinsSpent={saved?.coinCost}
-                  generationId={saved?.generationId ?? undefined}
-                  variantCount={savedImages.length}
-                  hadBrandProfile={!!saved?.brandApplied?.primaryColor}
-                />
-              </div>
             </div>
           )}
+        </div>
+
         </div>
       </div>
-    </div>
+    // </div>
   )
 }

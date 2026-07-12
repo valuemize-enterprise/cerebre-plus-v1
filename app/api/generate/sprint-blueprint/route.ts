@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
         }
         if (event.type === 'message_stop') {
           // Deduct coins and update generation record
-          await Promise.all([
+          const [deductResult] = await Promise.allSettled([
             supabase.rpc('deduct_design_coins' as any, {
               p_user_id: user.id, p_amount: COIN_COST,
               p_tool_id: 'sprint-blueprint', p_engine: 'base',
@@ -73,7 +73,10 @@ export async function POST(request: NextRequest) {
             supabase.from('tool_generations' as any).update({
               output: fullText, status: 'completed', completed_at: new Date().toISOString()
             }).eq('id', genRecord?.id).eq('user_id', user.id),
-          ]).catch(() => {})
+          ])
+          if (deductResult.status === 'rejected') {
+            console.error('[sprint-blueprint] coin deduction failed:', deductResult.reason)
+          }
           controller.enqueue(encoder.encode('data: {"done":true}\n\n'))
         }
       }

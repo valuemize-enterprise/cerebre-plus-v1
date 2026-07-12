@@ -27,17 +27,20 @@ export interface ToolDefinition {
   category:      ToolCategory
   coinCost:      number
   icon:          string             // Emoji
-  accentColour:  string             // Hex — for card theming
+  accentColour:  string    // Hex — for card theming
+  outputGroup?:  OutputGroup       // V2 JSON output group
+  initialCoinCost?: number
+  externalRoute?: string            // Redirect URL (e.g. CI module)
   laws:          number[]           // Cerebre Plus laws applied
   isNew?:        boolean
   isPremium?:    boolean            // Requires Growth+ plan
   formBlocks:    ToolFormField[]    // All form fields
-  loadingMessages: string[]        // Stage messages during generation
-  estimatedSeconds: number         // For progress bar
-  outputSections: string[]         // Expected H2 sections in output
-  nextToolIds:   string[]          // 3 recommended next tools
-  whatsappEnabled: boolean         // Does output include WhatsApp CTA
-  profiling:     string[]          // Profile fields this tool uses
+  loadingMessages?: string[]        // Stage messages during generation
+  estimatedSeconds?: number         // For progress bar
+  outputSections?: string[]         // Expected H2 sections in output
+  nextToolIds?:  string[]           // 3 recommended next tools
+  whatsappEnabled?: boolean         // Does output include WhatsApp CTA
+  profiling?:    string[]           // Profile fields this tool uses
 }
 
 export type ToolCategory =
@@ -50,6 +53,16 @@ export type ToolCategory =
   | 'reputation'
   | 'seo'
   | 'growth'
+
+export type OutputGroup =
+  | 'calendar'
+  | 'caption'
+  | 'document'
+  | 'email'
+  | 'intelligence'
+  | 'script'
+  | 'strategy'
+  | 'whatsapp'
 
 // ─────────────────────────────────────────────────────────────
 // SHARED FIELD DEFINITIONS (reused across tools)
@@ -93,6 +106,8 @@ export const TOOL_REGISTRY: ToolDefinition[] = [
   {
     id: 'copy-brain',
     name: 'CopyBrain AI',
+    outputGroup: 'caption',
+    initialCoinCost: 14,
     tagline: 'Write ads, captions, and website copy that converts.',
     description: 'Produces three complete copy variants using different Cerebre Plus psychological triggers. Every variant includes a WhatsApp CTA and is immediately publishable.',
     category: 'copywriting',
@@ -173,6 +188,8 @@ export const TOOL_REGISTRY: ToolDefinition[] = [
     description: 'Generates multiple scroll-stopping captions for any platform, complete with hashtag strategies and optimal posting times for Nigerian audiences.',
     category: 'copywriting',
     coinCost: 15,
+    outputGroup: 'caption',        // v2 JSON output — uses CaptionCraftOutput component
+    initialCoinCost: 11,           // 70% of 15, rounded up
     icon: '✍️',
     accentColour: '#A855F7',
     laws: [1, 2, 3, 8],
@@ -229,6 +246,8 @@ export const TOOL_REGISTRY: ToolDefinition[] = [
 
   {
     id: 'ad-scribe',
+    outputGroup: 'caption',
+    initialCoinCost: 10,
     name: 'AdScribe',
     tagline: 'Launch-ready Facebook, Instagram, and Google ad copy.',
     description: 'Creates complete ad sets with primary text, headlines, descriptions, creative briefs, and audience targeting recommendations — calibrated for Nigerian buyer psychology.',
@@ -279,6 +298,8 @@ export const TOOL_REGISTRY: ToolDefinition[] = [
 
   {
     id: 'email-scribe',
+    outputGroup: 'email',
+    initialCoinCost: 18,
     name: 'EmailScribe',
     tagline: 'Email sequences that build relationships and close sales.',
     description: 'Builds complete multi-email sequences following Cerebre Plus\'s Sales Letter Formula. Every email uses the personal "I" voice and leads to a WhatsApp conversion.',
@@ -333,6 +354,8 @@ export const TOOL_REGISTRY: ToolDefinition[] = [
 
   {
     id: 'video-script-forge',
+    outputGroup: 'script',
+    initialCoinCost: 18,
     name: 'VideoScriptForge',
     tagline: 'Camera-ready video scripts that hook in 2 seconds.',
     description: 'Writes complete video scripts for Reels, TikTok, YouTube, and ads — with hooks that pass the Lagos Bus Test and CTAs that bring viewers to WhatsApp.',
@@ -397,6 +420,8 @@ export const TOOL_REGISTRY: ToolDefinition[] = [
 
   {
     id: 'blog-brain',
+    outputGroup: 'document',
+    initialCoinCost: 21,
     name: 'BlogBrain',
     tagline: 'SEO articles that rank, educate, and convert readers.',
     description: 'Writes complete, SEO-optimised blog articles for Nigerian businesses — with specific Nigerian market examples, WhatsApp CTAs, and meta data for Google ranking.',
@@ -446,6 +471,8 @@ export const TOOL_REGISTRY: ToolDefinition[] = [
 
   {
     id: 'bio-builder',
+    outputGroup: 'caption',
+    initialCoinCost: 10,
     name: 'BioBuilder',
     tagline: 'Business bios that build instant trust and authority.',
     description: 'Generates complete bio sets for Instagram, LinkedIn, website, press kits, and more — all eliminating FOBE and positioning you as the obvious choice in your city.',
@@ -495,6 +522,8 @@ export const TOOL_REGISTRY: ToolDefinition[] = [
 
   {
     id: 'product-describer',
+    outputGroup: 'caption',
+    initialCoinCost: 8,
     name: 'ProductDescriber',
     tagline: 'Product descriptions that sell before they meet you.',
     description: 'Writes benefit-led product descriptions for websites, Jumia, Instagram Shop, WhatsApp catalogues, and flyers — with Awoof pricing comparisons built in.',
@@ -539,6 +568,8 @@ export const TOOL_REGISTRY: ToolDefinition[] = [
 
   {
     id: 'press-release-ai',
+    outputGroup: 'document',
+    initialCoinCost: 14,
     name: 'PressRelease AI',
     tagline: 'Media-ready press releases Nigerian journalists will open.',
     description: 'Generates complete, publication-ready press releases with executive quotes, media contact sections, and social media versions — targeting the right Nigerian outlets.',
@@ -593,6 +624,8 @@ export const TOOL_REGISTRY: ToolDefinition[] = [
 
   {
     id: 'content-calendar',
+    outputGroup: 'calendar',
+    initialCoinCost: 14,
     name: 'Content Calendar',
     tagline: '30 days of content planned, structured, and ready.',
     description: 'Builds a complete content calendar with daily posts, hashtag banks, WhatsApp broadcasts, and salary-cycle-aware promotional timing for Nigerian audiences.',
@@ -634,8 +667,38 @@ export const TOOL_REGISTRY: ToolDefinition[] = [
     profiling: ['business_name', 'industry', 'city', 'whatsapp', 'brand_voice'],
   },
 
+  // Visual Content Calendar — same schema as content-calendar, visual-first framing
+  {
+    id:           'visual-content-calendar',
+    outputGroup:  'calendar',
+    initialCoinCost: 14,
+    name:         'Visual Content Calendar',
+    tagline:      'See your entire month at a glance — every post designed for impact.',
+    description:  'Builds a complete visual content calendar with design direction, colour palette guidance, and image type recommendations for each post.',
+    category:     'content_planning',
+    coinCost:     20,
+    icon:         '🗓️',
+    accentColour: '#8B5CF6',
+    laws:         [2, 8, 10],
+    formBlocks: [
+      { key: 'platforms', label: 'Platforms', type: 'multiselect', required: true, tier: 'primary',
+        options: [{ value: 'instagram', label: 'Instagram' }, { value: 'facebook', label: 'Facebook' }, { value: 'tiktok', label: 'TikTok' }, { value: 'linkedin', label: 'LinkedIn' }] },
+      { key: 'calendar_duration', label: 'Duration', type: 'select', tier: 'primary',
+        options: [{ value: '7', label: '7 days' }, { value: '14', label: '14 days' }, { value: '30', label: '30 days' }], defaultValue: '30' },
+      { key: 'visual_style', label: 'Visual style', type: 'select', tier: 'primary',
+        options: [{ value: 'clean_minimal', label: 'Clean & minimal' }, { value: 'bold_vibrant', label: 'Bold & vibrant' }, { value: 'earthy_organic', label: 'Earthy & organic' }, { value: 'luxury_dark', label: 'Luxury dark' }] },
+      { key: 'content_goals', label: 'Primary goal', type: 'multiselect', required: true, tier: 'primary',
+        options: [{ value: 'awareness', label: 'Grow awareness' }, { value: 'sales', label: 'Drive sales' }, { value: 'engagement', label: 'Boost engagement' }, { value: 'trust', label: 'Build trust' }] },
+      { key: 'month_and_year', label: 'Month to plan for', type: 'text', tier: 'more_context', placeholder: 'e.g. July 2025' },
+    ],
+    nextToolIds:  ['content-calendar', 'caption-craft', 'social-post-designer'],
+    profiling:    ['business_name', 'industry', 'city', 'target_customer'],
+  },
+
   {
     id: 'carousel-script-builder',
+    outputGroup: 'script',
+    initialCoinCost: 13,
     name: 'CarouselScriptBuilder',
     tagline: 'Swipe-worthy carousels that educate, engage, and convert.',
     description: 'Creates complete slide-by-slide carousel scripts with design direction, captions, and CTAs — built to earn saves, shares, and WhatsApp enquiries.',
@@ -689,6 +752,8 @@ export const TOOL_REGISTRY: ToolDefinition[] = [
 
   {
     id: 'story-planner',
+    outputGroup: 'script',
+    initialCoinCost: 10,
     name: 'StoryPlanner',
     tagline: 'Instagram and Facebook story sequences that convert.',
     description: 'Creates complete story sequences with screen content, captions, polls, and WhatsApp link stickers — designed to take followers from cold to WhatsApp in one sitting.',
@@ -743,6 +808,8 @@ export const TOOL_REGISTRY: ToolDefinition[] = [
 
   {
     id: 'whatsapp-campaign-builder',
+    outputGroup: 'whatsapp',
+    initialCoinCost: 21,
     name: 'WhatsApp Campaign Builder',
     tagline: 'Broadcast campaigns that get 40%+ reply rates.',
     description: 'Creates multi-message WhatsApp broadcast sequences using Cerebre Plus\'s adapted Sales Letter Formula — Hook → Fear/Promise → Social Proof → Awoof → CTA → Deadline.',
@@ -794,6 +861,8 @@ export const TOOL_REGISTRY: ToolDefinition[] = [
 
   {
     id: 'follow-up-sequencer',
+    outputGroup: 'whatsapp',
+    initialCoinCost: 18,
     name: 'FollowUpSequencer',
     tagline: 'Convert the leads who said "let me think about it."',
     description: 'Creates a complete follow-up sequence for any objection type — with the real psychological reason behind the objection and word-for-word response scripts.',
@@ -846,6 +915,8 @@ export const TOOL_REGISTRY: ToolDefinition[] = [
 
   {
     id: 'welcome-message-craft',
+    outputGroup: 'whatsapp',
+    initialCoinCost: 8,
     name: 'WelcomeMessageCraft',
     tagline: 'First impressions that eliminate FOBE instantly.',
     description: 'Creates a complete set of WhatsApp greeting, away, first-reply, and catalogue messages — making every new contact feel like they\'ve landed somewhere trustworthy.',
@@ -899,6 +970,8 @@ export const TOOL_REGISTRY: ToolDefinition[] = [
 
   {
     id: 'promo-blast',
+    outputGroup: 'caption',
+    initialCoinCost: 10,
     name: 'PromoBlast',
     tagline: 'Promotional blasts that sell out fast.',
     description: 'Generates channel-optimised promotional messages for WhatsApp, Instagram, Facebook, and SMS — following the Promo Blast Formula: Awoof → Fear → CTA → Deadline.',
@@ -956,6 +1029,8 @@ export const TOOL_REGISTRY: ToolDefinition[] = [
 
   {
     id: 'strategy-brain',
+    outputGroup: 'strategy',
+    initialCoinCost: 35,
     name: 'StrategyBrain',
     tagline: 'Your complete 90-day marketing strategy in 60 seconds.',
     description: 'The flagship tool. Builds a complete 90-day marketing strategy with all 10 Cerebre Plus laws applied, salary-cycle campaign windows, Nigerian cultural calendar, and full KPI dashboard.',
@@ -997,6 +1072,8 @@ export const TOOL_REGISTRY: ToolDefinition[] = [
 
   {
     id: 'campaign-clock',
+    outputGroup: 'strategy',
+    initialCoinCost: 35,
     name: 'CampaignClock',
     tagline: 'Month-by-month campaign calendars with salary week strategy.',
     description: 'Builds a complete monthly campaign calendar with Nigerian event integration, salary-cycle promotional windows, and pre-written WhatsApp broadcasts for each key date.',
@@ -1041,6 +1118,8 @@ export const TOOL_REGISTRY: ToolDefinition[] = [
 
   {
     id: 'audience-profiler',
+    outputGroup: 'intelligence',
+    initialCoinCost: 28,
     name: 'AudienceProfiler',
     tagline: 'Know your Nigerian buyer better than they know themselves.',
     description: 'Builds a deep Ideal Customer Profile for the Nigerian market — with FOBE patterns, city-specific psychology, trust touchpoints, and word-for-word messaging that converts.',
@@ -1090,6 +1169,8 @@ export const TOOL_REGISTRY: ToolDefinition[] = [
 
   {
     id: 'launch-pad',
+    outputGroup: 'strategy',
+    initialCoinCost: 42,
     name: 'LaunchPad',
     tagline: 'Launch any product or business to maximum Day-1 revenue.',
     description: 'Creates a complete pre-launch → launch day → post-launch playbook with waitlist strategy, urgency architecture, hour-by-hour launch day schedule, and revenue projections.',
@@ -1135,6 +1216,8 @@ export const TOOL_REGISTRY: ToolDefinition[] = [
 
   {
     id: 'brand-positioner',
+    outputGroup: 'intelligence',
+    initialCoinCost: 35,
     name: 'BrandPositioner',
     tagline: 'Own a positioning territory your competitors can\'t claim.',
     description: 'Develops a complete brand positioning strategy with competitive map, positioning statement, messaging hierarchy, tagline options, and brand story — for the Nigerian and African market.',
@@ -1186,6 +1269,8 @@ export const TOOL_REGISTRY: ToolDefinition[] = [
 
   {
     id: 'pricing-narrator',
+    outputGroup: 'caption',
+    initialCoinCost: 21,
     name: 'PricingNarrator',
     tagline: 'Make your price feel like a bargain every time.',
     description: 'Creates complete pricing communication — from the Awoof pricing page to WhatsApp objection scripts — using the "show value before price" formula that converts in Nigeria.',
@@ -1240,6 +1325,8 @@ export const TOOL_REGISTRY: ToolDefinition[] = [
 
   {
     id: 'budget-optimizer',
+    outputGroup: 'strategy',
+    initialCoinCost: 35,
     name: 'BudgetOptimizer',
     tagline: 'Every naira allocated for maximum return.',
     description: 'Builds a complete marketing budget allocation plan with channel ROI rankings, salary-week concentration strategy, and quick-win actions — for any budget level.',
@@ -1278,6 +1365,8 @@ export const TOOL_REGISTRY: ToolDefinition[] = [
 
   {
     id: 'ad-pilot',
+    outputGroup: 'strategy',
+    initialCoinCost: 52,
     name: 'AdPilot',
     tagline: 'Complete paid campaigns from strategy to live ads.',
     description: 'Builds a full campaign plan with ad copy, audience targeting, A/B test schedule, and a 5-stage retargeting sequence — with the Fear of Competitor formula in every ad.',
@@ -1329,6 +1418,8 @@ export const TOOL_REGISTRY: ToolDefinition[] = [
 
   {
     id: 'retarget-engine',
+    outputGroup: 'strategy',
+    initialCoinCost: 24,
     name: 'RetargetEngine',
     tagline: 'Convert the 97% who almost bought.',
     description: 'Creates a multi-stage retargeting campaign with escalating urgency — from soft re-introduction to the final close — calibrated for Nigerian audience behaviour and ad fatigue.',
@@ -1383,6 +1474,8 @@ export const TOOL_REGISTRY: ToolDefinition[] = [
 
   {
     id: 'influencer-brief-writer',
+    outputGroup: 'strategy',
+    initialCoinCost: 18,
     name: 'InfluencerBriefWriter',
     tagline: 'Influencer briefs that get authentic Nigerian content.',
     description: 'Creates professional campaign briefs for Nigerian content creators — covering deliverables, key messages, legal clauses, payment structure, and tracking setup.',
@@ -1433,6 +1526,8 @@ export const TOOL_REGISTRY: ToolDefinition[] = [
 
   {
     id: 'google-ad-craft',
+    outputGroup: 'intelligence',
+    initialCoinCost: 21,
     name: 'GoogleAdCraft',
     tagline: 'Google ads that capture Nigerian search intent.',
     description: 'Writes complete Google ad campaigns — headlines, descriptions, extensions, keywords — using Nigerian search patterns including city names, Pidgin variants, and voice search formats.',
@@ -1487,6 +1582,8 @@ export const TOOL_REGISTRY: ToolDefinition[] = [
 
   {
     id: 'funnel-builder',
+    outputGroup: 'strategy',
+    initialCoinCost: 31,
     name: 'FunnelBuilder',
     tagline: 'Relationship → Trust → Value → Offer. The Nigerian funnel.',
     description: 'Creates a complete sales funnel with landing page copy, WhatsApp opt-in sequence, nurture messages, and the Cerebre Plus conversion flow — with WhatsApp as the primary CRM.',
@@ -1538,6 +1635,8 @@ export const TOOL_REGISTRY: ToolDefinition[] = [
 
   {
     id: 'lead-magnet-forge',
+    outputGroup: 'document',
+    initialCoinCost: 24,
     name: 'LeadMagnetForge',
     tagline: 'The free offer that builds your list and earns the sale.',
     description: 'Creates a complete lead magnet system — title, opt-in copy, content outline, WhatsApp delivery sequence, and 7-day follow-up — designed for maximum Nigerian opt-in rates.',
@@ -1584,7 +1683,11 @@ export const TOOL_REGISTRY: ToolDefinition[] = [
   },
 
   {
+    // SCHEMA NOTE: Blueprint lists this in Group 7 (intelligence) for classification,
+    // but visual spec says 'see Group 2 specs'. Implemented as Group 2 (document) for correct output rendering.
     id: 'proposal-writer',
+    outputGroup: 'document',
+    initialCoinCost: 28,
     name: 'ProposalWriter',
     tagline: 'Proposals that eliminate objections before they\'re raised.',
     description: 'Creates complete business proposals following the Sales Letter Formula — opening with the client\'s problem, building with the Awoof Stack, closing with a WhatsApp CTA.',
@@ -1632,7 +1735,11 @@ export const TOOL_REGISTRY: ToolDefinition[] = [
   },
 
   {
+    // SCHEMA NOTE: Blueprint lists this in Group 7 (intelligence) for classification,
+    // but visual spec says 'see Group 3 specs'. Implemented as Group 3 (script) for correct output rendering.
     id: 'sales-script-writer',
+    outputGroup: 'script',
+    initialCoinCost: 21,
     name: 'SalesScriptWriter',
     tagline: 'Word-for-word scripts that close Nigerian buyers.',
     description: 'Writes complete sales scripts for WhatsApp, phone, or in-person — following Cerebre Plus\'s Sales Letter Formula with Nigerian-specific objection handlers and closing lines.',
@@ -1736,6 +1843,8 @@ export const TOOL_REGISTRY: ToolDefinition[] = [
 
   {
     id: 'review-requestor',
+    outputGroup: 'caption',
+    initialCoinCost: 10,
     name: 'ReviewRequestor',
     tagline: 'Get Google and social reviews Nigerian buyers trust.',
     description: 'Creates a complete review request sequence for Google, Instagram, and WhatsApp — with timing strategy, follow-up for non-reviewers, and response templates for every type of review.',
@@ -1780,6 +1889,8 @@ export const TOOL_REGISTRY: ToolDefinition[] = [
 
   {
     id: 'crisis-responder',
+    outputGroup: 'document',
+    initialCoinCost: 18,
     name: 'CrisisResponder',
     tagline: 'Turn a public complaint into a trust-building moment.',
     description: 'Creates a complete brand crisis response — public statements, WhatsApp apology messages, 48-hour action plan, and the long-term recovery sequence that rebuilds trust faster.',
@@ -1831,6 +1942,8 @@ export const TOOL_REGISTRY: ToolDefinition[] = [
 
   {
     id: 'local-seo-kit',
+    outputGroup: 'intelligence',
+    initialCoinCost: 21,
     name: 'LocalSEOKit',
     tagline: 'Dominate Google searches in your Nigerian city.',
     description: 'Creates a complete local SEO strategy — Google Business Profile optimisation, Nigerian keyword list, citation guide, and review strategy for ranking in your city\'s Google Maps.',
@@ -1870,6 +1983,8 @@ export const TOOL_REGISTRY: ToolDefinition[] = [
 
   {
     id: 'keyword-hunter',
+    outputGroup: 'intelligence',
+    initialCoinCost: 18,
     name: 'KeywordHunter',
     tagline: 'Find the search terms Nigerian buyers actually use.',
     description: 'Delivers a complete keyword research strategy for Nigeria — including Nigerian English variants, Pidgin search patterns, city-name modifiers, and content clusters for ranking.',
@@ -1968,6 +2083,8 @@ export const TOOL_REGISTRY: ToolDefinition[] = [
 
   {
     id: 'referral-program-builder',
+    outputGroup: 'strategy',
+    initialCoinCost: 18,
     name: 'ReferralProgramBuilder',
     tagline: 'Turn every customer into a walking advertisement.',
     description: 'Creates a complete referral programme — offer structure, launch WhatsApp broadcast, ambassador brief, tracking system, and the social proof content your referrers can share.',
@@ -2016,6 +2133,8 @@ export const TOOL_REGISTRY: ToolDefinition[] = [
 
   {
     id: 'newsletter-ai',
+    outputGroup: 'document',
+    initialCoinCost: 18,
     name: 'NewsletterAI',
     tagline: 'Email newsletters Nigerian business owners actually read.',
     description: 'Creates complete newsletter editions — story-led opening, industry insights, featured offer with Awoof Stack, and a WhatsApp CTA — in Nigerian English your list looks forward to.',
@@ -2053,6 +2172,8 @@ export const TOOL_REGISTRY: ToolDefinition[] = [
 
   {
     id: 'win-back-campaign',
+    outputGroup: 'whatsapp',
+    initialCoinCost: 21,
     name: 'WinBackCampaign',
     tagline: 'Bring back customers who went quiet.',
     description: 'Creates a complete re-engagement campaign for inactive customers — with the story-led approach that revives Nigerian buyers who haven\'t bought in 30, 60, or 90+ days.',
@@ -2092,6 +2213,40 @@ export const TOOL_REGISTRY: ToolDefinition[] = [
     whatsappEnabled: true,
     profiling: ['business_name', 'industry', 'city', 'whatsapp', 'social_proof'],
   },
+
+  // ═══════════════════════════════════════════════════════════════
+  // COMPETITOR INTELLIGENCE MODULES (Group 9)
+  // These are NOT standalone form tools — externalRoute causes ToolPage
+  // to redirect to the CI session wizard at /competitor-intelligence.
+  // ═══════════════════════════════════════════════════════════════
+  {
+    id: 'social-media-audit', name: 'Social Media Audit',
+    tagline: 'See exactly what competitors are doing on social — and where to beat them.',
+    description: 'Analyses competitor Instagram, Facebook, and TikTok presence, posting patterns, engagement rates, and content strategy. Part of Competitor Intelligence 2.0.',
+    category: 'growth', coinCost: 25, icon: '📊', accentColour: '#E09818',
+    externalRoute: '/competitor-intelligence', formBlocks: [], laws: [],
+  },
+  {
+    id: 'ad-intelligence', name: 'Ad Intelligence',
+    tagline: 'Reverse-engineer every ad your competitors are running right now.',
+    description: 'Uncovers paid advertising strategy, creatives, targeting, and spend patterns using Meta Ad Library. Part of Competitor Intelligence 2.0.',
+    category: 'growth', coinCost: 30, icon: '🎯', accentColour: '#12D4B4',
+    externalRoute: '/competitor-intelligence', formBlocks: [], laws: [],
+  },
+  {
+    id: 'website-content-audit', name: 'Website & Content Audit',
+    tagline: 'Find every gap in competitor websites and content strategy.',
+    description: 'Deep-dives into competitor SEO, website copy, blog content, and organic search positioning. Part of Competitor Intelligence 2.0.',
+    category: 'growth', coinCost: 25, icon: '🌐', accentColour: '#8B7FFF',
+    externalRoute: '/competitor-intelligence', formBlocks: [], laws: [],
+  },
+  {
+    id: 'gap-opportunity-map', name: 'Gap & Opportunity Map',
+    tagline: 'Turn every competitor weakness into your next market advantage.',
+    description: 'Maps all identified competitor gaps to specific Cerebre Plus tools and growth actions. Part of Competitor Intelligence 2.0.',
+    category: 'growth', coinCost: 20, icon: '🗺️', accentColour: '#22C55E',
+    externalRoute: '/competitor-intelligence', formBlocks: [], laws: [],
+  },
 ]
 
 // ─────────────────────────────────────────────────────────────
@@ -2113,7 +2268,7 @@ export function getToolsByCategory(category: ToolCategory): ToolDefinition[] {
 export function getNextTools(toolId: string): ToolDefinition[] {
   const tool = getTool(toolId)
   if (!tool) return []
-  return tool.nextToolIds
+  return (tool.nextToolIds ?? [])
     .map(id => getTool(id))
     .filter((t): t is ToolDefinition => t !== undefined)
 }

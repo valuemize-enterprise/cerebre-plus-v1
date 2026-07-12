@@ -20,6 +20,22 @@ import {
 } from 'lucide-react'
 import { parseToolOutput, type ParsedSection, type LayoutType } from '@/lib/tools/output-parsers'
 import { RatingWidget } from '@/components/tools/RatingWidget'
+// import { CalendarOutputView }    from '@/components/tools/CalendarOutputView'
+// import { CopywritingOutput }    from '@/components/tools/outputs/CopywritingOutput'
+// import { WhatsAppOutput }       from '@/components/tools/outputs/WhatsAppOutput'
+// import { StrategyOutput }       from '@/components/tools/outputs/StrategyOutput'
+import { CaptionCraftOutput }   from '@/components/tools/outputs/CaptionCraftOutput'
+import { CaptionGroupOutput }   from '@/components/tools/outputs/CaptionGroupOutput'
+import { WhatsAppGroupOutput }  from '@/components/tools/outputs/WhatsAppGroupOutput'
+import { StrategyGroupOutput }  from '@/components/tools/outputs/StrategyGroupOutput'
+import { CalendarGroupOutput }  from '@/components/tools/outputs/CalendarGroupOutput'
+import { EmailGroupOutput }     from '@/components/tools/outputs/EmailGroupOutput'
+import { DocumentGroupOutput }  from '@/components/tools/outputs/DocumentGroupOutput'
+import { ScriptGroupOutput }       from '@/components/tools/outputs/ScriptGroupOutput'
+import { IntelligenceGroupOutput } from '@/components/tools/outputs/IntelligenceGroupOutput'
+import type { CaptionOutput, WhatsAppOutput, StrategyOutput, CalendarOutput, EmailOutput, DocumentOutput, ScriptOutput, IntelligenceOutput } from '@/lib/tools/output-schemas'
+import CalendarOutputView from './CalendarOutputView'
+import { CopywritingOutput } from './outputs/CopywritingOutput'
 
 // ─── Design tokens ──────────────────────────────────────────
 const N1    = '#0B1F3A'   // navy
@@ -268,7 +284,7 @@ function BigCopyBtn({ text, label = 'Copy', secondary = false }: { text:string; 
 }
 
 // ─── Bottom action bar ───────────────────────────────────────
-type ActProps = {
+export type ActProps = {
   onRegenerate?:  () => void
   isSaved?:       boolean
   onSave?:        () => void
@@ -348,10 +364,10 @@ function OutputFooter({
             coinsSpent={coinsSpent}
             variantCount={variantCount}
             compact={false}
-            // onRated={(thumbs) => {
-            //   // After thumbs tap, allow the full widget to show but mark as initiated
-            //   if (thumbs === 'up') setTimeout(() => setRated(true), 4000)
-            // }}
+            onRated={(thumbs) => {
+              // After thumbs tap, allow the full widget to show but mark as initiated
+              if (thumbs === 'up') setTimeout(() => setRated(true), 4000)
+            }}
           />
         </div>
       )}
@@ -689,89 +705,26 @@ function SequenceLayout({ copy, guidance, allText, isStreaming, ...ap }: {
 
 // ════════════════════════════════════════════════════════════
 // LAYOUT 5 — CALENDAR  (content-calendar)
+// Now uses CalendarOutputView — a proper interactive monthly grid.
 // ════════════════════════════════════════════════════════════
-function CalendarLayout({ copy, guidance, allText, isStreaming, ...ap }: {
+function CalendarLayout({ allText, isStreaming, ...ap }: {
   copy:ParsedSection[]; guidance:ParsedSection[]; allText:string; isStreaming?:boolean
 } & ActProps) {
-  // copy sections = Week 1, Week 2, etc.  Each week's text has Mon/Tue... days embedded
-  const [weekIdx, setWeekIdx]   = useState(0)
-  const [activeDay, setActiveDay] = useState<{label:string;text:string;platform:string}|null>(null)
-  const week = copy[weekIdx]
-  if (!week) return null
-
-  const DAYS = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday']
-  const SHORT= ['Mon','Tue','Wed','Thu','Fri','Sat','Sun']
-
-  // Parse days from the week's text
-  const days = useMemo(()=>{
-    if (!week) return []
-    const result: Array<{label:string;text:string;platform:string;emoji:string}> = []
-    DAYS.forEach((day,di)=>{
-      const re = new RegExp(`\\*\\*${day}[:\\s]*\\*\\*([\\s\\S]*?)(?=\\*\\*(?:${DAYS.join('|')})|$)`,'i')
-      const m  = week.text.match(re)
-      if (!m) return
-      const raw      = m[1].trim()
-      const platMatch= raw.match(/Platform:\s*([^\n]+)/i)
-      const platform = platMatch?.[1]?.trim() ?? 'Instagram'
-      const pc       = PLAT_COLOR[platform] ?? GOLD
-      const cleaned  = raw.replace(/Platform:[^\n]*/gi,'').trim()
-      result.push({ label:SHORT[di], text:cleaned, platform, emoji:(Object.entries(PLAT_COLOR).find(([k])=>platform.toLowerCase().includes(k))?.[0]?.[0]??'📅') })
-    })
-    return result
-  }, [week, weekIdx])
+  // While streaming, show a simple loading state
+  if (isStreaming) {
+    return (
+      <div style={{ display:'flex', flexDirection:'column', height:'100%' }}>
+        <div style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', flexDirection:'column', gap:12, color:MUTED }}>
+          <span style={{ fontSize:28 }}>📅</span>
+          <p style={{ fontSize:13, margin:0 }}>Building your content calendar…</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
-    <div style={{ display:'flex', flexDirection:'column', height:'100%' }}>
-      {/* Week selector */}
-      <div style={{ display:'flex', alignItems:'center', gap:6, padding:'10px 12px', borderBottom:`1px solid ${BDR}` }}>
-        <button onClick={()=>setWeekIdx(i=>Math.max(0,i-1))} disabled={weekIdx===0} style={{ background:FAINT, border:`1px solid ${BDR}`, color:MUTED, width:28, height:28, borderRadius:7, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', opacity:weekIdx===0?.4:1 }}><ChevronLeft size={13}/></button>
-        <div style={{ flex:1, display:'flex', gap:5, overflowX:'auto', scrollbarWidth:'none' }}>
-          {copy.map((w,i)=>(
-            <button key={i} onClick={()=>{setWeekIdx(i);setActiveDay(null)}} style={{ flexShrink:0, padding:'5px 12px', borderRadius:20, fontFamily:'inherit', background:weekIdx===i?`${GL}20`:FAINT, border:`1px solid ${weekIdx===i?GL+'40':BDR}`, color:weekIdx===i?GL:MUTED, fontWeight:weekIdx===i?700:500, fontSize:12, cursor:'pointer', whiteSpace:'nowrap' as const }}>{w.label}</button>
-          ))}
-        </div>
-        <button onClick={()=>setWeekIdx(i=>Math.min(copy.length-1,i+1))} disabled={weekIdx===copy.length-1} style={{ background:FAINT, border:`1px solid ${BDR}`, color:MUTED, width:28, height:28, borderRadius:7, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', opacity:weekIdx===copy.length-1?.4:1 }}><ChevronRight size={13}/></button>
-      </div>
-
-      <div style={{ flex:1, overflowY:'auto', padding:'12px 12px 6px' }}>
-        {/* Day cells */}
-        {days.length > 0 ? (
-          <>
-            <div style={{ display:'grid', gridTemplateColumns:'repeat(7,1fr)', gap:4, marginBottom:12 }}>
-              {SHORT.map((d,i)=><div key={i} style={{ textAlign:'center', fontSize:9.5, fontWeight:700, color:MUTED, paddingBottom:4 }}>{d}</div>)}
-              {days.map((day,i)=>{
-                const pc  = PLAT_COLOR[day.platform] ?? GOLD
-                const on  = activeDay?.label === day.label
-                return (
-                  <button key={i} onClick={()=>setActiveDay(on?null:day)} style={{ padding:'7px 3px', borderRadius:10, fontFamily:'inherit', border:`1.5px solid ${on?pc:BDR}`, background:on?`${pc}22`:FAINT, cursor:'pointer', display:'flex', flexDirection:'column', alignItems:'center', gap:3, transition:'all .18s' }}>
-                    <span style={{ fontSize:14 }}>📅</span>
-                    <span style={{ fontSize:8.5, fontWeight:700, color:on?pc:MUTED, textTransform:'uppercase' as const }}>{day.label}</span>
-                    <span style={{ fontSize:7.5, fontWeight:700, padding:'0 3px', borderRadius:3, background:`${pc}22`, color:pc }}>{day.platform.slice(0,2).toUpperCase()}</span>
-                  </button>
-                )
-              })}
-            </div>
-            {activeDay ? (
-              <div style={{ animation:'or-slide-up .2s ease' }}>
-                <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:10 }}>
-                  <div>
-                    <p style={{ fontSize:14, fontWeight:700, color:W, margin:0 }}>{DAYS[SHORT.indexOf(activeDay.label)]}</p>
-                    <span style={{ fontSize:10, fontWeight:700, padding:'1px 7px', borderRadius:10, background:`${PLAT_COLOR[activeDay.platform]??GOLD}18`, color:PLAT_COLOR[activeDay.platform]??GOLD }}>{activeDay.platform}</span>
-                  </div>
-                </div>
-                <UseCopyBlock text={activeDay.text} badge="POST THIS CAPTION"/>
-              </div>
-            ) : (
-              <p style={{ textAlign:'center', fontSize:13, color:MUTED, padding:'12px 0' }}>Tap any day to see the full caption</p>
-            )}
-          </>
-        ) : (
-          // Fallback: show week text as copy block
-          <UseCopyBlock text={week.text} badge="WEEK CONTENT"/>
-        )}
-        {guidance.map(g=><StrategyPanel key={g.id} text={g.text} label={g.label}/>)}
-      </div>
-
+    <div style={{ display:'flex', flexDirection:'column', height:'100%', overflowY:'auto' }}>
+      <CalendarOutputView rawText={allText}/>
       <OutputFooter allText={allText} isStreaming={isStreaming} {...ap}/>
     </div>
   )
@@ -872,21 +825,156 @@ export interface OutputRendererProps {
   isStreaming?:   boolean
   toolId?:        string
   toolName?:      string
-  outputSections?: string[]   // ← pass from tool definition (tool.outputSections)
+  outputSections?: string[]
   toolCategory?:  'text' | 'design' | 'whatsapp' | 'strategy' | 'calendar' | 'sequence'
   generationId?:  string
   coinsSpent?:    number
+  deepDiveCost?:  number      // v2: cost of the Deep Dive second call
   isSaved?:       boolean
   onSave?:        () => void
   onRegenerate?:  () => void
   whatsappEnabled?: boolean
+  // v2 JSON output — when present, bypasses the legacy text parser
+  outputJson?:    Record<string, unknown> | null
+  businessName?:  string      // v2: used by output components that render the business name
 }
 
 export function OutputRenderer({
   content, text, isStreaming, toolId, toolName,
-  outputSections = [], toolCategory = 'text', coinsSpent, generationId,
-  isSaved, onSave, onRegenerate,
+  outputSections = [], toolCategory = 'text', coinsSpent, deepDiveCost,
+  generationId, isSaved, onSave, onRegenerate,
+  outputJson, businessName,
 }: OutputRendererProps) {
+
+  // ── V2 JSON dispatch — routes structured output to the correct component ──
+  if (outputJson && !isStreaming) {
+    const group = (outputJson as any).output_group as string | undefined
+    const ddCost = deepDiveCost ?? coinsSpent ?? 0
+
+    if (group === 'caption') {
+      const commonCaptionProps = {
+        outputJson:   outputJson as unknown as CaptionOutput,
+        generationId: generationId ?? '',
+        toolId:       toolId ?? 'caption-craft',
+        coinsSpent:   coinsSpent ?? 0,
+        deepDiveCost: ddCost,
+        onRegenerate, isSaved, onSave,
+        businessName: businessName ?? toolName ?? 'Your Business',
+      }
+      // caption-craft keeps its dedicated Instagram post preview component
+      // all other Group 1 tools use CaptionGroupOutput with tool-specific frames
+      return toolId === 'caption-craft'
+        ? <CaptionCraftOutput {...commonCaptionProps}/>
+        : <CaptionGroupOutput {...commonCaptionProps}/>
+    }
+
+    if (group === 'whatsapp') {
+      return (
+        <WhatsAppGroupOutput
+          outputJson={outputJson as unknown as WhatsAppOutput}
+          generationId={generationId ?? ''}
+          toolId={toolId ?? 'whatsapp-campaign-builder'}
+          coinsSpent={coinsSpent ?? 0}
+          deepDiveCost={ddCost}
+          onRegenerate={onRegenerate}
+          isSaved={isSaved}
+          onSave={onSave}
+        />
+      )
+    }
+    if (group === 'strategy') {
+      return (
+        <StrategyGroupOutput
+          outputJson={outputJson as unknown as StrategyOutput}
+          generationId={generationId ?? ''}
+          toolId={toolId ?? 'strategy-brain'}
+          coinsSpent={coinsSpent ?? 0}
+          deepDiveCost={ddCost}
+          onRegenerate={onRegenerate}
+          isSaved={isSaved}
+          onSave={onSave}
+        />
+      )
+    }
+
+    if (group === 'calendar') {
+      return (
+        <CalendarGroupOutput
+          outputJson={outputJson as unknown as CalendarOutput}
+          generationId={generationId ?? ''}
+          toolId={toolId ?? 'content-calendar'}
+          coinsSpent={coinsSpent ?? 0}
+          deepDiveCost={ddCost}
+          onRegenerate={onRegenerate}
+          isSaved={isSaved}
+          onSave={onSave}
+        />
+      )
+    }
+
+    if (group === 'email') {
+      return (
+        <EmailGroupOutput
+          outputJson={outputJson as unknown as EmailOutput}
+          generationId={generationId ?? ''}
+          toolId={toolId ?? 'email-scribe'}
+          coinsSpent={coinsSpent ?? 0}
+          deepDiveCost={ddCost}
+          onRegenerate={onRegenerate}
+          isSaved={isSaved}
+          onSave={onSave}
+        />
+      )
+    }
+
+    if (group === 'document') {
+      return (
+        <DocumentGroupOutput
+          outputJson={outputJson as unknown as DocumentOutput}
+          generationId={generationId ?? ''}
+          toolId={toolId ?? 'blog-brain'}
+          coinsSpent={coinsSpent ?? 0}
+          deepDiveCost={ddCost}
+          onRegenerate={onRegenerate}
+          isSaved={isSaved}
+          onSave={onSave}
+        />
+      )
+    }
+
+    if (group === 'script') {
+      return (
+        <ScriptGroupOutput
+          outputJson={outputJson as unknown as ScriptOutput}
+          generationId={generationId ?? ''}
+          toolId={toolId ?? 'video-script-forge'}
+          coinsSpent={coinsSpent ?? 0}
+          deepDiveCost={ddCost}
+          onRegenerate={onRegenerate}
+          isSaved={isSaved}
+          onSave={onSave}
+        />
+      )
+    }
+
+    if (group === 'intelligence') {
+      return (
+        <IntelligenceGroupOutput
+          outputJson={outputJson as unknown as IntelligenceOutput}
+          generationId={generationId ?? ''}
+          toolId={toolId ?? 'audience-profiler'}
+          coinsSpent={coinsSpent ?? 0}
+          deepDiveCost={ddCost}
+          onRegenerate={onRegenerate}
+          isSaved={isSaved}
+          onSave={onSave}
+        />
+      )
+    }
+    // Phase 6: competitor + design groups added next
+  }
+
+  // ── V1 Legacy streaming / text output (all tools not yet migrated) ──
   const raw = content ?? text ?? ''
 
   const parsed = useMemo(()=>{
@@ -931,13 +1019,40 @@ export function OutputRenderer({
             )
           }
           switch (layout) {
-            case 'carousel':  return <CarouselLayout  {...lp} {...ap}/>
-            case 'whatsapp':  return <WhatsAppLayout  {...lp} {...ap}/>
-            case 'strategy':  return <StrategyLayout  {...lp} {...ap}/>
-            case 'sequence':  return <SequenceLayout  {...lp} {...ap}/>
+            // ── NEW beautiful output UIs ─────────────────────
+            case 'carousel':
+            case 'sequence':
+              return (
+                <CopywritingOutput
+                  copy={lp.copy} guidance={lp.guidance} allText={lp.allText}
+                  isStreaming={ap.isStreaming} toolName={toolName} coinsSpent={ap.coinsSpent}
+                  onRegenerate={ap.onRegenerate} isSaved={ap.isSaved} onSave={ap.onSave}
+                  toolId={ap.toolId} toolCategory={ap.toolCategory} generationId={ap.generationId}
+                />
+              )
+            case 'whatsapp':
+              return (
+                <div style={{ display:'flex', flexDirection:'column', height:'100%' }}>
+                  <div style={{ flex:1, overflowY:'auto', padding:'14px' }}>
+                    <UseCopyBlock text={clean(lp.allText)} badge="YOUR OUTPUT"/>
+                  </div>
+                  <OutputFooter allText={lp.allText} {...ap}/>
+                </div>
+              )
+            case 'strategy':
+              return (
+                <div style={{ display:'flex', flexDirection:'column', height:'100%' }}>
+                  <div style={{ flex:1, overflowY:'auto', padding:'14px' }}>
+                    <UseCopyBlock text={clean(lp.allText)} badge="YOUR OUTPUT"/>
+                  </div>
+                  <OutputFooter allText={lp.allText} {...ap}/>
+                </div>
+              )
+            case 'document':
+            case 'report':
+            case 'plain':
+              return <PlainLayout     {...lp} {...ap}/>
             case 'calendar':  return <CalendarLayout  {...lp} {...ap}/>
-            case 'document':  return <DocumentLayout  {...lp} {...ap}/>
-            case 'report':    return <ReportLayout    {...lp} {...ap}/>
             default:          return <PlainLayout     {...lp} {...ap}/>
           }
         })()}

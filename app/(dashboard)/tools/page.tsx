@@ -8,7 +8,7 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Search, X, Coins, Clock, TrendingUp, ArrowUpDown, Star, Sparkles } from 'lucide-react'
+import { Search, X, Coins, Clock, TrendingUp, ArrowUpDown, Star, Sparkles, ChevronRight } from 'lucide-react'
 
 import {
   TOOL_REGISTRY, CATEGORY_LABELS, CATEGORY_ICONS,
@@ -101,7 +101,7 @@ function ToolCard({
 
       {/* Run now hover CTA */}
       <div className="mt-3 flex items-center justify-between opacity-0 group-hover:opacity-100 transition-opacity">
-        <span className="text-xs font-semibold text-[#E09818]">Run now →</span>
+        <span className="text-xs font-semibold text-[#E09818] flex items-center">Run now <ChevronRight size={18} /></span>
         {!canAfford && (
           <span className="text-xs text-red-400">Not enough coins</span>
         )}

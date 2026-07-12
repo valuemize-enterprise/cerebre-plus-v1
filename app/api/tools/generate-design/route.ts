@@ -28,26 +28,26 @@ import {
 } from '@/lib/design/prompt-templates'
 
 // ── R2 upload helper ──────────────────────────────────────────
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3'
-
-const s3 = new S3Client({
-  region:   'auto',
-  endpoint: process.env.R2_ENDPOINT!,
-  credentials: {
-    accessKeyId:     process.env.R2_ACCESS_KEY_ID!,
-    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!,
-  },
-})
-
 async function uploadToR2(buffer: Buffer, fileName: string): Promise<string> {
-  await s3.send(new PutObjectCommand({
-    Bucket:      process.env.R2_BUCKET_NAME!,
-    Key:         fileName,
-    Body:        buffer,
-    ContentType: 'image/png',
-  }))
+  const R2_ACCOUNT = process.env.R2_ACCOUNT_ID!
+  const R2_BUCKET  = process.env.R2_BUCKET_NAME!
+  const R2_TOKEN   = process.env.R2_API_TOKEN!
+  const R2_PUBLIC  = process.env.R2_PUBLIC_URL!
 
-  return `${process.env.NEXT_PUBLIC_R2_PUBLIC_URL}/${fileName}`
+  const url = `https://api.cloudflare.com/client/v4/accounts/${R2_ACCOUNT}/r2/buckets/${R2_BUCKET}/objects/${fileName}`
+
+  const res = await fetch(url, {
+    method:  'PUT',
+    headers: { 'Authorization': `Bearer ${R2_TOKEN}`, 'Content-Type': 'image/png' },
+    body:    new Uint8Array(buffer),
+  })
+
+  if (!res.ok) {
+    const txt = await res.text().catch(()=>'')
+    throw new Error(`R2 upload failed (${res.status}): ${txt.slice(0, 200)}`)
+  }
+
+  return `${R2_PUBLIC}/${fileName}`
 }
 
 // ── Coin deduction with fallback ──────────────────────────────
@@ -256,11 +256,55 @@ export async function POST(request: NextRequest) {
       .select('id')
       .single()
 
+    // ── ALSO save to main generations table (output_json) ─────
+    // This makes the design output visible in the history page alongside text tools.
+    const designHeadline = `${imageUrls.length} ${tool.name.replace('Designer','').replace('Maker','').trim()} design${imageUrls.length !== 1 ? 's' : ''} for ${brand.businessName}`
+    const designOutputJson = {
+      output_group:     'design',
+      schema_version:   2,
+      headline:         designHeadline.slice(0, 80),
+      design_brief:     promptSummary.slice(0, 200),
+      brand_dna_applied: true,
+      essentials: {
+        primary_url:        imageUrls[0] ?? '',
+        variations:         imageUrls.slice(1),
+        dimensions:         targetFormat === 'square' ? '1080×1080'
+                          : targetFormat === 'portrait' ? '1080×1350'
+                          : targetFormat === 'story'    ? '1080×1920'
+                          : targetFormat === 'landscape' ? '1920×1005'
+                          : targetFormat === 'banner'    ? '1584×396'
+                          : targetFormat === 'thumbnail' ? '1280×720'
+                          : '1080×1080',
+        tier:               engine === 'premium' ? 'Premium' : 'Standard',
+        caption_suggestion: '',   // generated on Deep Dive
+      },
+      deep_dive: null,
+    }
+
+    const { data: mainGen } = await supabase
+      .from('generations' as any)
+      .insert({
+        user_id:           user.id,
+        tool_id:           toolId,
+        tool_name:         tool.name,
+        inputs:            formData,
+        output:            imageUrls.join('\n'),   // text fallback for legacy history
+        output_json:       designOutputJson,
+        output_group:      'design',
+        schema_version:    2,
+        status:            'complete',
+        coin_cost:         coinCost,
+        initial_coin_cost: coinCost,
+        completed_at:      new Date().toISOString(),
+      })
+      .select('id')
+      .single()
+
     return NextResponse.json({
       imageUrls,
       coinCost,
       engine,
-      generationId:  generation?.id ?? null,
+      generationId:  mainGen?.id ?? generation?.id ?? null,
       brandApplied:  {
         primaryColor: brand.primaryColor,
         logoOverlaid: !!brand.logoUrl,

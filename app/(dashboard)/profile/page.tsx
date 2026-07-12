@@ -24,6 +24,7 @@ import {
   detectFieldSemantic,
   type ProfileContext,
 } from '@/lib/tools/form-suggestions'
+import { IndustrySelector } from '@/components/ui/IndustrySelector'
 
 const NAVY = '#0B1F3A'
 const GOLD = '#E09818'
@@ -448,13 +449,16 @@ export default function ProfilePage() {
               placeholder="e.g. Luxe Interiors Lagos"
               autoFocus={focusField === 'business_name'}
             />
-            <FieldInput
-              label="Industry / sector" required
-              value={form.industry as string || ''}
-              onChange={(v) => setField('industry', v)}
-              onBlur={autoSave}
-              placeholder="e.g. Interior Design, Catering, Real Estate, Fashion"
-            />
+
+            <div style={{ marginBottom: 16 }}>
+              <label className="block text-xs font-bold text-white/50 uppercase tracking-wider mb-2">
+                Industry / Sector <span className="text-[#E09818]">*</span>
+              </label>
+              <IndustrySelector
+                value={form.industry as string || ''}
+                onChange={(v) => { setField('industry', v); setTimeout(autoSave, 100) }}
+              />
+            </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
@@ -465,8 +469,8 @@ export default function ProfilePage() {
                   onBlur={autoSave}
                   className="w-full rounded-xl border border-white/10 bg-[#0B1F3A] px-4 py-3 text-sm text-white focus:border-[#E09818]/50 focus:outline-none"
                 >
-                  <option value="">Select city</option>
-                  {NIGERIAN_CITIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                  <option className='bg-black' value="">Select city</option>
+                  {NIGERIAN_CITIES.map((c) => <option key={c} className='bg-black' value={c}>{c}</option>)}
                 </select>
               </div>
               <FieldInput
@@ -636,7 +640,7 @@ export default function ProfilePage() {
               helpText="This appears at the end of most tool outputs."
             />
             <SuggestionStrip
-              suggestions={getFieldSuggestions('cta_text', 'How do customers take action?', profileCtx)}
+              suggestions={getFieldSuggestions('call_to_action', 'How do customers take action?', profileCtx)}
               label="CTA examples for your industry"
               onSelect={(v) => { setField('primary_cta', v); setTimeout(autoSave, 300) }}
               visible={(form.primary_cta as string || '').length < 10}
@@ -696,12 +700,12 @@ export default function ProfilePage() {
                 onChange={(e) => { setField('language_preference', e.target.value); setTimeout(autoSave, 100) }}
                 className="w-full rounded-xl border border-white/10 bg-[#0B1F3A] px-4 py-3 text-sm text-white focus:outline-none"
               >
-                <option value="en-NG">Nigerian English (recommended)</option>
-                <option value="en-formal">Formal English</option>
-                <option value="pidgin">Nigerian Pidgin (casual)</option>
-                <option value="yoruba">Yoruba</option>
-                <option value="igbo">Igbo</option>
-                <option value="hausa">Hausa</option>
+                <option value="en-NG className='bg-black'">Nigerian English (recommended)</option>
+                <option value="en-formal className='bg-black'">Formal English</option>
+                <option value="pidgin className='bg-black'">Nigerian Pidgin (casual)</option>
+                <option value="yoruba className='bg-black'">Yoruba</option>
+                <option value="igbo className='bg-black'">Igbo</option>
+                <option value="hausa className='bg-black'">Hausa</option>
               </select>
             </div>
           </motion.div>

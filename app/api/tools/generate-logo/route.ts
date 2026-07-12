@@ -159,12 +159,15 @@ export async function POST(request: NextRequest) {
     }
 
     // ── Deduct coins ──────────────────────────────────────────
-    await supabase.rpc("deduct_design_coins" as any, {
+    const { error: deductLogoErr } = await supabase.rpc("deduct_design_coins" as any, {
       p_user_id: user.id,
       p_amount: coinCost,
       p_tool_id: "logo-generator",
       p_engine: engine,
     });
+    if (deductLogoErr) {
+      console.error("[generate-logo] coin deduction failed:", deductLogoErr.message);
+    }
 
     // ── Save to history ───────────────────────────────────────
     const imageUrls = Object.values(urls).filter((u) => u.endsWith(".png"));

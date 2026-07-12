@@ -14,6 +14,7 @@ import {
   type ModuleId, type AnalysisMode, type CompetitorSession,
   type ModuleResult, type CompetitorInsight, type UpsellRecommendation,
 } from '@/lib/competitor/types'
+import { CIGroupOutput } from '@/components/competitor/CIGroupOutput'
 import { RatingWidget } from '@/components/tools/RatingWidget'
 
 const N='#0B1F3A', N2='#0D2040', GOLD='#E09818', GL='#F5B830'
@@ -343,7 +344,7 @@ export default function SessionPage({ params }: { params: Promise<{ sessionId: s
     isHeavyAnalysis:  session.is_heavy_analysis,
     competitors:      session.competitors || [],
     modulesSelected:  session.modules_selected || [],
-    modulesCompleted: completedIds as unknown as ModuleId[],
+    modulesCompleted: session.modules_completed || [],
     moduleResults:    moduleResults as any,
     status:           session.status,
     progressPct:      session.progress_pct || 0,
@@ -418,15 +419,15 @@ export default function SessionPage({ params }: { params: Promise<{ sessionId: s
             </div>
           )}
 
-          {completedIds.map(moduleId => {
-            const result = moduleResults[moduleId]
-            if (!result) return null
-            return (
-              <div key={moduleId} style={{ animation:'ci-fade 0.3s ease' }}>
-                <ModuleResultCard result={result} moduleId={moduleId as ModuleId}/>
-              </div>
-            )
-          })}
+          {/* CIGroupOutput — tabbed dashboard replacing the old accordion */}
+          {completedIds.length > 0 && (
+            <div style={{ marginTop: 16, background: N2, border: `1px solid ${B}`, borderRadius: 14, padding: 16 }}>
+              <CIGroupOutput
+                session={castSession}
+                moduleResults={moduleResults as any}
+              />
+            </div>
+          )}
         </div>
       )}
 
@@ -452,7 +453,7 @@ export default function SessionPage({ params }: { params: Promise<{ sessionId: s
             toolCategory="text"
             coinsSpent={session.coins_spent}
             generationId={session.id}
-            // onRated={() => setTimeout(() => setRated(true), 5000)}
+            onRated={() => setTimeout(() => setRated(true), 5000)}
           />
         </div>
       )}

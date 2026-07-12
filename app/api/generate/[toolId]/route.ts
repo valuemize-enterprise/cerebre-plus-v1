@@ -1,465 +1,407 @@
 // ═══════════════════════════════════════════════════════════════
-// /app/api/generate/[toolId]/route.ts
-// The streaming AI generation endpoint. Every tool call flows through here.
-// SERVER-SIDE ONLY — never exposes Anthropic API key or system prompts.
+// /app/api/generate/[toolId]/route.ts  (v2 — Output System upgrade)
+//
+// TWO GENERATION MODES:
+//   MODE A — Legacy streaming (tools without outputGroup in registry)
+//   MODE B — JSON non-streaming (tools WITH outputGroup in registry)
+//             Deducts 70% of coinCost on initial call.
+//             Deep Dive handled by separate /deep-dive route.
 // ═══════════════════════════════════════════════════════════════
 
-import { NextRequest } from "next/server";
-import Anthropic from "@anthropic-ai/sdk";
-import { createServerClient } from "@/lib/supabase/server";
-import { getTool, canAffordTool } from "@/lib/tools/registry";
-import {
-  CEREBRE_MASTER_SYSTEM_PROMPT,
-  buildProfileContext,
-  type ProfileContext,
-} from "@/lib/ai/master-system-prompt";
-import { getToolPrompt1to10 } from "@/lib/ai/tool-prompts-1-10";
-import { getToolPrompt11to20 } from "@/lib/ai/tool-prompts-11-20";
-import { getToolPrompt21to30 } from "@/lib/ai/tool-prompts-21-30";
-import { getToolPrompt31to40 } from "@/lib/ai/tool-prompts-31-40";
-import { validateToolInputs } from "@/lib/validations/tool-schemas";
-import { Ratelimit } from "@upstash/ratelimit";
-import { Redis } from "@upstash/redis";
+import { NextRequest }             from 'next/server'
+import Anthropic                   from '@anthropic-ai/sdk'
+import { createServerClient }      from '@/lib/supabase/server'
+import { getTool }                 from '@/lib/tools/registry'
+import { CEREBRE_MASTER_SYSTEM_PROMPT, buildProfileContext, type ProfileContext } from '@/lib/ai/master-system-prompt'
+import { getToolPrompt1to10 }      from '@/lib/ai/tool-prompts-1-10'
+import { getToolPrompt11to20 }     from '@/lib/ai/tool-prompts-11-20'
+import { getToolPrompt21to30 }     from '@/lib/ai/tool-prompts-21-30'
+import { getToolPrompt31to40 }     from '@/lib/ai/tool-prompts-31-40'
+import { validateToolInputs }      from '@/lib/validations/tool-schemas'
+import { getSchemaInstruction }    from '@/lib/tools/output-prompt-utils'
+import { validateOutputSchema }    from '@/lib/tools/output-schemas'
+import { Ratelimit }               from '@upstash/ratelimit'
+import { Redis }                   from '@upstash/redis'
 
-// Mixpanel — fire-and-forget via HTTP (no SDK import needed, avoids mixpanel-browser vs mixpanel confusion)
 async function trackEvent(event: string, props: Record<string, unknown>) {
-  const token = process.env.MIXPANEL_TOKEN;
-  if (!token) return;
+  const token = process.env.MIXPANEL_TOKEN
+  if (!token) return
   try {
-    const payload = Buffer.from(
-      JSON.stringify({
-        event,
-        properties: { token, ...props, time: Math.floor(Date.now() / 1000) },
-      }),
-    ).toString("base64");
-    // Non-blocking — intentionally not awaited at call site
-    fetch(`https://api.mixpanel.com/track?data=${payload}`, {
-      method: "GET",
-    }).catch(() => {
-      /* never throw */
-    });
-  } catch {
-    /* analytics never blocks the user */
-  }
+    const payload = Buffer.from(JSON.stringify({
+      event, properties: { token, ...props, time: Math.floor(Date.now() / 1000) },
+    })).toString('base64')
+    fetch(`https://api.mixpanel.com/track?data=${payload}`, { method: 'GET' }).catch(() => {})
+  } catch { /* analytics never blocks */ }
 }
 
-// ─────────────────────────────────────────────────────────────
-// CLIENTS (initialised once at module level)
-// ─────────────────────────────────────────────────────────────
-
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY!,
-});
-
-// Upstash rate limiter: 10 requests/minute/user
+const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! })
 const ratelimit = new Ratelimit({
   redis: Redis.fromEnv(),
-  limiter: Ratelimit.slidingWindow(10, "60s"),
-  prefix: "cerebre:generate",
-});
-
-// ─────────────────────────────────────────────────────────────
-// ERROR CODE ENUM
-// ─────────────────────────────────────────────────────────────
+  limiter: Ratelimit.slidingWindow(10, '60s'),
+  prefix: 'cerebre:generate',
+})
 
 const ERR = {
-  TOOL_NOT_FOUND: {
-    code: "TOOL_NOT_FOUND",
-    status: 404,
-    message: "Tool not found. Please refresh the page.",
-  },
-  UNAUTHENTICATED: {
-    code: "UNAUTHENTICATED",
-    status: 401,
-    message: "Please log in to continue.",
-  },
-  PROFILE_MISSING: {
-    code: "PROFILE_MISSING",
-    status: 422,
-    message: "Complete your profile to run this tool.",
-  },
-  INSUFFICIENT_COINS: {
-    code: "INSUFFICIENT_COINS",
-    status: 402,
-    message: "Not enough Cerebre Coins. Please top up to continue.",
-  },
-  ENTERPRISE_ONLY: {
-    code: "ENTERPRISE_ONLY",
-    status: 402,
-    message: "This tool requires an Enterprise plan.",
-  },
-  RATE_LIMITED: {
-    code: "RATE_LIMITED",
-    status: 429,
-    message: "Too many requests. Please wait a moment and try again.",
-  },
-  VALIDATION_FAILED: {
-    code: "VALIDATION_FAILED",
-    status: 400,
-    message: "Please check all required fields and try again.",
-  },
-  GENERATION_FAILED: {
-    code: "GENERATION_FAILED",
-    status: 500,
-    message: "Generation failed. No coins were deducted.",
-  },
-  PROMPT_MISSING: {
-    code: "PROMPT_MISSING",
-    status: 500,
-    message: "Tool prompt configuration error. Please contact support.",
-  },
-} as const;
+  TOOL_NOT_FOUND:     { code: 'TOOL_NOT_FOUND',     status: 404, message: 'Tool not found. Please refresh the page.'              },
+  UNAUTHENTICATED:    { code: 'UNAUTHENTICATED',    status: 401, message: 'Please log in to continue.'                            },
+  PROFILE_MISSING:    { code: 'PROFILE_MISSING',    status: 422, message: 'Complete your profile to run this tool.'               },
+  INSUFFICIENT_COINS: { code: 'INSUFFICIENT_COINS', status: 402, message: 'Not enough Cerebre Coins. Please top up to continue.'  },
+  RATE_LIMITED:       { code: 'RATE_LIMITED',       status: 429, message: 'Too many requests. Please wait a moment and try again.'},
+  VALIDATION_FAILED:  { code: 'VALIDATION_FAILED',  status: 400, message: 'Please check all required fields and try again.'       },
+  GENERATION_FAILED:  { code: 'GENERATION_FAILED',  status: 500, message: 'Generation failed. No coins were deducted.'            },
+  PROMPT_MISSING:     { code: 'PROMPT_MISSING',     status: 500, message: 'Tool prompt configuration error. Contact support.'     },
+  SCHEMA_INVALID:     { code: 'SCHEMA_INVALID',     status: 500, message: 'Unexpected AI response format. Please retry.'          },
+} as const
 
-function errResponse(err: (typeof ERR)[keyof typeof ERR], detail?: string) {
+function errR(err: typeof ERR[keyof typeof ERR], detail?: string) {
   return new Response(
     JSON.stringify({ error: err.code, message: err.message, detail }),
-    { status: err.status, headers: { "Content-Type": "application/json" } },
-  );
+    { status: err.status, headers: { 'Content-Type': 'application/json' } },
+  )
 }
 
-// ─────────────────────────────────────────────────────────────
-// PROMPT ROUTER
-// ─────────────────────────────────────────────────────────────
-
-function getToolPrompt(
-  toolId: string,
-  inputs: Record<string, any>,
-  profile: ProfileContext,
-): string | null {
+function getToolPrompt(toolId: string, inputs: Record<string, any>, profile: ProfileContext): string | null {
   return (
-    getToolPrompt1to10(toolId, inputs, profile) ??
+    getToolPrompt1to10(toolId, inputs, profile)  ??
     getToolPrompt11to20(toolId, inputs, profile) ??
     getToolPrompt21to30(toolId, inputs, profile) ??
     getToolPrompt31to40(toolId, inputs, profile) ??
     null
-  );
+  )
 }
 
-// ─────────────────────────────────────────────────────────────
-// Validation delegated to validateToolInputs (covers all 40 tools)
-// ─────────────────────────────────────────────────────────────
-function validateInputs(toolId: string, raw: Record<string, unknown>) {
-  return validateToolInputs(toolId, raw);
+function calcInitialCost(fullCost: number): number {
+  return Math.max(1, Math.round(fullCost * 0.7))
 }
 
-// ─────────────────────────────────────────────────────────────
-// MAIN HANDLER
-// ─────────────────────────────────────────────────────────────
+function extractJson(text: string): string {
+  // Strategy 1: try parsing as-is
+  try { JSON.parse(text); return text } catch {}
+
+  // Strategy 2: strip markdown fences
+  let s = text.trim().replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?\s*```\s*$/i, '').trim()
+  try { JSON.parse(s); return s } catch {}
+
+  // Strategy 3: find outermost { ... } pair
+  const firstBrace = s.indexOf('{')
+  const lastBrace = s.lastIndexOf('}')
+  if (firstBrace !== -1 && lastBrace > firstBrace) {
+    s = s.slice(firstBrace, lastBrace + 1)
+    try { JSON.parse(s); return s } catch {}
+  }
+
+  // Strategy 4: try to repair truncated JSON
+  s = repairTruncatedJson(s)
+  try { JSON.parse(s); return s } catch {}
+
+  throw new Error('All JSON extraction strategies failed')
+}
+
+function repairTruncatedJson(text: string): string {
+  let result = text.replace(/,\s*$/, '')
+
+  // Close unclosed strings: count unescaped quotes
+  let inString = false, escaped = false
+  let openQuoteCount = 0
+  for (let i = 0; i < result.length; i++) {
+    const ch = result[i]
+    if (escaped) { escaped = false; continue }
+    if (ch === '\\') { escaped = true; continue }
+    if (ch === '"') {
+      inString = !inString
+      openQuoteCount++
+    }
+  }
+  if (openQuoteCount % 2 !== 0) {
+    result += '"'
+  }
+
+  // Count open vs close braces and brackets on the FINAL result
+  let braces = 0, brackets = 0
+  inString = false; escaped = false
+  for (let i = 0; i < result.length; i++) {
+    const ch = result[i]
+    if (escaped) { escaped = false; continue }
+    if (ch === '\\') { escaped = true; continue }
+    if (ch === '"') { inString = !inString; continue }
+    if (!inString) {
+      if (ch === '{') braces++
+      if (ch === '}') braces--
+      if (ch === '[') brackets++
+      if (ch === ']') brackets--
+    }
+  }
+
+  while (brackets > 0) { result += ']'; brackets-- }
+  while (braces > 0) { result += '}'; braces-- }
+
+  return result
+}
 
 export async function POST(
   request: NextRequest,
   { params }: { params: { toolId: string } },
 ) {
-  const { toolId } = params;
+  const { toolId } = params
+  const tool = getTool(toolId)
+  if (!tool) return errR(ERR.TOOL_NOT_FOUND, toolId)
 
-  // ── 1. Validate tool exists ──────────────────────────────
-  const tool = getTool(toolId);
-  if (!tool) return errResponse(ERR.TOOL_NOT_FOUND, toolId);
+  const isV2        = Boolean((tool as any).outputGroup)
+  const outputGroup = (tool as any).outputGroup as string | undefined
 
-  // ── 2. Authenticate user ─────────────────────────────────
-  const supabase = await createServerClient();
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser();
-  if (authError || !user) return errResponse(ERR.UNAUTHENTICATED);
+  const supabase = await createServerClient()
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) return errR(ERR.UNAUTHENTICATED)
+  const userId = user.id
 
-  const userId = user.id;
+  const { data: profile } = await supabase.from('profiles').select('*').eq('id', userId).single()
+  if (!profile) return errR(ERR.PROFILE_MISSING)
 
-  // ── 3. Fetch profile ─────────────────────────────────────
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("id", userId)
-    .single();
+  let body: Record<string, unknown>
+  try { body = await request.json() }
+  catch { return errR(ERR.VALIDATION_FAILED, 'Invalid request body') }
 
-  if (!profile) return errResponse(ERR.PROFILE_MISSING);
+  const inputs       = (body.inputs as Record<string, unknown>) ?? {}
+  const isOnboarding = Boolean(body.isOnboarding)
+  const isFreeRun    = Boolean(body.freeRun)
 
-  // ── 4. Parse body FIRST — needed to determine free run before coin check ──
-  // (body must be read here so isFreeRun can bypass the coin check below)
-  let body: Record<string, unknown>;
-  try {
-    body = await request.json();
-  } catch {
-    return errResponse(ERR.VALIDATION_FAILED, "Invalid request body");
-  }
+  const { data: subscription } = await supabase.from('subscriptions').select('plan_tier, status').eq('user_id', userId).single() 
+  const planTier     = subscription?.plan_tier || 'free'
+  const isEnterprise = planTier === 'enterprise'
+  const fullCost     = tool.coinCost
+  const initialCost  = isV2 ? calcInitialCost(fullCost) : fullCost
 
-  const inputs = (body.inputs as Record<string, unknown>) ?? {};
-  const isOnboarding = Boolean(body.isOnboarding);
-  const isFreeRun = Boolean(body.freeRun); // sent by FreeToolWidget with ?free=1
-
-  // ── 5. Plan + free-run eligibility ──────────────────────
-  const { data: subscription } = await supabase
-    .from("subscriptions")
-    .select("plan_tier, status")
-    .eq("user_id", userId)
-    .single();
-
-  const planTier = subscription?.plan_tier || "free";
-  const isEnterprise = planTier === "enterprise";
-  const coinCost = tool.coinCost;
-
-  // Check free-run eligibility BEFORE the coin balance check so users with
-  // zero coins can still claim their one free tool from the dashboard widget.
-  let eligibleForFreeRun = false;
+  let eligibleForFreeRun = false
   if (isFreeRun && !isEnterprise) {
-    const { data: profCheck } = await supabase
-      .from("profiles" as any)
-      .select("free_tool_used")
-      .eq("id", userId)
-      .single();
-    eligibleForFreeRun = !profCheck?.free_tool_used;
+    const { data: profCheck } = await supabase.from('profiles').select('free_tool_used').eq('id', userId).single() as any
+    eligibleForFreeRun = !profCheck?.free_tool_used
   }
 
-  const skipCoins = isEnterprise || isOnboarding || eligibleForFreeRun;
+  const skipCoins = isEnterprise || isOnboarding || eligibleForFreeRun
 
-  // ── 6. Coin balance check (skipped for enterprise, onboarding, free run) ─
-  let balance = 0;
+  let balance = 0
   if (!skipCoins) {
-    const { data: coinData } = await supabase
-      .from("coin_balances")
-      .select("balance")
-      .eq("user_id", userId)
-      .single();
-
-    balance = coinData?.balance ?? 0;
-
-    if (!canAffordTool(toolId, balance)) {
-      return errResponse(
-        ERR.INSUFFICIENT_COINS,
-        `Need ${coinCost}, have ${balance}`,
-      );
+    const { data: coinData } = await supabase.from('coin_balances').select('balance').eq('user_id', userId).single()
+    balance = coinData?.balance ?? 0
+    const costToCheck = isV2 ? initialCost : fullCost
+    if (balance < costToCheck) {
+      return errR(ERR.INSUFFICIENT_COINS, `Need ${costToCheck} coins, have ${balance}`)
     }
   }
 
-  // ── 7. Rate limit (10 req/min/user) ─────────────────────
-  const { success: ratePassed, remaining } = await ratelimit.limit(userId);
-  if (!ratePassed) {
-    return errResponse(
-      ERR.RATE_LIMITED,
-      `${remaining} requests remaining this minute`,
-    );
-  }
+  const { success: ratePassed } = await ratelimit.limit(userId)
+  if (!ratePassed) return errR(ERR.RATE_LIMITED)
 
-  const validated = validateInputs(toolId, inputs);
-  if (!validated.success) {
-    return errResponse(ERR.VALIDATION_FAILED, validated.errors.join(" | "));
-  }
+  const validated = validateToolInputs(toolId, inputs)
+  if (!validated.success) return errR(ERR.VALIDATION_FAILED, validated.errors.join(' | '))
 
-  // ── 7. Build 3-layer prompt ──────────────────────────────
-  const profileContext = buildProfileContext(profile as ProfileContext);
-  const toolPrompt = getToolPrompt(
-    toolId,
-    validated.data,
-    profile as ProfileContext,
-  );
+  const profileContext = buildProfileContext(profile as ProfileContext)
+  const toolPrompt     = getToolPrompt(toolId, validated.data, profile as ProfileContext)
+  if (!toolPrompt) return errR(ERR.PROMPT_MISSING, toolId)
 
-  if (!toolPrompt) {
-    return errResponse(ERR.PROMPT_MISSING, `No prompt defined for ${toolId}`);
-  }
+  const systemPrompt = [CEREBRE_MASTER_SYSTEM_PROMPT, '\n\n', profileContext].join('')
 
-  const systemPrompt = [
-    CEREBRE_MASTER_SYSTEM_PROMPT,
-    "\n\n",
-    profileContext,
-  ].join("");
+  const schemaInstruction = isV2 && outputGroup
+    ? getSchemaInstruction({
+        group:        outputGroup as any,
+        businessName: profile.business_name || 'the business',
+        platform:     (validated.data as any).platform || 'Instagram',
+        numVariants:  parseInt((validated.data as any).num_variations || '3', 10),
+        numMessages:  parseInt((validated.data as any).num_messages || '5', 10),
+        formula:      'Hook · Fear · Proof · Awoof · CTA',
+        timeframe:    (validated.data as any).timeframe || '60 days',
+        month:        new Date().toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }),
+        totalPosts:   30,
+        subject:      profile.business_name || 'your business',
+      })
+    : null
 
-  // ── 8. Stream from Claude ────────────────────────────────
-  let generationId: string | null = null;
-  let totalTokens = 0;
-  let didComplete = false;
+  const finalPrompt = schemaInstruction ? `${toolPrompt}\n\n${schemaInstruction}` : toolPrompt
 
-  // Pre-insert generation row in pending state (for recovery if stream dies)
-  const { data: genRow } = (await supabase
-    .from("generations" as any)
-    .insert({
-      user_id: userId,
-      tool_id: toolId,
-      tool_name: tool.name,
-      inputs: validated.data,
-      status: "streaming",
-      coin_cost: skipCoins ? 0 : coinCost,
+  const generationInsertPayload = {
+    user_id:           userId,
+    tool_id:           toolId,
+    tool_name:         tool.name,
+    tool_category:     tool.category,
+    input_data:        validated.data,
+    status:            'streaming',
+    coins_deducted:    skipCoins ? 0 : (isV2 ? initialCost : fullCost),
+    schema_version:    isV2 ? 2 : 1,
+    output_group:      outputGroup ?? null,
+    initial_coin_cost: skipCoins ? 0 : (isV2 ? initialCost : null),
+  } as any
+
+  const { data: genRow, error: insertErr } = await supabase.from('generations').insert(generationInsertPayload).select('id').single()
+  if (insertErr) console.error('[generate] generations insert failed:', insertErr.message, insertErr.details)
+
+  const generationId = genRow?.id ?? null
+
+  // ═══════════════ MODE B — V2 JSON ═══════════════
+  if (isV2) {
+    const MAX_RETRIES = 2
+    let outputJson: unknown = null
+    let aiResponse: any = null
+
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        aiResponse = await anthropic.messages.create({
+          model:      'claude-sonnet-4-6',
+          max_tokens: 8192,
+          system:     systemPrompt,
+          messages:   [{ role: 'user', content: finalPrompt }],
+        })
+
+        const stopReason = aiResponse.stop_reason
+        const rawText = aiResponse.content.filter((c: any) => c.type === 'text').map((c: any) => (c as any).text).join('')
+        console.error(`[v2] attempt ${attempt + 1} stop_reason: ${stopReason}, raw length: ${rawText.length}, first 300 chars:`, rawText.slice(0, 300))
+
+        try {
+          outputJson = JSON.parse(extractJson(rawText))
+          break
+        } catch (parseErr) {
+          console.error(`[v2] JSON parse failed (attempt ${attempt + 1}/${MAX_RETRIES + 1}). Raw:`, rawText.slice(0, 500))
+          if (attempt === MAX_RETRIES) {
+        if (generationId) await supabase.from('generations').update({ status: 'failed' } as any).eq('id', generationId)
+            return errR(ERR.SCHEMA_INVALID, 'AI response was not valid JSON — please retry')
+          }
+        }
+      } catch (aiErr: any) {
+        console.error(`[v2] AI call failed (attempt ${attempt + 1}):`, aiErr?.message)
+        if (attempt === MAX_RETRIES) throw aiErr
+      }
+    }
+
+    let validatedOutput: any
+    try { validatedOutput = validateOutputSchema(outputJson, outputGroup as any) }
+    catch (schemaErr: any) {
+      console.error('[v2] Schema validation failed:', schemaErr.message)
+      validatedOutput = { ...(outputJson as object), output_group: outputGroup, schema_version: 2 }
+    }
+
+    if (!skipCoins && generationId) {
+      const { error: deductErr } = await supabase.rpc('deduct_coins_initial' as any, {
+        p_user_id: userId, p_initial_cost: initialCost,
+        p_full_cost: fullCost, p_tool_id: toolId, p_generation_id: generationId,
+      })
+      if (deductErr) console.error('[v2] coin deduction failed:', deductErr)
+    }
+
+    if (generationId) {
+      const { error: updateErr } = await supabase.from('generations').update({
+        output_json:      validatedOutput,
+        output_content:   JSON.stringify(validatedOutput),
+        status:           'complete',
+        token_count:      aiResponse.usage.output_tokens,
+      }).eq('id', generationId)
+      if (updateErr) console.error('[v2] generation update failed:', updateErr.message)
+    }
+
+    if (eligibleForFreeRun) {
+      await supabase.from('profiles' as any).update({ free_tool_used: true, free_tool_id: toolId }).eq('id', userId)
+    }
+
+    checkMilestones(userId, supabase).catch(console.error)
+    trackEvent('generation_complete_v2', {
+      distinct_id: userId, tool_id: toolId, output_group: outputGroup,
+      initial_cost: skipCoins ? 0 : initialCost, full_cost: fullCost,
+      plan_tier: planTier, tokens: aiResponse.usage.output_tokens,
     })
-    .select("id")
-    .single()) as any;
 
-  generationId = genRow?.id ?? null;
+    const responseData = {
+      generation_id:  generationId,
+      output_json:    validatedOutput,
+      coins_spent:    skipCoins ? 0 : initialCost,
+      balance_after:  balance - (skipCoins ? 0 : initialCost),
+      deep_dive_cost: fullCost,
+      schema_version: 2,
+    }
 
-  const encoder = new TextEncoder();
+    const encoder = new TextEncoder()
+    const stream = new ReadableStream({
+      start(controller) {
+        const chunk = `0:${JSON.stringify(JSON.stringify(responseData))}\n`
+        controller.enqueue(encoder.encode(chunk))
+        const tokens = aiResponse?.usage?.output_tokens ?? 0
+        controller.enqueue(encoder.encode(`d:{"finishReason":"stop","usage":{"promptTokens":0,"completionTokens":${tokens}}}\n`))
+        controller.close()
+      },
+    })
 
+    return new Response(stream, {
+      status: 200,
+      headers: {
+        'Content-Type':         'text/plain; charset=utf-8',
+        'X-Vercel-AI-Data-Stream': 'v1',
+        'Cache-Control':        'no-cache',
+        'Connection':           'keep-alive',
+        'X-Generation-Id':      generationId ?? '',
+        'X-Coins-Spent':        String(skipCoins ? 0 : initialCost),
+        'X-Deep-Dive-Cost':     String(fullCost),
+        'X-Balance-After':      String(balance - (skipCoins ? 0 : initialCost)),
+        'X-Coin-Cost':          String(skipCoins ? 0 : initialCost),
+      },
+    })
+  }
+
+  // ═══════════════ MODE A — V1 Streaming ═══════════════
+  const encoder = new TextEncoder()
   const stream = new ReadableStream({
     async start(controller) {
       try {
         const response = await anthropic.messages.create({
-          model: "claude-sonnet-4-6",
-          max_tokens: 8192,
-          system: systemPrompt,
-          messages: [{ role: "user", content: toolPrompt }],
-          stream: true,
-        });
+          model: 'claude-sonnet-4-6', max_tokens: 8192, system: systemPrompt,
+          messages: [{ role: 'user', content: finalPrompt }], stream: true,
+        })
 
-        let fullText = "";
-        let inputTokens = 0;
+        let fullText = '', totalTokens = 0
 
         for await (const event of response) {
-          if (event.type === "message_start") {
-            inputTokens = event.message.usage?.input_tokens ?? 0;
+          if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
+            const chunk = event.delta.text
+            fullText += chunk
+            controller.enqueue(encoder.encode(`0:${JSON.stringify(chunk)}\n`))
           }
-
-          if (
-            event.type === "content_block_delta" &&
-            event.delta.type === "text_delta"
-          ) {
-            const chunk = event.delta.text;
-            fullText += chunk;
-
-            // Send the chunk to the client in Vercel AI SDK data-stream format
-            controller.enqueue(encoder.encode(`0:${JSON.stringify(chunk)}\n`));
-          }
-
-          if (event.type === "message_delta") {
-            totalTokens = event.usage?.output_tokens ?? 0;
-          }
-
-          if (event.type === "message_stop") {
-            didComplete = true;
-
-            // ── 9. Atomic coin deduction (onFinish) ───────
+          if (event.type === 'message_delta') totalTokens = event.usage?.output_tokens ?? 0
+          if (event.type === 'message_stop') {
             if (!skipCoins && generationId) {
-              const { error: deductError } = await supabase.rpc(
-                "deduct_coins",
-                {
-                  p_user_id: userId,
-                  p_amount: coinCost,
-                  p_tool_id: toolId,
-                  p_generation_id: generationId,
-                },
-              );
-
-              if (deductError) {
-                // Refund if deduction RPC fails (shouldn't happen — RPC uses FOR UPDATE lock)
-                console.error("[generate] coin deduction failed:", deductError);
-              }
+              await supabase.rpc('deduct_coins', { p_user_id: userId, p_amount: fullCost, p_tool_id: toolId, p_generation_id: generationId })
             }
-
-            // ── 10. Save complete generation ──────────────
             if (generationId) {
-              await supabase
-                .from("generations")
-                .update({
-                  output: fullText,
-                  status: "complete",
-                  tokens_used: totalTokens,
-                  completed_at: new Date().toISOString(),
-                })
-                .eq("id", generationId);
+              await supabase.from('generations').update({
+                output_content: fullText, status: 'complete', token_count: totalTokens,
+              }).eq('id', generationId)
             }
-
-            // ── 10b. Mark free tool as used (one-time) ────
             if (eligibleForFreeRun) {
-              await supabase
-                .from("profiles" as any)
-                .update({ free_tool_used: true, free_tool_id: toolId })
-                .eq("id", userId);
+              await supabase.from('profiles' as any).update({ free_tool_used: true, free_tool_id: toolId }).eq('id', userId)
             }
-
-            // ── 11. Check milestones ───────────────────────
-            checkMilestones(userId, supabase).catch(console.error);
-
-            // ── 12. Analytics ──────────────────────────────────
-            trackEvent("generation_complete", {
-              distinct_id: userId,
-              tool_id: toolId,
-              tool_name: tool.name,
-              coin_cost: skipCoins ? 0 : coinCost,
-              plan_tier: planTier,
-              tokens: totalTokens,
-              is_onboarding: isOnboarding,
-              city: profile.city,
-              industry: profile.industry,
-            });
-
-            // Send the finish signal
-            controller.enqueue(
-      encoder.encode(
-        `d:${JSON.stringify({
-          finishReason: 'stop',
-          usage: {
-            promptTokens: inputTokens,
-            completionTokens: totalTokens,
-          },
-        })}\n`
-      )
-    )
+            checkMilestones(userId, supabase).catch(console.error)
+            trackEvent('generation_complete', { distinct_id: userId, tool_id: toolId, coin_cost: skipCoins ? 0 : fullCost })
+            controller.enqueue(encoder.encode(`d:{"finishReason":"stop","usage":{"promptTokens":0,"completionTokens":${totalTokens}}}\n`))
           }
         }
       } catch (err: any) {
-        console.error("[generate] streaming error:", err);
-
-        // Mark generation as failed
-        if (generationId) {
-          await supabase
-            .from("generations")
-            .update({ status: "failed" })
-            .eq("id", generationId);
-        }
-
-        // If coins were not deducted (stream died before onFinish), nothing to refund
-        // If stream completed but deduction failed, the RPC handles the refund
-
-        controller.enqueue(
-          encoder.encode(
-            `3:${JSON.stringify({ code: "GENERATION_FAILED", message: ERR.GENERATION_FAILED.message })}\n`,
-          ),
-        );
-      } finally {
-        controller.close();
-      }
+        if (generationId) await supabase.from('generations').update({ status: 'failed' }).eq('id', generationId)
+        controller.enqueue(encoder.encode(`3:${JSON.stringify({ code: 'GENERATION_FAILED', message: ERR.GENERATION_FAILED.message })}\n`))
+      } finally { controller.close() }
     },
-  });
+  })
 
-  // Return the stream in Vercel AI SDK format
   return new Response(stream, {
     headers: {
-      "Content-Type": "text/plain; charset=utf-8",
-      "X-Vercel-AI-Data-Stream": "v1",
-      "Cache-Control": "no-cache",
-      Connection: "keep-alive",
-      "X-Generation-Id": generationId ?? "",
-      "X-Coin-Cost": String(skipCoins ? 0 : coinCost),
-      "X-Balance-Before": String(balance),
-      "X-Balance-After": String(balance - (skipCoins ? 0 : coinCost)),
+      'Content-Type': 'text/plain; charset=utf-8', 'X-Vercel-AI-Data-Stream': 'v1',
+      'Cache-Control': 'no-cache', 'Connection': 'keep-alive',
+      'X-Generation-Id': generationId ?? '', 'X-Coin-Cost': String(skipCoins ? 0 : fullCost),
     },
-  });
+  })
 }
 
-// ─────────────────────────────────────────────────────────────
-// MILESTONE CHECKER (runs after generation, never blocks stream)
-// ─────────────────────────────────────────────────────────────
-
 async function checkMilestones(userId: string, supabase: any) {
-  const { count } = await supabase
-    .from("generations")
-    .select("id", { count: "exact", head: true })
-    .eq("user_id", userId)
-    .eq("status", "complete");
-
-  const milestones = [1, 10, 25, 50, 100, 250, 500];
-  if (milestones.includes(count ?? 0)) {
-    await supabase.from("notifications").insert({
-      user_id: userId,
-      type: "milestone",
-      payload: { generations: count },
-      read: false,
-    });
+  const { count } = await supabase.from('generations').select('id', { count: 'exact', head: true }).eq('user_id', userId).eq('status', 'complete')
+  if ([1, 10, 25, 50, 100, 250, 500].includes(count ?? 0)) {
+    await supabase.from('notifications').insert({ user_id: userId, type: 'milestone', payload: { generations: count }, read: false })
   }
 }
 
-// ─────────────────────────────────────────────────────────────
-// ROUTE CONFIG — Edge runtime for lowest latency streaming
-// ─────────────────────────────────────────────────────────────
-
-export const runtime = "nodejs"; // Node for Anthropic SDK streaming
-export const dynamic = "force-dynamic";
-export const maxDuration = 60; // 60-second timeout for longest generations
-
+export const runtime     = 'nodejs'
+export const dynamic     = 'force-dynamic'
+export const maxDuration = 60

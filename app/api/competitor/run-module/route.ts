@@ -90,10 +90,13 @@ export async function POST(request: NextRequest) {
 
   // ── Deduct coins ──────────────────────────────────────────
   if (result.status === 'completed') {
-    await supabase.rpc('deduct_design_coins' as any, {
+    const { error: deductModErr } = await supabase.rpc('deduct_design_coins' as any, {
       p_user_id: user.id, p_amount: coinCost,
       p_tool_id: 'competitor-intelligence', p_engine: mode,
     })
+    if (deductModErr) {
+      console.error('[competitor-run-module] coin deduction failed:', deductModErr.message)
+    }
   }
 
   return NextResponse.json({

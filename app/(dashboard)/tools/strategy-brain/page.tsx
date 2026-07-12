@@ -105,8 +105,8 @@ function FieldInput({ field, value, onChange }: { field: any; value: any; onChan
   if (field.type === 'select') return (
     <select value={value||''} onChange={e=>onChange(e.target.value)}
       style={{...base,padding:'10px 14px',cursor:'pointer'}}>
-      <option value="">Select…</option>
-      {(field.options||[]).map((o:string)=><option key={o} value={o}>{o}</option>)}
+      <option value="" className='bg-black' >Select…</option>
+      {(field.options||[]).map((o:string)=><option key={o} value={o} className='bg-black' >{o}</option>)}
     </select>
   )
   if (field.type === 'multicheck') {

@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
     const cached = await redis.exists(cacheKey)
     if (cached) { skipped++; continue }
 
-    const { data: profile } = await supabase.from('profiles').select('*').eq('user_id', userId).single()
+    const { data: profile } = await supabase.from('profiles').select('*').eq('id', userId).single()
     if (!profile) { skipped++; continue }
 
     try {

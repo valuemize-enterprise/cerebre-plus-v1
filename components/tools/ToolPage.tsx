@@ -112,7 +112,7 @@ function FormField({
       >
         <option value="" disabled>Select an option…</option>
         {field.options?.map((opt) => (
-          <option key={opt.value} value={opt.value}>{opt.label}</option>
+          <option key={opt.value} className='bg-black' value={opt.value}>{opt.label}</option>
         ))}
       </select>
     )
@@ -234,10 +234,12 @@ export default function ToolPage({ tool, coinBalance, prefill, onCoinDeducted }:
   const [balanceAfter,  setBalanceAfter]  = useState(coinBalance)
   const [isOnline,      setIsOnline]      = useState(true)
   const [cachedOutput,  setCachedOutput]  = useState<string | null>(null)
+  const [v2CachedJson,  setV2CachedJson]  = useState<Record<string, any> | null>(null)
 
   const outputPanelRef = useRef<HTMLDivElement>(null)
   const storageKey     = `cerebre_form_${tool.id}`
   const cacheKey       = `cerebre_output_${tool.id}`
+  const genIdKey       = `cerebre_genid_${tool.id}`
 
   // ── Initialise default values ─────────────────────────────
   useEffect(() => {
@@ -284,7 +286,13 @@ export default function ToolPage({ tool, coinBalance, prefill, onCoinDeducted }:
       const cached = localStorage.getItem(cacheKey)
       if (cached) setCachedOutput(cached)
     } catch { /* ignore */ }
-  }, [storageKey, cacheKey])
+
+    // Load cached generation ID (for deep-dive on refresh)
+    try {
+      const savedGenId = localStorage.getItem(genIdKey)
+      if (savedGenId) setGenerationId(savedGenId)
+    } catch { /* ignore */ }
+  }, [storageKey, cacheKey, genIdKey])
 
   // ── Auto-save form to localStorage on every change ───────
   const handleFormChange = useCallback((key: string, val: string | string[] | boolean) => {
@@ -316,11 +324,17 @@ export default function ToolPage({ tool, coinBalance, prefill, onCoinDeducted }:
       // Read response headers for generation metadata
       const genId        = response.headers.get('X-Generation-Id')
       const balAfter     = response.headers.get('X-Balance-After')
-      if (genId)    setGenerationId(genId)
+      const coinCostHdr  = response.headers.get('X-Coin-Cost')
+      if (genId) {
+        setGenerationId(genId)
+        try { localStorage.setItem(genIdKey, genId) } catch { /* ignore */ }
+      }
       if (balAfter) {
-        const bal = parseInt(balAfter, 10)
-        setBalanceAfter(bal)
-        onCoinDeducted?.(bal)
+        setBalanceAfter(parseInt(balAfter, 10))
+      }
+      if (coinCostHdr) {
+        const cost = parseInt(coinCostHdr, 10)
+        if (cost > 0) onCoinDeducted?.(cost)
       }
 
       // Switch to output tab on mobile
@@ -401,9 +415,22 @@ export default function ToolPage({ tool, coinBalance, prefill, onCoinDeducted }:
   const displayOutput  = completion || cachedOutput || ''
   const nextTools      = getNextTools(tool.id)
 
+  // V2 JSON detection: try to parse the completion as JSON
+  const isV2Tool       = Boolean((tool as any).outputGroup)
+  const parsedV2Json   = useMemo(() => {
+    if (!isV2Tool) return null
+    const raw = completion || cachedOutput
+    if (!raw) return null
+    try {
+      const parsed = JSON.parse(raw)
+      return parsed.output_json ?? parsed
+    } catch { return null }
+  }, [isV2Tool, completion, cachedOutput])
+
   // ── Profile chip data ─────────────────────────────────────
-  const profileFieldsUsed = tool.profiling.filter((f) => Boolean(profile?.[f as keyof typeof profile]))
-  const profileComplete   = Math.round((profileFieldsUsed.length / tool.profiling.length) * 100)
+  const profilingFields = tool.profiling ?? []
+  const profileFieldsUsed = profilingFields.filter((f) => Boolean(profile?.[f as keyof typeof profile]))
+  const profileComplete   = Math.round((profileFieldsUsed.length / Math.max(profilingFields.length, 1)) * 100)
 
   // ─────────────────────────────────────────────────────────
   // FORM PANEL
@@ -436,7 +463,7 @@ export default function ToolPage({ tool, coinBalance, prefill, onCoinDeducted }:
           <div className="mt-3 flex items-center gap-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5">
             <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
             <span className="text-xs text-emerald-300">
-              Profile loaded — {profileFieldsUsed.length}/{tool.profiling.length} fields auto-filled
+              Profile loaded — {profileFieldsUsed.length}/{profilingFields.length} fields auto-filled
             </span>
           </div>
         )}
@@ -682,8 +709,8 @@ export default function ToolPage({ tool, coinBalance, prefill, onCoinDeducted }:
             className="flex-1 flex items-center justify-center p-8"
           >
             <LoadingStages
-              messages={tool.loadingMessages}
-              estimatedSeconds={tool.estimatedSeconds}
+              messages={tool.loadingMessages ?? []}
+              estimatedSeconds={tool.estimatedSeconds ?? 20}
               toolName={tool.name}
             />
           </motion.div>
@@ -713,7 +740,7 @@ export default function ToolPage({ tool, coinBalance, prefill, onCoinDeducted }:
           <div className="mt-6 w-full max-w-sm">
             <p className="mb-2 text-xs text-white/30 text-left">This tool generates:</p>
             <div className="space-y-1.5">
-              {tool.outputSections.slice(0, 5).map((section) => (
+              {(tool.outputSections ?? []).slice(0, 5).map((section) => (
                 <div
                   key={section}
                   className="flex items-center gap-2 rounded-lg bg-white/5 px-3 py-2 text-xs text-white/50"
@@ -725,9 +752,9 @@ export default function ToolPage({ tool, coinBalance, prefill, onCoinDeducted }:
                   {section}
                 </div>
               ))}
-              {tool.outputSections.length > 5 && (
+              {(tool.outputSections ?? []).length > 5 && (
                 <p className="text-center text-xs text-white/25">
-                  +{tool.outputSections.length - 5} more sections
+                  +{(tool.outputSections ?? []).length - 5} more sections
                 </p>
               )}
             </div>
@@ -748,6 +775,8 @@ export default function ToolPage({ tool, coinBalance, prefill, onCoinDeducted }:
             coinsSpent={tool.coinCost}
             generationId={generationId}
             whatsappEnabled={tool.whatsappEnabled}
+            outputJson={parsedV2Json ?? undefined}
+            businessName={profile?.business_name}
           />
         </div>
       )}

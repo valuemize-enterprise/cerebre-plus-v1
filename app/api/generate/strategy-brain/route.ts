@@ -100,7 +100,7 @@ export async function POST(request: NextRequest) {
 
           if (event.type === 'message_stop') {
             // Deduct coins and mark generation complete in parallel
-            await Promise.allSettled([
+            const results = await Promise.allSettled([
               skipCoins
                 ? Promise.resolve()
                 : supabase.rpc('deduct_design_coins' as any, {
@@ -118,6 +118,9 @@ export async function POST(request: NextRequest) {
                 ? supabase.from('profiles' as any).update({ free_tool_used: true, free_tool_id: TOOL_ID }).eq('id', user.id)
                 : Promise.resolve(),
             ])
+            if (results[0].status === 'rejected') {
+              console.error('[strategy-brain] coin deduction failed:', results[0].reason)
+            }
 
             controller.enqueue(encoder.encode('data: {"done":true}\n\n'))
           }

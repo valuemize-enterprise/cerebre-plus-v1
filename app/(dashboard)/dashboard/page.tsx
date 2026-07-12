@@ -30,7 +30,7 @@ export default async function DashboardPage() {
     { data: recentGenerations },
     { data: notifications },
   ] = await Promise.all([
-    supabase.from('profiles').select('*').eq('user_id', user.id).single(),
+    supabase.from('profiles').select('*').eq('id', user.id).single(),
     supabase.from('subscriptions').select('*').eq('user_id', user.id).single(),
     supabase.from('coin_balances').select('balance, updated_at').eq('user_id', user.id).single(),
     supabase
