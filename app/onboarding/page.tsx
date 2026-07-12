@@ -238,7 +238,7 @@ export default function OnboardingPage() {
         unique_advantage:      form.unique_advantage.trim(),
         social_proof:          form.social_proof.trim(),
         price_range:           form.price_range.trim(),
-        call_to_action:        form.call_to_action.trim(),
+        primary_cta:        form.call_to_action.trim(),
         brand_voice:           form.brand_voice,
         marketing_challenges:  form.marketing_challenges,
         primary_goal:          null,    // captured via challenges
