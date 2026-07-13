@@ -86,6 +86,48 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <InstallPWA />
         </ToastProviderWithHook>
         </Suspense>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@graph": [
+                {
+                  "@type": "Organization",
+                  "@id": "https://www.cerebreplus.com/#org",
+                  "name": "Cerebre Plus",
+                  "url": "https://www.cerebreplus.com",
+                  "logo": "https://www.cerebreplus.com/icon-192.png",
+                  "description": "AI marketing platform built for Nigerian and African businesses.",
+                  "sameAs": [
+                    "https://www.instagram.com/cerebreplus",
+                    "https://www.linkedin.com/company/cerebre-media-africa",
+                    "https://x.com/cerebreplus"
+                  ],
+                  "areaServed": ["NG", "GH", "KE", "ZA"]
+                },
+                {
+                  "@type": "SoftwareApplication",
+                  "name": "Cerebre Plus",
+                  "applicationCategory": "BusinessApplication",
+                  "operatingSystem": "Web, iOS, Android",
+                  "description": "40+ AI marketing tools for Nigerian SMEs — captions, WhatsApp campaigns, ad copy, content calendars, and strategy in seconds.",
+                  "offers": {
+                    "@type": "Offer",
+                    "priceCurrency": "NGN",
+                    "price": "0",
+                    "description": "Free to start. Coin-based pricing in naira."
+                  },
+                  "aggregateRating": {
+                    "@type": "AggregateRating",
+                    "ratingValue": "4.8",
+                    "ratingCount": "120"
+                  }
+                }
+              ]
+            })
+          }}
+        />
       </body>
     </html>
   )
