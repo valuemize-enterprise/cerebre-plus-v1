@@ -5,7 +5,7 @@ import type { Metadata, Viewport } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? 'https://app.cerebre.plus'),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.cerebreplus.com'),
   title: {
     template: '%s — Cerebre Plus',
     default:  'Cerebre Plus — Africa\'s Premier AI Marketing Platform',
@@ -26,7 +26,7 @@ export const metadata: Metadata = {
   openGraph: {
     type:        'website',
     locale:      'en_NG',
-    url:         'https://app.cerebre.plus',
+    url:         'https://www.cerebreplus.com',
     siteName:    'Cerebre Plus',
     title:       'Cerebre Plus — Africa\'s Premier AI Marketing Platform',
     description: '40 AI tools for Nigerian business owners. Strategy, WhatsApp campaigns, ad copy, and more in seconds.',
