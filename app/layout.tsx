@@ -77,6 +77,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <meta name="google-site-verification" content="googlef047e032ad96533b" />
+        <meta name="google-site-verification" content="PF2pHIrdk1s8fpVdCIEDHA4pp-ALuhNZD8HamPm_PNg" />
       </head>
       <body className="bg-cerebre-ink text-cerebre-text font-body antialiased min-h-dvh">
          <Suspense fallback={null}>
