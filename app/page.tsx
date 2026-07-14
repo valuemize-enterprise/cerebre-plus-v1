@@ -188,9 +188,13 @@ export default function LandingPage() {
       {/* ══ NAV ══════════════════════════════════════════════════ */}
       <nav style={{position:'sticky',top:0,zIndex:100,background:'rgba(6,12,26,0.88)',backdropFilter:'blur(22px)',borderBottom:'1px solid rgba(255,255,255,0.07)'}}>
         <div style={{maxWidth:1200,margin:'0 auto',padding:'0 36px',height:66,display:'flex',alignItems:'center',justifyContent:'space-between'}}>
-          <span style={{fontFamily:"'Georgia',serif",fontSize:20,fontWeight:900,letterSpacing:1,color:'#EBF2FC'}}>
-            CEREBRE <span style={{color:'#F5B830'}}>PLUS</span>
-          </span>
+          <div>
+            <img
+              src="/Cerebre_Plus_2.png"
+              alt="Cerebre Media Africa"
+              style={{ height: 48, width: 100 }}
+            />
+          </div>
           <div className="nav-links" style={{display:'flex',gap:32}}>
             {[['Tools','#tools'],['How it works','#how'],['Pricing','#pricing'],['SME Club','#sme'],['Blog','/blog']].map(([l,h])=>(
               <a key={l} href={h} className="nav-link">{l}</a>
