@@ -4,7 +4,7 @@ import * as React from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Mail, Lock, ArrowRight, Eye, EyeOff, AlertCircle } from 'lucide-react'
+import { Mail, Lock, ArrowRight, Eye, EyeOff, AlertCircle, ChevronRight } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -524,8 +524,8 @@ export default function LoginPage() {
           {/* Sign up link */}
           <p className="mt-6 text-center text-sm text-cerebre-muted">
             Don't have an account?{' '}
-            <Link href="/signup" className="text-cerebre-gold hover:text-cerebre-gold-light font-medium transition-colors">
-              Create one →
+            <Link href="/signup" className="text-cerebre-gold hover:text-cerebre-gold-light flex  font-medium transition-colors">
+              Create one <ChevronRight />
             </Link>
           </p>
 

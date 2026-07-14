@@ -5,50 +5,35 @@ import type { Metadata, Viewport } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.cerebreplus.com'),
+  metadataBase: new URL('https://www.cerebreplus.com'),
   title: {
     template: '%s — Cerebre Plus',
-    default:  'Cerebre Plus — Africa\'s Premier AI Marketing Platform',
+    default:  'Cerebre Plus — AI Marketing Tools Built for Nigerian Businesses',
   },
   description:
-    '40 AI marketing tools built for Nigerian and African business owners. Get your 90-day marketing strategy, WhatsApp campaigns, ad copy, and more — in seconds.',
+    'The AI marketing platform for Nigerian SMEs. Generate WhatsApp campaigns, Instagram captions, ad copy, content calendars & 90-day strategies in seconds — priced in naira. Start free.',
   keywords: [
-    'AI marketing Nigeria',
-    'Nigerian marketing platform',
-    'WhatsApp marketing tool',
-    'Lagos marketing AI',
-    'African business marketing',
-    'Cerebre Plus',
+    'AI marketing tool Nigeria', 'marketing software for small business Nigeria',
+    'WhatsApp marketing tool Nigeria', 'AI caption generator Nigeria',
+    'content calendar generator Nigeria', 'AI copywriting Nigeria',
+    'digital marketing tool Lagos', 'Cerebre Plus',
   ],
-  authors: [{ name: 'Cerebre Media Africa', url: 'https://cerebre.plus' }],
-  creator:     'Cerebre Media Africa',
-  publisher:   'Cerebre Media Africa',
+  verification: {
+    google: 'PASTE_YOUR_GOOGLE_VERIFICATION_CODE_HERE',
+  },
+  alternates: { canonical: 'https://www.cerebreplus.com' },
   openGraph: {
-    type:        'website',
-    locale:      'en_NG',
-    url:         'https://www.cerebreplus.com',
-    siteName:    'Cerebre Plus',
-    title:       'Cerebre Plus — Africa\'s Premier AI Marketing Platform',
-    description: '40 AI tools for Nigerian business owners. Strategy, WhatsApp campaigns, ad copy, and more in seconds.',
-    images: [{
-      url:    '/og-image.png',
-      width:  1200,
-      height: 630,
-      alt:    'Cerebre Plus',
-    }],
+    type: 'website', locale: 'en_NG', url: 'https://www.cerebreplus.com',
+    siteName: 'Cerebre Plus',
+    title: 'AI Marketing Tools Built for Nigerian Businesses — Cerebre Plus',
+    description: '40+ AI tools for Nigerian SMEs. WhatsApp campaigns, captions, ad copy & strategy in seconds. Priced in naira. Start free.',
+    images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'Cerebre Plus' }],
   },
   twitter: {
-    card:        'summary_large_image',
-    title:       'Cerebre Plus',
-    description: 'AI marketing built for Nigerian businesses.',
-    images:      ['/og-image.png'],
-  },
-  icons: {
-    icon:  [
-      { url: '/favicon.ico' },
-      { url: '/icon-192.png', sizes: '192x192', type: 'image/png' },
-    ],
-    apple: '/apple-touch-icon.png',
+    card: 'summary_large_image',
+    title: 'AI Marketing Tools for Nigerian Businesses',
+    description: '40+ AI marketing tools built for Nigeria. Start free.',
+    images: ['/og-image.png'],
   },
   manifest: '/manifest.json',
 }
@@ -73,6 +58,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className="dark" suppressHydrationWarning>
       <head>
+        <link rel="icon" href="/favicon.png" type="image/png" />
+        <link rel="apple-touch-icon" href="/favicon.png" />
         {/* Preconnect to critical origins */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />

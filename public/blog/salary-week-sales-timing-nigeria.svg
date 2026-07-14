@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+  <defs>
+    <linearGradient id="bg2" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0B1F3A"/><stop offset="1" stop-color="#060C1A"/>
+    </linearGradient>
+    <linearGradient id="gold2" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#F5B830"/><stop offset="1" stop-color="#E09818"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg2)"/>
+  <circle cx="150" cy="100" r="200" fill="#E09818" opacity="0.06"/>
+  <circle cx="1080" cy="540" r="240" fill="#12D4B4" opacity="0.06"/>
+  <!-- Calendar -->
+  <g transform="translate(140,150)">
+    <rect x="0" y="0" width="320" height="300" rx="20" fill="#0D2040" stroke="rgba(255,255,255,0.15)" stroke-width="2"/>
+    <rect x="0" y="0" width="320" height="70" rx="20" fill="url(#gold2)"/>
+    <text x="160" y="46" text-anchor="middle" font-family="system-ui,sans-serif" font-size="30" font-weight="800" fill="#060C1A">MONTH END</text>
+    <g fill="rgba(235,242,252,0.25)">
+      <circle cx="60" cy="120" r="14"/><circle cx="120" cy="120" r="14"/><circle cx="180" cy="120" r="14"/><circle cx="240" cy="120" r="14"/>
+      <circle cx="60" cy="175" r="14"/><circle cx="120" cy="175" r="14"/><circle cx="180" cy="175" r="14"/><circle cx="240" cy="175" r="14"/>
+      <circle cx="60" cy="230" r="14"/><circle cx="120" cy="230" r="14"/>
+    </g>
+    <circle cx="180" cy="230" r="22" fill="#12D4B4"/>
+    <text x="180" y="238" text-anchor="middle" font-family="system-ui" font-size="20" font-weight="900" fill="#060C1A">25</text>
+    <circle cx="240" cy="230" r="22" fill="#E09818"/>
+    <text x="240" y="238" text-anchor="middle" font-family="system-ui" font-size="20" font-weight="900" fill="#060C1A">28</text>
+  </g>
+  <!-- Rising chart -->
+  <g transform="translate(560,140)">
+    <polyline points="0,340 110,300 220,320 330,200 440,230 550,60"
+      fill="none" stroke="url(#gold2)" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="550" cy="60" r="22" fill="#F5B830"/>
+    <path d="M520 20 L550 60 L575 15" stroke="#12D4B4" stroke-width="0" fill="none"/>
+    <text x="0" y="420" font-family="system-ui,sans-serif" font-size="44" font-weight="800" fill="#EBF2FC">Salary Week Selling</text>
+    <text x="0" y="466" font-family="system-ui,sans-serif" font-size="26" fill="rgba(205,217,236,0.7)">The timing secret Nigerian businesses use to double sales</text>
+    <rect x="0" y="492" width="120" height="6" rx="3" fill="#12D4B4"/>
+  </g>
+</svg>

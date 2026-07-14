@@ -151,7 +151,7 @@ CREATE TYPE content_type AS ENUM (
 
 CREATE TABLE public.profiles (
   -- Identity
-  user_id                        UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  id                        UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   email                       TEXT NOT NULL,
   full_name                   TEXT,
   avatar_url                  TEXT,

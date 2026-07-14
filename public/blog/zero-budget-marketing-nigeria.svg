@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0B1F3A"/><stop offset="1" stop-color="#060C1A"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#F5B830"/><stop offset="1" stop-color="#E09818"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <circle cx="1050" cy="80" r="220" fill="#E09818" opacity="0.07"/>
+  <circle cx="120" cy="560" r="260" fill="#12D4B4" opacity="0.06"/>
+  <!-- Megaphone -->
+  <g transform="translate(180,180) rotate(-12)">
+    <path d="M60 90 L200 30 L200 210 L60 150 Z" fill="url(#gold)"/>
+    <rect x="20" y="88" width="46" height="64" rx="10" fill="#F5B830"/>
+    <rect x="196" y="20" width="18" height="200" rx="9" fill="#E09818"/>
+    <path d="M240 60 q40 60 0 120" stroke="#12D4B4" stroke-width="10" fill="none" stroke-linecap="round"/>
+    <path d="M270 40 q60 80 0 160" stroke="#12D4B4" stroke-width="10" fill="none" stroke-linecap="round" opacity="0.6"/>
+    <path d="M300 20 q80 100 0 200" stroke="#12D4B4" stroke-width="10" fill="none" stroke-linecap="round" opacity="0.3"/>
+  </g>
+  <!-- Naira symbol big -->
+  <text x="760" y="330" font-family="Georgia,serif" font-size="230" font-weight="900" fill="url(#gold)">₦0</text>
+  <text x="600" y="430" font-family="system-ui,sans-serif" font-size="44" font-weight="800" fill="#EBF2FC">Marketing With Zero Budget</text>
+  <text x="600" y="480" font-family="system-ui,sans-serif" font-size="26" fill="rgba(205,217,236,0.7)">Grow your Nigerian business without spending a kobo</text>
+  <rect x="600" y="520" width="120" height="6" rx="3" fill="#12D4B4"/>
+</svg>
