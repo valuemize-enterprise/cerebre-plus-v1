@@ -221,37 +221,47 @@ export default function OnboardingPage() {
       : [...form.marketing_challenges, c])
 
   // ── Save all data to Supabase profiles table ─────────────────
-  const saveAndFinish = async () => {
+   const saveAndFinish = async () => {
     setSaving(true); setError('')
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('Not authenticated')
 
       const { error: e } = await supabase.from('profiles').update({
-        business_name:         form.business_name.trim(),
-        industry:              form.industry,
-        city:                  form.city.trim(),
-        years_in_business:     form.years_in_business ? parseInt(form.years_in_business) : null,
-        whatsapp:              form.whatsapp.trim(),
-        description:           form.description.trim(),
-        target_customer:       form.target_customer.trim(),
-        unique_advantage:      form.unique_advantage.trim(),
-        social_proof:          form.social_proof.trim(),
-        price_range:           form.price_range.trim(),
-        primary_cta:        form.call_to_action.trim(),
-        brand_voice:           form.brand_voice,
-        marketing_challenges:  form.marketing_challenges,
-        primary_goal:          null,    // captured via challenges
-        primary_challenge:     form.marketing_challenges[0] || null,
-        target_customers:      form.target_customer.trim(),
-        onboarding_complete:   true,
-        updated_at:            new Date().toISOString(),
+        business_name: form.business_name.trim(),
+        industry: form.industry,
+        city: form.city.trim(),
+        years_in_business: form.years_in_business ? parseInt(form.years_in_business) : null,
+        whatsapp: form.whatsapp.trim(),
+        description: form.description.trim(),
+        target_customer: form.target_customer.trim(),
+        unique_advantage: form.unique_advantage.trim(),
+        social_proof: form.social_proof.trim(),
+        price_range: form.price_range.trim(),
+        primary_cta: form.call_to_action.trim(),
+        brand_voice: form.brand_voice,
+        marketing_challenges: form.marketing_challenges,
+        primary_goal: null,    // captured via challenges
+        primary_challenge: form.marketing_challenges[0] || null,
+        target_customers: form.target_customer.trim(),
+        onboarding_complete: true,
+        updated_at: new Date().toISOString(),
       }).eq('id', user.id)
 
       if (e) throw new Error(e.message)
+      const res = await fetch('/api/onboarding/complete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      })
+      if (!res.ok) {
+        const { error } = await res.json()
+        throw new Error(error || 'Save failed')
+      }
       setStep(3)
       setTimeout(() => router.push('/dashboard'), 2200)
     } catch (err: any) {
+
       setError(err.message || 'Save failed. Please try again.')
       setSaving(false)
     }
