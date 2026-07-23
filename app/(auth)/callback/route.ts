@@ -35,8 +35,13 @@ export async function GET(request: NextRequest) {
 
         if (existingProfile) {
           const existingProfileAny = existingProfile as any;
+          // This is the "signed up with email/password, now logging in with
+          // Google using the same email" case. We don't want two separate
+          // accounts — delete the freshly-created Google auth user + profile,
+          // then sign the user into their ORIGINAL account via magic link and
+          // send them straight to `finalRedirect` (dashboard by default).
           console.log(
-            "[auth/callback] Email conflict — merging Google account into existing profile:",
+            "[auth/callback] Email conflict — merging Google login into existing password account:",
             existingProfileAny.id,
           );
 
