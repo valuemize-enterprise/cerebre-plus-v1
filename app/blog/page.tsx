@@ -13,11 +13,11 @@ export const metadata: Metadata = {
   title: 'Marketing Blog for Nigerian & African Businesses',
   description:
     'Practical marketing guides for Nigerian businesses: WhatsApp marketing, Instagram captions that sell, salary-week timing, real naira costs, and zero-budget growth strategies.',
-  alternates: { canonical: 'https://app.cerebre.plus/blog' },
+  alternates: { canonical: 'https://cerebreplus.com/blog' },
   openGraph: {
     title: 'Cerebre Plus Blog — Marketing Guides for African Businesses',
     description: 'Practical, no-fluff marketing guides written for how Nigerians actually buy.',
-    url: 'https://app.cerebre.plus/blog',
+    url: 'https://cerebreplus.com/blog',
     type: 'website',
   },
 }
@@ -42,18 +42,18 @@ export default function BlogIndexPage() {
     '@type': 'Blog',
     name: 'Cerebre Plus Blog',
     description: 'Marketing guides for Nigerian and African businesses.',
-    url: 'https://app.cerebre.plus/blog',
+    url: 'https://cerebreplus.com/blog',
     publisher: {
       '@type': 'Organization',
       name: 'Cerebre Plus',
-      logo: { '@type': 'ImageObject', url: 'https://app.cerebre.plus/icon-192.png' },
+      logo: { '@type': 'ImageObject', url: 'https://cerebreplus.com/icon-192.png' },
     },
     blogPost: BLOG_POSTS.map(p => ({
       '@type': 'BlogPosting',
       headline: p.title,
-      url: `https://app.cerebre.plus/blog/${p.slug}`,
+      url: `https://cerebreplus.com/blog/${p.slug}`,
       datePublished: p.publishedAt,
-      image: `https://app.cerebre.plus${p.image}`,
+      image: `https://cerebreplus.com${p.image}`,
     })),
   }
 

@@ -25,7 +25,7 @@ export function generateStaticParams() {
 export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
   const post = getPost(params.slug)
   if (!post) return {}
-  const url = `https://app.cerebre.plus/blog/${post.slug}`
+  const url = `https://cerebreplus.com/blog/${post.slug}`
   return {
     title: post.metaTitle,
     description: post.metaDescription,
@@ -35,12 +35,12 @@ export async function generateMetadata({ params }: { params: { slug: string } })
     openGraph: {
       type: 'article', url, title: post.metaTitle, description: post.metaDescription,
       publishedTime: post.publishedAt, modifiedTime: post.updatedAt,
-      images: [{ url: `https://app.cerebre.plus${post.image}`, width: 1200, height: 630, alt: post.imageAlt }],
+      images: [{ url: `https://cerebreplus.com${post.image}`, width: 1200, height: 630, alt: post.imageAlt }],
       siteName: 'Cerebre Plus',
     },
     twitter: {
       card: 'summary_large_image', title: post.metaTitle,
-      description: post.metaDescription, images: [`https://app.cerebre.plus${post.image}`],
+      description: post.metaDescription, images: [`https://cerebreplus.com${post.image}`],
     },
   }
 }
@@ -147,7 +147,7 @@ export default function BlogArticlePage({ params }: { params: { slug: string } }
   const post = getPost(params.slug)
   if (!post) notFound()
 
-  const url = `https://app.cerebre.plus/blog/${post.slug}`
+  const url = `https://cerebreplus.com/blog/${post.slug}`
   const related = getRelatedPosts(post.slug, 3)
 
   // Full schema stack: BlogPosting + FAQPage + BreadcrumbList
@@ -159,14 +159,14 @@ export default function BlogArticlePage({ params }: { params: { slug: string } }
         '@id': `${url}#article`,
         headline: post.title,
         description: post.metaDescription,
-        image: `https://app.cerebre.plus${post.image}`,
+        image: `https://cerebreplus.com${post.image}`,
         datePublished: post.publishedAt,
         dateModified: post.updatedAt,
         wordCount: post.content.reduce((n, b) => n + (b.text?.split(' ').length || 0) + (b.items?.join(' ').split(' ').length || 0), 0),
-        author: { '@type': 'Organization', name: post.author, url: 'https://app.cerebre.plus' },
+        author: { '@type': 'Organization', name: post.author, url: 'https://cerebreplus.com' },
         publisher: {
           '@type': 'Organization', name: 'Cerebre Plus',
-          logo: { '@type': 'ImageObject', url: 'https://app.cerebre.plus/icon-192.png' },
+          logo: { '@type': 'ImageObject', url: 'https://cerebreplus.com/icon-192.png' },
         },
         mainEntityOfPage: { '@type': 'WebPage', '@id': url },
         inLanguage: 'en-NG',
@@ -182,8 +182,8 @@ export default function BlogArticlePage({ params }: { params: { slug: string } }
       {
         '@type': 'BreadcrumbList',
         itemListElement: [
-          { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://app.cerebre.plus' },
-          { '@type': 'ListItem', position: 2, name: 'Blog', item: 'https://app.cerebre.plus/blog' },
+          { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://cerebreplus.com' },
+          { '@type': 'ListItem', position: 2, name: 'Blog', item: 'https://cerebreplus.com/blog' },
           { '@type': 'ListItem', position: 3, name: post.title, item: url },
         ],
       },

@@ -7,7 +7,7 @@ import { INDUSTRY_LIST } from '@/lib/tools/industries'
 import { TOOL_REGISTRY } from '@/lib/tools/registry'
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const base = 'https://app.cerebre.plus'
+  const base = 'https://cerebreplus.com'
   const now = new Date()
 
   const staticPages: MetadataRoute.Sitemap = [

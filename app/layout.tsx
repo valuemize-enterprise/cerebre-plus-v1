@@ -136,7 +136,7 @@ export const nextConfig = {
     // Server Actions (stable in Next 14 but keep for future-proofing)
     serverActions: {
       allowedOrigins: [
-        'app.cerebre.plus',
+        'cerebreplus.com',
         'localhost:3000',
       ],
     },
