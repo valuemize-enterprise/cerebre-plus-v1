@@ -144,9 +144,9 @@ function EventPanel({ event, onClose, onStatusChange, onDelete }: {
   const p   = PLATFORM_CONFIG[event.platform] || { color:MUTED, emoji:'📌', label:event.platform }
   const st  = STATUS_CONFIG[event.status] || STATUS_CONFIG.draft
 
-  const copy = () => {
+  const copy = async () => {
     const text = [event.caption, event.hashtags].filter(Boolean).join('\n\n')
-    navigator.clipboard.writeText(text).then(() => { setCopied(true); setTimeout(()=>setCopied(false), 2000) })
+    try { await navigator.clipboard?.writeText(text) } catch {} setCopied(true); setTimeout(()=>setCopied(false), 2000)
   }
 
   return (

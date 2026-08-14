@@ -39,7 +39,11 @@ export default function SharedViewClient({ generation, business }: SharedViewCli
   const [copied, setCopied] = useState(false)
 
   const copy = useCallback(async () => {
-    await navigator.clipboard.writeText(generation.output)
+    try {
+      await navigator.clipboard?.writeText(generation.output)
+    } catch (err) {
+      // Clipboard API not supported or user denied permission
+    }
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }, [generation.output])

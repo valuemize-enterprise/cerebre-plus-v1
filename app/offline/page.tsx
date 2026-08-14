@@ -76,7 +76,11 @@ export default function OfflinePage() {
   }, [])
 
   const copy = async (id: string, text: string) => {
-    await navigator.clipboard.writeText(text)
+    try {
+      await navigator.clipboard?.writeText(text)
+    } catch (err) {
+      // Clipboard API not supported or user denied permission
+    }
     setCopied(id)
     setTimeout(() => setCopied(null), 2000)
   }

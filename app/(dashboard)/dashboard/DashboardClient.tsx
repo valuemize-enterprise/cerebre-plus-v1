@@ -496,7 +496,7 @@ function RecentGenerations({
   const { toast } = useToast()
 
   const copyToClipboard = useCallback(async (text: string) => {
-    await navigator.clipboard.writeText(text)
+    try { await navigator.clipboard?.writeText(text) } catch {}
     toast({ type: 'success', title: 'Copied!', description: 'Output copied to clipboard.' })
   }, [toast])
 

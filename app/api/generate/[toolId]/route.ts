@@ -290,7 +290,7 @@ export async function POST(
       const { error: updateErr } = await supabase.from('generations').update({
         output_json:      validatedOutput,
         output_content:   JSON.stringify(validatedOutput),
-        status:           'complete',
+        status:           'completed',
         token_count:      aiResponse.usage.output_tokens,
       }).eq('id', generationId)
       if (updateErr) console.error('[v2] generation update failed:', updateErr.message)
@@ -368,7 +368,7 @@ export async function POST(
             }
             if (generationId) {
               await supabase.from('generations').update({
-                output_content: fullText, status: 'complete', token_count: totalTokens,
+                output_content: fullText, status: 'completed', token_count: totalTokens,
               }).eq('id', generationId)
             }
             if (eligibleForFreeRun) {
@@ -396,7 +396,7 @@ export async function POST(
 }
 
 async function checkMilestones(userId: string, supabase: any) {
-  const { count } = await supabase.from('generations').select('id', { count: 'exact', head: true }).eq('user_id', userId).eq('status', 'complete')
+  const { count } = await supabase.from('generations').select('id', { count: 'exact', head: true }).eq('user_id', userId).eq('status', 'completed')
   if ([1, 10, 25, 50, 100, 250, 500].includes(count ?? 0)) {
     await supabase.from('notifications').insert({ user_id: userId, type: 'milestone', payload: { generations: count }, read: false })
   }

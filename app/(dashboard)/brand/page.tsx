@@ -100,7 +100,7 @@ function CopyItem({
   useEffect(() => { setEditVal(value); setSavedVal(value) }, [value])
 
   const copy = useCallback(async () => {
-    await navigator.clipboard.writeText(savedVal)
+    try { await navigator.clipboard?.writeText(savedVal) } catch {}
     setCopied(true)
     toast({ type: 'success', title: 'Copied!', description: `${label} copied to clipboard` })
     setTimeout(() => setCopied(false), 2000)

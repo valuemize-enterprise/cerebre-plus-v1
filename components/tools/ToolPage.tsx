@@ -640,7 +640,7 @@ export default function ToolPage({ tool, coinBalance, prefill, onCoinDeducted }:
           onClick={handleGenerate}
           disabled={!canAfford || !isOnline}
           className={`
-            relative w-full overflow-hidden rounded-xl py-3.5 text-sm font-bold
+            relative w-full overflow-hidden rounded-xl mb-9 md:mb-0 py-3.5 text-sm font-bold
             transition-all duration-200 active:scale-[0.98]
             ${canAfford && isOnline
               ? 'bg-[#E09818] text-[#0B1F3A] hover:bg-[#F0A828] shadow-lg shadow-[#E09818]/20'
@@ -783,7 +783,7 @@ export default function ToolPage({ tool, coinBalance, prefill, onCoinDeducted }:
 
       {/* "What to do next" recommendations */}
       {hasOutput && !isLoading && nextTools.length > 0 && (
-        <div className="border-t border-white/10 px-5 py-6">
+        <div className="border-t border-white/10 px-5 py-6 mb-9 md:mb-0">
           <h3 className="mb-3 text-sm font-semibold text-white/60 uppercase tracking-wider">
             What to do next
           </h3>
@@ -856,7 +856,8 @@ export default function ToolPage({ tool, coinBalance, prefill, onCoinDeducted }:
                   : 'text-white/40 hover:text-white/60'}
               `}
             >
-              {tab === 'brief' ? 'Brief' : (
+              {tab === 'brief' ? 'Briefs' : 
+              (
                 <span className="flex items-center justify-center gap-1.5">
                   Output
                   {isLoading && (
@@ -880,7 +881,7 @@ export default function ToolPage({ tool, coinBalance, prefill, onCoinDeducted }:
         </div>
 
         {/* Mobile tab content */}
-        <div className="flex-1 overflow-hidden relative">
+        <div className="flex-1 min-h-full  relative mb-5">
           <AnimatePresence mode="wait">
             <motion.div
               key={mobileTab}
@@ -888,7 +889,7 @@ export default function ToolPage({ tool, coinBalance, prefill, onCoinDeducted }:
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: mobileTab === 'brief' ? 16 : -16 }}
               transition={{ duration: 0.15 }}
-              className="absolute inset-0"
+              className="absolute inset-0 min-h-screen py-5 md:h-full"
             >
               {mobileTab === 'brief' ? FormPanel : OutputPanel}
             </motion.div>

@@ -174,7 +174,7 @@ export default function HelpPage() {
   const [copied,    setCopied]    = useState(false)
 
   const copyWA = async () => {
-    await navigator.clipboard.writeText(`+${SUPPORT_WA}`)
+    try { await navigator.clipboard?.writeText(`+${SUPPORT_WA}`) } catch {}
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }

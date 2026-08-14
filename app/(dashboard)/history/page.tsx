@@ -144,7 +144,7 @@ function GenerationRow({ gen, isExpanded, onToggle, businessName }: {
     const txt = isV2
       ? (gen.output_json?.headline as string ?? '') + '\n\n' + rawText
       : rawText
-    await navigator.clipboard.writeText(txt)
+    try { await navigator.clipboard?.writeText(txt) } catch {}
     setCopied(true)
     toast({ type:'success', title:'Copied!', description:'Output copied to clipboard' })
     setTimeout(() => setCopied(false), 2000)

@@ -302,7 +302,7 @@ export default function DemoPage() {
 
   const copy = async () => {
     if (!selectedOutput) return
-    await navigator.clipboard.writeText(selectedOutput.output)
+    try { await navigator.clipboard?.writeText(selectedOutput.output) } catch {}
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }

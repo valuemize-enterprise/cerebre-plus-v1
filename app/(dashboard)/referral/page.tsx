@@ -61,7 +61,7 @@ export default function ReferralPage() {
   }, [])
 
   const copy = useCallback(async () => {
-    await navigator.clipboard.writeText(referralLink)
+    try { await navigator.clipboard?.writeText(referralLink) } catch {}
     setCopied(true)
     toast({ type: 'success', title: 'Link copied!', description: 'Share it and earn coins when they subscribe.' })
     setTimeout(() => setCopied(false), 2500)

@@ -117,7 +117,7 @@ function CollectionSection({
   const copyShareLink = async () => {
     if (!shareToken) { onShare(); return }
     const url = `${window.location.origin}/share/${shareToken.token}`
-    await navigator.clipboard.writeText(url)
+    try { await navigator.clipboard?.writeText(url) } catch {}
     setLinkCopied(true)
     toast({ id: url, type: 'success', title: 'Link copied!', description: 'Share this link for public read-only access' })
     setTimeout(() => setLinkCopied(false), 2000)
@@ -277,7 +277,7 @@ export default function LibraryPage() {
       toast({ id: collection, type: 'error', title: 'Could not create share link', description: error.message })
     } else {
       const url = `${window.location.origin}/share/${token}`
-      await navigator.clipboard.writeText(url)
+      try { await navigator.clipboard?.writeText(url) } catch {}
       toast({ id: collection, type: 'success', title: 'Share link created!', description: 'Anyone with the link can view this collection' })
       loadLibrary()
     }
