@@ -105,7 +105,7 @@ export const ToolCard = ({
               <div className="flex items-center gap-1 mb-0.5">
                 <Badge variant="live" size="xs" dot>Live</Badge>
                 {isNew     && <Badge variant="new"   size="xs">New</Badge>}
-                {isPremium && <Badge variant="growth" size="xs">Growth+</Badge>}
+                {/* Growth+ badge removed — Phase 1: all tools accessible with coins */}
               </div>
 
               {/* Name */}

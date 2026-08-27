@@ -37,7 +37,8 @@ export async function POST(request: NextRequest) {
     if (!ids.length) return NextResponse.json({ message: 'No users in this segment', count: 0 })
     query = query.in('id', ids)
   } else if (segment === 'growth') {
-    const { data: subs } = await admin.from('subscriptions').select('user_id').eq('plan_tier','growth').eq('status','active')
+    // PHASE 1: Send to all onboarded users (not just Growth plan)
+    const { data: subs } = await admin.from('profiles').select('id').eq('onboarding_complete', true)
     const ids = (subs ?? []).map((s:any) => s.user_id)
     if (!ids.length) return NextResponse.json({ message: 'No users in this segment', count: 0 })
     query = query.in('id', ids)

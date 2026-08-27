@@ -1,7 +1,7 @@
 'use client'
 // ═══════════════════════════════════════════════════════════════
 // /app/(dashboard)/billing/page.tsx
-// Billing & Subscription management — v2
+// Billing & Coins management — v2
 // Plans: Free (₦0/70c/30d) · Starter (₦20K/yr) · Growth (₦80K/yr)
 // ═══════════════════════════════════════════════════════════════
 
@@ -355,12 +355,11 @@ export default function BillingPage() {
   useEffect(() => {
     const load = async () => {
       try {
-        const [subR, coinR, txR] = await Promise.all([
-          fetch('/api/billing/subscription'),
+        // PHASE 1: No subscription fetch. Coins are the only currency.
+        const [coinR, txR] = await Promise.all([
           fetch('/api/coins/balance'),
           fetch('/api/coins/history?limit=8'),
         ])
-        if (subR.ok) setSubscription(await subR.json())
         if (coinR.ok) setCoins((await coinR.json()).balance)
         if (txR.ok) setTransactions((await txR.json()).transactions || [])
       } catch { }
@@ -375,24 +374,20 @@ export default function BillingPage() {
     }
   }, [])
 
-  useEffect(() => {
-    if (params.get('reason') === 'trial_expired') {
-      toast({ type: 'warning', title: 'Free trial ended', description: 'Your 30-day trial has expired. Upgrade to keep your access.' })
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  // PHASE 1: No trial expiry
 
-  const planTier = (subscription?.plan_tier ?? 'free') as PlanId
-  const daysLeft = getDaysRemaining(planTier === 'free' ? subscription?.free_expires_at : subscription?.current_period_end)
-  const pct = getCoinRemainingPct(coins, planTier)
-  const userCanTopUp = canTopUp(planTier) && subscription?.status === 'active'
+  // PHASE 1: Everyone can top up — no plan tier needed
+  const planTier: PlanId = 'free'
+  const daysLeft = 0
+  const pct = Math.min(100, Math.max(0, Math.round((coins / 70) * 100)))
+  const userCanTopUp = true
 
 
   const paystackKey = process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY
 
   // ── Paystack ───────────────────────────────────────────────
   const initPaystack = useCallback(async (
-    type: 'plan_upgrade' | 'topup_bulk' | 'topup_custom',
+    type: 'topup_bulk' | 'topup_custom',
     opts: Record<string, any>
   ) => {
     if (!user?.email) {
@@ -400,9 +395,7 @@ export default function BillingPage() {
       return;
     }
 
-    const key = type === 'plan_upgrade'
-      ? opts.planId
-      : `${type}_${opts.packId || opts.coinQty}`;
+    const key = `${type}_${opts.packId || opts.coinQty}`;
     setPaying(key);
 
     try {
@@ -446,9 +439,8 @@ export default function BillingPage() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                   reference: response.reference,
-                  planId: type === 'plan_upgrade' ? opts.planId : undefined,
-                  isTopUp: type !== 'plan_upgrade',
-                  topUpCoins: type !== 'plan_upgrade' ? outCoins : undefined,
+                  isTopUp: true,
+                  topUpCoins: outCoins,
                 }),
               });
 
@@ -457,12 +449,8 @@ export default function BillingPage() {
               if (verData.success) {
                 toast({
                   type: 'success',
-                  title: type === 'plan_upgrade'
-                    ? `🎉 Welcome to ${opts.planId}!`
-                    : `+${outCoins} coins added!`,
-                  description: type === 'plan_upgrade'
-                    ? 'Your plan is now active.'
-                    : 'Coins credited to your account.',
+                  title: `+${outCoins} coins added!`,
+                  description: 'Coins credited to your account.',
                 });
                 setTimeout(() => window.location.reload(), 1200);
               } else {
@@ -495,9 +483,7 @@ export default function BillingPage() {
     }
   }, [user, toast]);
 
-  // ── Handlers — defined after initPaystack ──────────────────────
-  const handleUpgrade = useCallback((planId: PlanId) =>
-    initPaystack('plan_upgrade', { planId }), [initPaystack]);
+  // ── Handlers ───────────────────────────────────────────────
 
 
   const handleBulk = useCallback((pack: typeof BULK_PACKS[number]) =>
@@ -526,10 +512,10 @@ export default function BillingPage() {
         {/* Header */}
         <div style={{ marginBottom: 32 }}>
           <h1 style={{ fontFamily: "'Georgia',serif", fontSize: 26, fontWeight: 900, color: '#fff' }}>
-            Billing & Subscription
+            Billing & Coins
           </h1>
           <p style={{ fontSize: 13.5, color: MUTED, marginTop: 4 }}>
-            Manage your plan, top up coins, and view payment history.
+            Top up Cerebre Coins and view your transaction history.
           </p>
         </div>
 
@@ -564,7 +550,7 @@ export default function BillingPage() {
               </div>
               <p style={{ fontSize: 12, color: planTier === 'free' && daysLeft <= 7 ? CORAL : MUTED, marginTop: 6, fontWeight: planTier === 'free' && daysLeft <= 7 ? 700 : 400 }}>
                 {planTier === 'free'
-                  ? daysLeft > 0 ? `⚠ Trial ends in ${daysLeft} day${daysLeft !== 1 ? 's' : ''}` : 'Trial has ended'
+                  ? daysLeft > 0 ? `⚠ Trial ends in ${daysLeft} day${daysLeft >= 1 ? 's' : ''}` : 'Trial has ended'
                   : daysLeft > 0 ? `Renews in ${daysLeft} days` : 'Expired — please renew'}
               </p>
             </div>
@@ -584,25 +570,9 @@ export default function BillingPage() {
           </div>
         </div>
 
-        {/* SME Club spotlight — only for non-Growth users */}
-        {planTier !== 'growth' && (
-          <SMEClubSpotlight onJoin={() => handleUpgrade('growth')} paying={paying !== null} />
-        )}
+        {/* SME Club is free for everyone — see /sme-club */}
 
-        {/* Plan cards */}
-        <h2 style={{ fontSize: 16, fontWeight: 800, color: '#EBF2FC', marginBottom: 16 }}>Choose your plan</h2>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(268px,1fr))', gap: 14, marginBottom: 48 }}>
-          {(['free', 'starter', 'growth'] as PlanId[]).map(pid => (
-            <PlanCard
-              key={pid}
-              planId={pid}
-              isCurrent={planTier === pid}
-              daysLeft={planTier === pid ? daysLeft : 0}
-              onUpgrade={handleUpgrade}
-              paying={paying !== null}
-            />
-          ))}
-        </div>
+        {/* Plan cards removed — Phase 1: pay-as-you-go coins only */}
 
         {/* Coin Top-Up */}
         <div style={{ marginBottom: 40 }}>
@@ -616,111 +586,123 @@ export default function BillingPage() {
           </div>
 
           {!userCanTopUp ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <p style={{ fontSize: 11, color: MUTED, marginTop: 2 }}>coins remaining</p>
+              <div style={{ width: 130, height: 4, background: 'rgba(255,255,255,0.07)', borderRadius: 2, marginTop: 8, marginLeft: 'auto' }}>
+                <div style={{ height: '100%', width: `${pct}%`, background: `linear-gradient(90deg,${GOLD},${GL})`, borderRadius: 2 }} />
+              </div>
+              <p style={{ fontSize: 10, color: MUTED, marginTop: 4 }}>{pct}% of {PLANS[planTier].coins} coins remaining</p>
+            </div>
+          ) : (
             /* Locked */
             <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 14, padding: '32px 24px', textAlign: 'center' }}>
               <Lock className="h-8 w-8 mx-auto mb-3" style={{ color: 'rgba(205,217,236,0.18)' }} />
               <p style={{ fontSize: 15, fontWeight: 700, color: '#EBF2FC', marginBottom: 8 }}>Coin top-ups are not available on the Free plan</p>
-              <p style={{ fontSize: 13, color: MUTED, maxWidth: 400, margin: '0 auto 22px', lineHeight: 1.65 }}>
-                Upgrade to Starter or Growth to buy additional coins any time you need them — from a minimum of 10 coins (₦5,000) up to 500 coins at bulk rates.
-              </p>
-              <button
-                onClick={() => handleUpgrade('starter')}
-                style={{ background: `linear-gradient(135deg,${GOLD},${GL})`, color: VOID, fontWeight: 800, fontSize: 14, padding: '12px 28px', borderRadius: 10, border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}
-              >
-                Upgrade to Starter — ₦20,000/yr →
-              </button>
             </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          )}
+      </div>
 
-              {/* Info note */}
-              <div style={{ background: `${TEAL}08`, border: `1px solid ${TEAL}20`, borderRadius: 12, padding: '12px 16px', fontSize: 12.5, color: DIM, lineHeight: 1.5 }}>
-                💡 <strong style={{ color: '#EBF2FC' }}>How top-ups work:</strong> Custom amounts are charged at ₦{COIN_BASE_RATE.toLocaleString()} per coin (minimum {COIN_MIN_CUSTOM} coins = ₦{(COIN_MIN_CUSTOM * COIN_BASE_RATE).toLocaleString()}). Bulk packs below offer progressively better rates — the more you buy, the less you pay per coin.
-              </div>
+      {/* SME Club is free for everyone — see /sme-club */}
 
-              {/* Custom calculator */}
-              <CoinCalculator onBuy={handleCustom} paying={paying !== null} />
+      {/* Plan cards removed — Phase 1: pay-as-you-go coins only */}
 
-              {/* Bulk packs */}
-              <div>
-                <p style={{ fontSize: 11.5, fontWeight: 700, color: MUTED, textTransform: 'uppercase' as const, letterSpacing: '1px', marginBottom: 12 }}>
-                  Bulk packs — save more when you buy more
-                </p>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(175px,1fr))', gap: 12 }}>
-                  {BULK_PACKS.map(pack => (
-                    <div key={pack.id} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 14, padding: '18px 14px', textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
-                      {pack.badge && (
-                        <div style={{ position: 'absolute', top: 8, right: 8, background: `${GOLD}18`, border: `1px solid ${GOLD}30`, color: GL, fontSize: 9, fontWeight: 700, padding: '2px 7px', borderRadius: 20 }}>
-                          {pack.badge}
-                        </div>
-                      )}
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, marginBottom: 4 }}>
-                        <Coins className="h-4 w-4" style={{ color: GL }} />
-                        <span style={{ fontFamily: "'Georgia',serif", fontSize: 30, fontWeight: 900, color: GL, lineHeight: 1 }}>{pack.coins}</span>
-                      </div>
-                      <p style={{ fontSize: 11, color: MUTED, marginBottom: 10 }}>coins</p>
-                      <p style={{ fontFamily: "'Georgia',serif", fontSize: 22, fontWeight: 700, color: '#EBF2FC', marginBottom: 2 }}>{pack.priceLabel}</p>
-                      <p style={{ fontSize: 10.5, color: MUTED, textDecoration: 'line-through', marginBottom: 4 }}>
-                        ₦{pack.basePrice.toLocaleString()} at base rate
-                      </p>
-                      <p style={{ fontSize: 11, fontWeight: 700, color: TEAL, marginBottom: 4 }}>Save {pack.savingPct}%</p>
-                      <p style={{ fontSize: 10, color: MUTED, marginBottom: 14 }}>₦{pack.perCoin}/coin</p>
-                      <button
-                        onClick={() => handleBulk(pack)}
-                        disabled={paying !== null}
-                        style={{ width: '100%', padding: '10px', borderRadius: 8, background: `linear-gradient(135deg,${GOLD},${GL})`, color: VOID, fontWeight: 800, fontSize: 12.5, border: 'none', cursor: paying !== null ? 'not-allowed' : 'pointer', fontFamily: 'inherit', opacity: paying !== null ? .6 : 1 }}
-                      >
-                        {paying === pack.id ? '⏳' : 'Buy →'}
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
+      {/* Coin Top-Up */}
+      <div style={{ marginBottom: 40 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+          <h2 style={{ fontSize: 16, fontWeight: 800, color: '#EBF2FC' }}>Top-Up Coins</h2>
+          {!userCanTopUp && (
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', color: MUTED, fontSize: 10, fontWeight: 700, padding: '3px 10px', borderRadius: 20 }}>
+              <Lock className="h-3 w-3" /> Starter or Growth required
+            </span>
           )}
         </div>
 
-        {/* Transaction history */}
-        {transactions.length > 0 && (
-          <div style={{ marginBottom: 32 }}>
-            <h2 style={{ fontSize: 16, fontWeight: 800, color: '#EBF2FC', marginBottom: 14 }}>Recent Transactions</h2>
-            <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14, overflow: 'hidden' }}>
-              {transactions.map((tx, i) => (
-                <div key={tx.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 18px', gap: 12, borderTop: i > 0 ? '1px solid rgba(255,255,255,0.05)' : 'none' }}>
-                  <div>
-                    <p style={{ fontSize: 13.5, color: '#EBF2FC', fontWeight: 600 }}>{tx.description || tx.type}</p>
-                    <p style={{ fontSize: 11.5, color: MUTED, marginTop: 2 }}>
-                      {new Date(tx.created_at).toLocaleDateString('en-NG', { day: 'numeric', month: 'short', year: 'numeric' })}
-                    </p>
+        {!userCanTopUp ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <p style={{ fontSize: 11.5, fontWeight: 700, color: MUTED, textTransform: 'uppercase' as const, letterSpacing: '1px', marginBottom: 12 }}>
+              Bulk packs — save more when you buy more
+            </p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(175px,1fr))', gap: 12 }}>
+              {BULK_PACKS.map(pack => (
+                <div key={pack.id} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 14, padding: '18px 14px', textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
+                  {pack.badge && (
+                    <div style={{ position: 'absolute', top: 8, right: 8, background: `${GOLD}18`, border: `1px solid ${GOLD}30`, color: GL, fontSize: 9, fontWeight: 700, padding: '2px 7px', borderRadius: 20 }}>
+                      {pack.badge}
+                    </div>
+                  )}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, marginBottom: 4 }}>
+                    <Coins className="h-4 w-4" style={{ color: GL }} />
+                    <span style={{ fontFamily: "'Georgia',serif", fontSize: 30, fontWeight: 900, color: GL, lineHeight: 1 }}>{pack.coins}</span>
                   </div>
-                  <span style={{ fontSize: 14, fontWeight: 700, color: tx.amount > 0 ? TEAL : 'rgba(205,217,236,0.4)', flexShrink: 0 }}>
-                    {tx.amount > 0 ? '+' : ''}{tx.amount} coins
-                  </span>
+                  <p style={{ fontSize: 11, color: MUTED, marginBottom: 10 }}>coins</p>
+                  <p style={{ fontFamily: "'Georgia',serif", fontSize: 22, fontWeight: 700, color: '#EBF2FC', marginBottom: 2 }}>{pack.priceLabel}</p>
+                  <p style={{ fontSize: 10.5, color: MUTED, textDecoration: 'line-through', marginBottom: 4 }}>
+                    ₦{pack.basePrice.toLocaleString()} at base rate
+                  </p>
+                  <p style={{ fontSize: 11, fontWeight: 700, color: TEAL, marginBottom: 4 }}>Save {pack.savingPct}%</p>
+                  <p style={{ fontSize: 10, color: MUTED, marginBottom: 14 }}>₦{pack.perCoin}/coin</p>
+                  <button
+                    onClick={() => handleBulk(pack)}
+                    disabled={paying !== null}
+                    style={{ width: '100%', padding: '10px', borderRadius: 8, background: `linear-gradient(135deg,${GOLD},${GL})`, color: VOID, fontWeight: 800, fontSize: 12.5, border: 'none', cursor: paying !== null ? 'not-allowed' : 'pointer', fontFamily: 'inherit', opacity: paying !== null ? .6 : 1 }}
+                  >
+                    {paying === pack.id ? '⏳' : 'Buy →'}
+                  </button>
                 </div>
               ))}
             </div>
           </div>
-        )}
-
-        {/* Guarantee */}
-        <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 14, padding: '18px 22px', display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
-          <Shield className="h-8 w-8 shrink-0" style={{ color: GOLD }} />
-          <div style={{ flex: 1 }}>
-            <p style={{ fontSize: 13.5, fontWeight: 700, color: '#EBF2FC' }}>30-Day Money-Back Guarantee</p>
-            <p style={{ fontSize: 12.5, color: MUTED, marginTop: 3, lineHeight: 1.5 }}>
-              Subscribe, use the tools, and if you don't believe it was worth every naira within 30 days — WhatsApp us for a full refund. No forms. No questions asked.
-            </p>
+        ) : (
+          /* Locked */
+          <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 14, padding: '32px 24px', textAlign: 'center' }}>
+            <Lock className="h-8 w-8 mx-auto mb-3" style={{ color: 'rgba(205,217,236,0.18)' }} />
+            <p style={{ fontSize: 15, fontWeight: 700, color: '#EBF2FC', marginBottom: 8 }}>Coin top-ups are not available on the Free plan</p>
           </div>
-          <a
-            href={`https://wa.me/${process.env.NEXT_PUBLIC_SUPPORT_WHATSAPP || '2348000000000'}?text=Hi, I'd like a refund for my Cerebre Plus subscription`}
-            target="_blank" rel="noopener noreferrer"
-            style={{ display: 'flex', alignItems: 'center', gap: 6, border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.04)', color: '#EBF2FC', fontSize: 12, fontWeight: 600, padding: '8px 16px', borderRadius: 8, whiteSpace: 'nowrap' as const }}
-          >
-            Contact Support
-          </a>
-        </div>
+        )}
+      </div>
 
+      {/* Transaction history */}
+      {transactions.length > 0 && (
+        <div style={{ marginBottom: 32 }}>
+          <h2 style={{ fontSize: 16, fontWeight: 800, color: '#EBF2FC', marginBottom: 14 }}>Recent Transactions</h2>
+          <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14, overflow: 'hidden' }}>
+            {transactions.map((tx, i) => (
+              <div key={tx.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 18px', gap: 12, borderTop: i > 0 ? '1px solid rgba(255,255,255,0.05)' : 'none' }}>
+                <div>
+                  <p style={{ fontSize: 13.5, color: '#EBF2FC', fontWeight: 600 }}>{tx.description || tx.type}</p>
+                  <p style={{ fontSize: 11.5, color: MUTED, marginTop: 2 }}>
+                    {new Date(tx.created_at).toLocaleDateString('en-NG', { day: 'numeric', month: 'short', year: 'numeric' })}
+                  </p>
+                </div>
+                <span style={{ fontSize: 14, fontWeight: 700, color: tx.amount > 0 ? TEAL : 'rgba(205,217,236,0.4)', flexShrink: 0 }}>
+                  {tx.amount > 0 ? '+' : ''}{tx.amount} coins
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Guarantee */}
+      <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 14, padding: '18px 22px', display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+        <Shield className="h-8 w-8 shrink-0" style={{ color: GOLD }} />
+        <div style={{ flex: 1 }}>
+          <p style={{ fontSize: 13.5, fontWeight: 700, color: '#EBF2FC' }}>30-Day Money-Back Guarantee</p>
+          <p style={{ fontSize: 12.5, color: MUTED, marginTop: 3, lineHeight: 1.5 }}>
+            Subscribe, use the tools, and if you don't believe it was worth every naira within 30 days — WhatsApp us for a full refund. No forms. No questions asked.
+          </p>
+        </div>
+        <a
+          href={`https://wa.me/${process.env.NEXT_PUBLIC_SUPPORT_WHATSAPP || '2348000000000'}?text=Hi, I'd like a refund for my Cerebre Plus subscription`}
+          target="_blank" rel="noopener noreferrer"
+          style={{ display: 'flex', alignItems: 'center', gap: 6, border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.04)', color: '#EBF2FC', fontSize: 12, fontWeight: 600, padding: '8px 16px', borderRadius: 8, whiteSpace: 'nowrap' as const }}
+        >
+          Contact Support
+        </a>
       </div>
     </div>
+    </div >
+
+    // </div>
   )
 }

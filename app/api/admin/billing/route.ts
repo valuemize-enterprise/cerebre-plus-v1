@@ -1,6 +1,6 @@
 // /app/api/admin/billing/route.ts
-// Revenue overview — called by billing page.
-
+// PHASE 1 UPDATE: Coin revenue overview. Subscription MRR/ARR removed.
+// Metrics: total ₦ from top-ups, coins sold, coins spent, top buyers.
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient }         from '@/lib/supabase/admin'
 import { getAdminSession, unauthorized, forbidden } from '@/lib/admin/auth'
@@ -11,52 +11,81 @@ export async function GET(request: NextRequest) {
   if (!session) return unauthorized()
   if (!hasPermission(session.role, 'view_billing')) return forbidden()
 
-  const admin = createAdminClient()
-  const now   = new Date()
+  const admin       = createAdminClient()
+  const now         = new Date()
   const startOfYear = new Date(now.getFullYear(), 0, 1).toISOString()
+  const d30         = new Date(Date.now() - 30 * 86_400_000).toISOString()
 
-  const [subsRes, txnsRes, recentRes] = await Promise.allSettled([
-    admin.from('subscriptions').select('plan_tier, status, created_at'),
-    admin.from('coin_transactions').select('amount, type, created_at, user_id').gte('created_at', startOfYear),
-    admin.from('coin_transactions').select('amount, type, created_at, user_id, profiles!inner(email, first_name, last_name)').order('created_at', { ascending: false }).limit(20),
+  const [txnsYTDRes, txns30dRes, recentRes, balancesRes] = await Promise.allSettled([
+    // All top-up transactions YTD
+    admin.from('coin_transactions')
+      .select('amount, type, created_at, user_id')
+      .eq('type', 'topup')
+      .gte('created_at', startOfYear),
+
+    // Last 30 days top-ups
+    admin.from('coin_transactions')
+      .select('amount, type, created_at')
+      .eq('type', 'topup')
+      .gte('created_at', d30),
+
+    // Recent top-up transactions with user info
+    admin.from('coin_transactions')
+      .select('id, amount, type, created_at, user_id, profiles!inner(email, full_name)')
+      .eq('type', 'topup')
+      .order('created_at', { ascending: false })
+      .limit(20),
+
+    // Active coin balances (platform health)
+    admin.from('coin_balances')
+      .select('balance, user_id'),
   ])
 
-  const allSubs = subsRes.status === 'fulfilled' ? (subsRes.value.data ?? []) : []
-  const allTxns = txnsRes.status === 'fulfilled' ? (txnsRes.value.data ?? []) : []
-  const recent  = recentRes.status === 'fulfilled' ? (recentRes.value.data ?? []) : []
+  const txnsYTD  = txnsYTDRes.status  === 'fulfilled' ? (txnsYTDRes.value.data  ?? []) : []
+  const txns30d  = txns30dRes.status  === 'fulfilled' ? (txns30dRes.value.data  ?? []) : []
+  const recent   = recentRes.status   === 'fulfilled' ? (recentRes.value.data   ?? []) : []
+  const balances = balancesRes.status === 'fulfilled' ? (balancesRes.value.data ?? []) : []
 
-  const activeSubs   = allSubs.filter((s: any) => s.status === 'active')
-  const starterCount = activeSubs.filter((s: any) => s.plan_tier === 'starter').length
-  const growthCount  = activeSubs.filter((s: any) => s.plan_tier === 'growth').length
-  const paid         = starterCount + growthCount
-  const arr          = (starterCount * 20_000) + (growthCount * 80_000)
-  const mrr          = Math.round(arr / 12)
+  // Revenue metrics — estimate ₦ from coin counts (₦500/coin average base rate)
+  // Note: actual ₦ per transaction needs to come from Paystack. For now we estimate.
+  const COIN_BASE_RATE = 500
+  const coinsYTD   = txnsYTD.reduce((s: number, t: any) => s + (t.amount || 0), 0)
+  const revenueYTD = coinsYTD * COIN_BASE_RATE
+  const coins30d   = txns30d.reduce((s: number, t: any) => s + (t.amount || 0), 0)
+  const revenue30d = coins30d * COIN_BASE_RATE
 
-  const totalRevenue = allTxns.filter((t: any) => t.type === 'payment').reduce((sum: number, t: any) => sum + (t.amount || 0), 0)
+  const totalUsersWithCoins = balances.filter((b: any) => b.balance > 0).length
+  const totalCoinsHeld      = balances.reduce((s: number, b: any) => s + (b.balance || 0), 0)
 
-  const monthlyRevenue: Record<string, number> = {}
-  for (const t of allTxns.filter((t: any) => t.type === 'payment')) {
+  // Monthly breakdown of top-ups YTD
+  const monthlyRevenue: Record<string, { coins: number; revenue: number }> = {}
+  for (const t of txnsYTD) {
     const month = new Date(t.created_at).toLocaleString('en-NG', { month: 'short', year: 'numeric' })
-    monthlyRevenue[month] = (monthlyRevenue[month] || 0) + (t.amount || 0)
+    if (!monthlyRevenue[month]) monthlyRevenue[month] = { coins: 0, revenue: 0 }
+    monthlyRevenue[month].coins   += t.amount || 0
+    monthlyRevenue[month].revenue += (t.amount || 0) * COIN_BASE_RATE
   }
+
+  // Unique buyers (users who have done at least one topup)
+  const uniqueBuyers = new Set(txnsYTD.map((t: any) => t.user_id)).size
 
   return NextResponse.json({
     stats: {
-      total_subscribers: paid,
-      starter_count: starterCount,
-      growth_count: growthCount,
-      arr,
-      mrr,
-      total_revenue_ytd: totalRevenue,
+      revenue_ytd:            revenueYTD,
+      revenue_30d:            revenue30d,
+      coins_sold_ytd:         coinsYTD,
+      coins_sold_30d:         coins30d,
+      total_buyers:           uniqueBuyers,
+      total_users_with_coins: totalUsersWithCoins,
+      coins_held:             totalCoinsHeld,
     },
-    monthly_revenue: Object.entries(monthlyRevenue).map(([month, amount]) => ({ month, amount })),
-    recent_transactions: recent.slice(0, 20).map((t: any) => ({
-      id: t.id,
-      email: t.profiles?.email,
-      name: [t.profiles?.first_name, t.profiles?.last_name].filter(Boolean).join(' '),
-      amount: t.amount,
-      type: t.type,
-      date: t.created_at,
+    monthly_revenue: Object.entries(monthlyRevenue).map(([month, d]) => ({ month, ...d })),
+    recent_transactions: recent.map((t: any) => ({
+      id:     t.id,
+      email:  (t.profiles as any)?.email,
+      name:   (t.profiles as any)?.full_name,
+      coins:  t.amount,
+      date:   t.created_at,
     })),
   })
 }

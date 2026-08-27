@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
   if (hasPermission(role, 'view_revenue')) {
     const [subs, growthCount] = await Promise.all([
       admin.from('subscriptions').select('plan_tier,status').eq('status','active'),
-      admin.from('subscriptions').select('id',{count:'exact',head:true}).eq('plan_tier','growth').eq('status','active'),
+      admin.from('coin_balances').select('id',{count:'exact',head:true}).gt('balance', 0),  // users with coins
     ])
     const subList = subs.data || []
     const growthPrice = 7500

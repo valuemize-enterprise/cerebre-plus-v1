@@ -26,6 +26,7 @@ const NAV = [
   { href:'/cerebre-admin/users',        label:'Users',       Icon:Users,           perm:'view_users'         as Permission },
   { href:'/cerebre-admin/billing',      label:'Billing',     Icon:CreditCard,      perm:'view_billing'       as Permission },
   { href:'/cerebre-admin/sme-club',     label:'SME Club',    Icon:Crown,           perm:'view_sme_club'      as Permission },
+  { href:'/cerebre-admin/club',         label:'Club Hub',    Icon:Crown,           perm:'view_sme_club'      as Permission },
   { href:'/cerebre-admin/coins',        label:'Coins',       Icon:Coins,           perm:'grant_coins'        as Permission },
   { href:'/cerebre-admin/ai-insights',  label:'AI Insights', Icon:Brain,           perm:'view_ai_insights'   as Permission },
   { href:'/cerebre-admin/ratings',      label:'Ratings',     Icon:Star,            perm:'view_ratings'       as Permission },

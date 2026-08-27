@@ -34,12 +34,12 @@ export async function POST(request: NextRequest) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  // If published → notify all Growth subscribers
+  // PHASE 1: If published → notify all users (SME Club is open to everyone)
   if (is_published && data) {
-    const { data: growthUsers } = await admin
-      .from('subscriptions').select('user_id').eq('plan_tier','growth').eq('status','active')
+    const { data: allUsers } = await admin
+      .from('profiles' as any).select('id').eq('onboarding_complete', true)
 
-    const notifyJobs = (growthUsers ?? []).map(({ user_id }) =>
+    const notifyJobs = (allUsers ?? []).map(({ id: user_id }) =>
       sendSmeNewSession(user_id, {
         number:       data.session_number,
         title:        data.title,
@@ -75,8 +75,8 @@ export async function PATCH(request: NextRequest) {
 
   // Notify on publish (not already published before)
   if (updates.is_published && !before?.is_published && data) {
-    const { data: growthUsers } = await admin.from('subscriptions').select('user_id').eq('plan_tier','growth').eq('status','active')
-    const notifyJobs = (growthUsers ?? []).map(({ user_id }) =>
+    const { data: allUsers  } = await admin.from('profiles' as any).select('id').eq('onboarding_complete', true)
+    const notifyJobs = (allUsers ?? []).map(({ id: user_id }) =>
       sendSmeNewSession(user_id, {
         number: data.session_number, title: data.title, description: data.description ?? '',
         category: data.category, duration: data.duration_minutes ?? 45, isFreePreview: data.is_free_preview,

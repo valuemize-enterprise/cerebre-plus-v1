@@ -43,10 +43,9 @@
       "schedule": "0 8 * * *"
     },
     {
-      "path": "/api/cron/expire-free-plans",
-      "schedule": "0 1 * * *"
-    },
-    { "path": "/api/cron/daily", "schedule": "0 7 * * *" }
+      "path": "/api/cron/daily",
+      "schedule": "0 7 * * *"
+    }
   ],
   "headers": [
     {

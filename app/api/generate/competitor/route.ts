@@ -48,16 +48,9 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Check plan & coins
-  const isEnterprise =
-    (
-      await supabase
-        .from("subscriptions")
-        .select("plan_tier")
-        .eq("user_id", user.id)
-        .single()
-    )?.data?.plan_tier === "enterprise";
-  if (!isEnterprise) {
+  // PHASE 1: Coin-only check — no plan tier
+  const isEnterprise = false
+  {
     const { data: coinData } = await supabase
       .from("coin_balances")
       .select("balance")
@@ -125,7 +118,7 @@ Generate a structured competitive intelligence report:
         yourEdge,
       },
       status: "streaming",
-      coins_deducted: isEnterprise ? 0 : TOOL_COST,
+      coins_deducted: TOOL_COST,
       output_content: null,
       output_metadata: {},
       token_count: null,
@@ -180,7 +173,7 @@ Generate a structured competitive intelligence report:
                 .update({
                   output_content: fullText,
                   status: "completed",
-                  coins_deducted: isEnterprise ? 0 : TOOL_COST,
+                  coins_deducted: TOOL_COST,
                   token_count: totalTokens,
                   is_saved: true,
                   saved_at: new Date().toISOString(),

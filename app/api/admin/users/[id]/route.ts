@@ -37,7 +37,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     coin_balance:     coins?.balance || 0,
     recent_transactions: txns || [],
     last_sign_in_at:  authUser?.user?.last_sign_in_at,
-    sme_club_member:  sub?.plan_tier === 'growth' || profile.sme_club_override === true,
+    sme_club_member:  true,  // PHASE 1: SME Club is open to all users
     account_status:   profile.account_status || 'active',
   })
 }

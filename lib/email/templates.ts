@@ -374,3 +374,45 @@ export function referralRewardEmail(params: { name: string; referredName: string
     `, `You earned ${coinsEarned} coins for referring ${referredName}`)
   }
 }
+
+// ── Club Welcome Email ─────────────────────────────────────────
+// Sent when a user completes onboarding and their SME Club access is active.
+export function clubWelcomeEmail(params: {
+  name:         string
+  whatsappLink: string
+  dashboardUrl: string
+}) {
+  const { name, whatsappLink, dashboardUrl } = params
+  const BASE = process.env.NEXT_PUBLIC_APP_URL ?? 'https://cerebreplus.com'
+
+  const body = `
+    ${h1('Welcome to the SME Club 🌟')}
+    ${para(`Hi ${name || 'there'},`)}
+    ${para("You're officially part of the SME Club — a community of Nigerian business owners who are serious about growth.")}
+    ${divider()}
+    ${h2('What happens now')}
+    ${para("Every week, you'll get:")}
+    ${para(`<strong style="color:#F5B830;">Mon</strong> — Monday Money Move: one action, delivered as a voice note on WhatsApp.`)}
+    ${para('<strong style="color:#12D4B4;">Tue</strong> — Tool Tuesday: a live Cerebre demo solving a real business problem.')}
+    ${para(`<strong style="color:#E84830;">Wed</strong> — Hot Seat: one member's business diagnosed publicly. Apply anytime.`)}
+    ${para('<strong style="color:#8B5CF6;">Thu</strong> — Template Thursday: a professional template drops on your dashboard.')}
+    ${para('<strong style="color:#22C55E;">Fri</strong> — Win Friday: share your results, earn coins, inspire everyone.')}
+    ${divider()}
+    ${h2('Your first step')}
+    ${para(`Join the WhatsApp Community — that's where the weekly voice notes, live updates, and conversations happen.`)}
+    <div style="margin:20px 0;">
+      ${cta('Join the WhatsApp Community →', whatsappLink, '#25D366')}
+    </div>
+    ${para('Then check your dashboard for your first challenge. Complete it to earn coins and get on the leaderboard.', true)}
+    <div style="margin:20px 0;">
+      ${cta('Go to Your Club Hub →', `${dashboardUrl}/sme-club`)}
+    </div>
+    ${para(`We'll see you in the community. 🚀`, true)}
+    ${para('<strong>The Cerebre Team</strong>', true)}
+  `
+
+  return {
+    subject: `Welcome to the SME Club, ${name || 'there'} 🌟`,
+    html:    layout(body, `You're in the SME Club — weekly education, real community, coins for participating.`),
+  }
+}

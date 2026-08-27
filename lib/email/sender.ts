@@ -178,3 +178,24 @@ export async function sendReferralRewardEmail(userId: string, params: {
   const { subject, html } = T.referralRewardEmail({ name: user.name, ...params })
   return sendEmail({ to: user.email, subject, html, emailType: 'referral_reward', userId, skipDedup: true })
 }
+
+// ── Club welcome ──────────────────────────────────────────────
+export async function sendClubWelcome(
+  userId: string,
+  params: { email: string; name: string; whatsappLink?: string },
+) {
+  const { subject, html } = T.clubWelcomeEmail({
+    name:         params.name,
+    whatsappLink: params.whatsappLink ?? process.env.NEXT_PUBLIC_SME_CLUB_WHATSAPP_LINK ?? 'https://wa.me/',
+    dashboardUrl: process.env.NEXT_PUBLIC_APP_URL ?? 'https://cerebreplus.com',
+  })
+  return sendEmail({
+    to:         params.email,
+    subject,
+    html,
+    emailType:  'club_welcome',
+    userId,
+    skipDedup:  false,
+    dedupHours: 720,  // only send once per 30 days
+  })
+}

@@ -437,7 +437,7 @@ export default function ToolPage({ tool, coinBalance, prefill, onCoinDeducted }:
   // ─────────────────────────────────────────────────────────
 
   const FormPanel = (
-    <div className="flex h-full flex-col overflow-y-auto">
+    <div className="flex flex-col">
       {/* Tool header */}
       <div className="sticky top-0 z-10 border-b border-white/10 bg-[#0B1F3A]/95 px-5 pt-5 pb-4 backdrop-blur-sm">
         <div className="flex items-start gap-3">
@@ -698,7 +698,7 @@ export default function ToolPage({ tool, coinBalance, prefill, onCoinDeducted }:
   // ─────────────────────────────────────────────────────────
 
   const OutputPanel = (
-    <div ref={outputPanelRef} className="flex h-full flex-col overflow-y-auto">
+    <div ref={outputPanelRef} className="flex flex-col">
       {/* Loading stages (while streaming is in progress before text appears) */}
       <AnimatePresence>
         {isLoading && !completion && (
@@ -838,13 +838,13 @@ export default function ToolPage({ tool, coinBalance, prefill, onCoinDeducted }:
   // ─────────────────────────────────────────────────────────
 
   return (
-    <div className="h-full flex flex-col" style={{ background: NAVY }}>
+    <div className="flex flex-col" style={{ background: NAVY }}>
 
       {/* ── MOBILE LAYOUT ─────────────────────────────────── */}
-      <div className="flex flex-col h-full md:hidden">
+      <div className="flex flex-col md:hidden">
 
-        {/* Mobile tab bar */}
-        <div className="flex border-b border-white/10 bg-[#0B1F3A]/95 shrink-0">
+        {/* Mobile tab bar — sticky so it stays put while the form scrolls */}
+        <div className="sticky top-0 z-10 flex border-b border-white/10 bg-[#0B1F3A]/95 shrink-0 backdrop-blur-sm">
           {(['brief', 'output'] as MobileTab[]).map((tab) => (
             <button
               key={tab}
@@ -880,36 +880,38 @@ export default function ToolPage({ tool, coinBalance, prefill, onCoinDeducted }:
           ))}
         </div>
 
-        {/* Mobile tab content */}
-        <div className="flex-1 min-h-full  relative mb-5">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={mobileTab}
-              initial={{ opacity: 0, x: mobileTab === 'brief' ? -16 : 16 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: mobileTab === 'brief' ? 16 : -16 }}
-              transition={{ duration: 0.15 }}
-              className="absolute inset-0 min-h-screen py-5 md:h-full"
-            >
-              {mobileTab === 'brief' ? FormPanel : OutputPanel}
-            </motion.div>
-          </AnimatePresence>
-        </div>
+        {/* Mobile tab content
+            FIX: was "absolute inset-0" against a parent with no resolved height → blank panels.
+            Now uses natural flow. min-h-[70dvh] guarantees panels are tall enough to scroll.
+            The outer <main> in DashboardShell is the scroll container; sticky header/footer
+            in FormPanel work relative to it. */}
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={mobileTab}
+            initial={{ opacity: 0, x: mobileTab === 'brief' ? -16 : 16 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: mobileTab === 'brief' ? 16 : -16 }}
+            transition={{ duration: 0.15 }}
+            className="min-h-[70dvh]"
+          >
+            {mobileTab === 'brief' ? FormPanel : OutputPanel}
+          </motion.div>
+        </AnimatePresence>
       </div>
 
       {/* ── DESKTOP LAYOUT ────────────────────────────────── */}
-      <div className="hidden md:flex h-full overflow-hidden">
+      <div className="hidden md:flex">
 
         {/* Left: Form panel (40%) */}
         <div
-          className="w-2/5 shrink-0 border-r border-white/10 overflow-hidden"
+          className="w-2/5 shrink-0 border-r border-white/10"
           style={{ maxWidth: 480 }}
         >
           {FormPanel}
         </div>
 
         {/* Right: Output panel (60%) */}
-        <div className="flex-1 overflow-hidden">
+        <div className="flex-1">
           {OutputPanel}
         </div>
       </div>

@@ -165,14 +165,14 @@ export async function POST(
   const isOnboarding = Boolean(body.isOnboarding)
   const isFreeRun    = Boolean(body.freeRun)
 
-  const { data: subscription } = await supabase.from('subscriptions').select('plan_tier, status').eq('user_id', userId).single() 
-  const planTier     = subscription?.plan_tier || 'free'
-  const isEnterprise = planTier === 'enterprise'
+  // PHASE 1: No plan tiers — coins are the only gate
+  const planTier     = 'pay_as_you_go'  // kept for analytics tracking only
+  const isEnterprise = false             // enterprise tier removed
   const fullCost     = tool.coinCost
   const initialCost  = isV2 ? calcInitialCost(fullCost) : fullCost
 
   let eligibleForFreeRun = false
-  if (isFreeRun && !isEnterprise) {
+  if (isFreeRun) {
     const { data: profCheck } = await supabase.from('profiles').select('free_tool_used').eq('id', userId).single() as any
     eligibleForFreeRun = !profCheck?.free_tool_used
   }

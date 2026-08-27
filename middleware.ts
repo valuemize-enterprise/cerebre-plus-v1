@@ -1,247 +1,83 @@
 // ═══════════════════════════════════════════════════════════════
-// /middleware.ts — Cerebre Plus Edge Middleware
-// Runs on every request before rendering.
+// /middleware.ts  — Cerebre Plus Edge Middleware
+// Runs on EVERY request (excluding static assets).
+//
 // Responsibilities:
-//   1. Refresh Supabase session tokens
-//   2. Protect /dashboard/* and /tools/* routes
-//   3. Protect /admin/* (require CEREBRE_ADMIN_EMAILS)
-//   4. Redirect authenticated users away from auth pages
-//   5. Track page views in Mixpanel (server-side, fire-and-forget)
+//   1. Refresh Supabase auth tokens on every request (CRITICAL)
+//      Without this, access tokens expire silently → random logouts.
+//   2. Protect /cerebre-admin/* and /api/admin/* (cookie-based)
+//
+// Route protection for /dashboard, /tools, /billing, etc. is
+// handled in each layout's Server Component (app/(dashboard)/layout.tsx),
+// which uses getServerUser() and redirects if unauthenticated.
+// This is the correct Supabase SSR pattern — the layout runs after
+// middleware has already refreshed the session cookies.
+//
+// NOTE: app/middleware.ts is dead code — Next.js only reads
+// middleware.ts at the project root (this file). See that file
+// for historical context.
 // ═══════════════════════════════════════════════════════════════
-import { type NextRequest, NextResponse } from "next/server";
-import { updateSession } from "@/lib/supabase/middleware";
-import { supabase } from "./lib/supabase/client";
 
-// ─────────────────────────────────────────────────────────────
-// ROUTE DEFINITIONS
-// ─────────────────────────────────────────────────────────────
-
-/** Routes that require authentication */
-const PROTECTED_PREFIXES = [
-  "/dashboard",
-  "/tools",
-  "/library",
-  "/profile",
-  "/billing",
-  "/referral",
-  "/calendar",
-  "/insights",
-  "/settings",
-  "/notifications",
-  "/onboarding",
-  "/help",
-  "/feedback",
-  "/share",
-];
-
-/** Routes that require admin access */
-const ADMIN_PREFIXES = ["/admin"];
-
-/** Auth pages — authenticated users should not see these */
-const AUTH_PAGES = [
-  "/login",
-  "/signup",
-  "/forgot-password",
-  "/reset-password",
-  "/verify",
-];
-
-/** Routes that are always public */
-const PUBLIC_PREFIXES = [
-  "/",
-  "/pricing",
-  "/features",
-  "/about",
-  "/blog",
-  "/waitlist",
-  "/shared", // Public share view pages
-  "/demo", // Public demo page
-  "/api", // All API routes handle their own auth
-  "/_next", // Next.js internals
-  "/favicon",
-  "/robots",
-  "/sitemap",
-  "/manifest",
-  "/icons",
-  "/images",
-  "/sw.js", // Service worker
-];
-
-// ─────────────────────────────────────────────────────────────
-// ADMIN EMAIL LIST
-// ─────────────────────────────────────────────────────────────
-
-function getAdminEmails(): string[] {
-  const raw = process.env.CEREBRE_ADMIN_EMAILS ?? "";
-  return raw
-    .split(",")
-    .map((e) => e.trim().toLowerCase())
-    .filter(Boolean);
-}
-
-// ─────────────────────────────────────────────────────────────
-// MIXPANEL SERVER-SIDE PAGE VIEW
-// ─────────────────────────────────────────────────────────────
-
-async function trackPageView(
-  userId: string | null,
-  pathname: string,
-  request: NextRequest,
-) {
-  const token = process.env.NEXT_PUBLIC_MIXPANEL_TOKEN;
-  if (!token || !userId) return;
-
-  const payload = {
-    event: "$pageview",
-    properties: {
-      token,
-      distinct_id: userId,
-      $current_url: `${process.env.NEXT_PUBLIC_APP_URL}${pathname}`,
-      mp_lib: "node",
-      time: Math.floor(Date.now() / 1000),
-      $user_agent: request.headers.get("user-agent") ?? "",
-    },
-  };
-
-  // Fire-and-forget — don't await, never block the request
-  fetch("https://api.mixpanel.com/track", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify([payload]),
-  }).catch(() => {}); // Silently swallow errors
-}
-
-// ─────────────────────────────────────────────────────────────
-// PATH HELPERS
-// ─────────────────────────────────────────────────────────────
-
-function matchesAny(pathname: string, prefixes: string[]): boolean {
-  return prefixes.some((prefix) => pathname.startsWith(prefix));
-}
-
-// ─────────────────────────────────────────────────────────────
-// MIDDLEWARE FUNCTION
-// ─────────────────────────────────────────────────────────────
+import { type NextRequest, NextResponse } from 'next/server'
+import { updateSession } from '@/lib/supabase/middleware'
 
 export async function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
+  const { pathname } = request.nextUrl
 
-  // Always skip for static assets + Next.js internals
+  // ── 1. Admin page protection (cookie-based, no Supabase needed) ──
   if (
-    pathname.startsWith("/_next/") ||
-    pathname.startsWith("/api/") ||
-    pathname === "/favicon.ico" ||
-    pathname.endsWith(".png") ||
-    pathname.endsWith(".svg") ||
-    pathname.endsWith(".ico") ||
-    pathname.endsWith(".webp") ||
-    pathname.endsWith(".woff2") ||
-    pathname === "/sw.js" ||
-    pathname === "/manifest.json" ||
-    pathname === "/robots.txt" ||
-    pathname === "/sitemap.xml"
+    pathname.startsWith('/cerebre-admin') &&
+    !pathname.startsWith('/cerebre-admin/login')
   ) {
-    return NextResponse.next();
+    const cookie = request.cookies.get('admin_session')
+    if (!cookie?.value) {
+      const loginUrl = new URL('/cerebre-admin/login', request.url)
+      loginUrl.searchParams.set('next', pathname)
+      return NextResponse.redirect(loginUrl)
+    }
+    // Valid admin session — pass through (no Supabase needed for admin)
+    return NextResponse.next()
   }
 
-  // ── 1. Refresh session (MUST happen first) ─────────────────
-  const { supabaseResponse, user } = await updateSession(request);
-
-  // ── 2. Fire-and-forget page view tracking ──────────────────
-  trackPageView(user?.id ?? null, pathname, request);
-
-  // ── 3. Admin route guard ───────────────────────────────────
-  // ── Admin console protection ──────────────────────────
+  // ── 2. Admin API protection (cookie-based) ────────────────────
   if (
-    pathname.startsWith("/cerebre-admin") &&
-    !pathname.startsWith("/cerebre-admin/login")
+    pathname.startsWith('/api/admin') &&
+    pathname !== '/api/admin/auth'
   ) {
-    const cookieHeader = request.headers.get("cookie") || "";
-    const hasSession = cookieHeader.includes("admin_session=");
-    if (!hasSession) {
-      return NextResponse.redirect(
-        new URL("/cerebre-admin/login", request.url),
-      );
+    const cookie = request.cookies.get('admin_session')
+    if (!cookie?.value) {
+      return NextResponse.json(
+        { error: 'Admin session required' },
+        { status: 401 }
+      )
     }
-    // Full session validation happens in the layout and API routes
+    return NextResponse.next()
   }
 
-  if (
-    user && (pathname.startsWith("/dashboard") || pathname.startsWith("/tools"))
-  ) {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("email_verified_at")
-      .eq("id", user.id)
-      .single();
-  }
-
-  // ── Block admin API without session cookie ────────────
-  if (
-    pathname.startsWith("/api/admin") &&
-    !pathname.startsWith("/api/admin/auth")
-  ) {
-    const cookieHeader = request.headers.get("cookie") || "";
-    if (!cookieHeader.includes("admin_session=")) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-  }
-
-  if (matchesAny(pathname, ADMIN_PREFIXES)) {
-    if (!user) {
-      const url = request.nextUrl.clone();
-      url.pathname = "/login";
-      url.searchParams.set("redirect", pathname);
-      url.searchParams.set("reason", "admin");
-      return NextResponse.redirect(url);
-    }
-
-    const adminEmails = getAdminEmails();
-    const isAdmin = adminEmails.includes(user.email?.toLowerCase() ?? "");
-    if (!isAdmin) {
-      // Authenticated but not admin → redirect to dashboard
-      const url = request.nextUrl.clone();
-      url.pathname = "/dashboard";
-      return NextResponse.redirect(url);
-    }
-
-    return supabaseResponse;
-  }
-
-  // ── 4. Protected route guard ───────────────────────────────
-  if (matchesAny(pathname, PROTECTED_PREFIXES)) {
-    if (!user) {
-      const url = request.nextUrl.clone();
-      url.pathname = "/login";
-      url.searchParams.set("redirect", pathname);
-      return NextResponse.redirect(url);
-    }
-
-    // Authenticated — let the dashboard layout handle
-    // onboarding redirect (it needs the profile from DB)
-    return supabaseResponse;
-  }
-
-  // ── 5. Auth page redirect (already logged in) ──────────────
-  if (matchesAny(pathname, AUTH_PAGES)) {
-    if (user) {
-      const url = request.nextUrl.clone();
-      // Respect the redirect param if present
-      const redirect = request.nextUrl.searchParams.get("redirect");
-      url.pathname = redirect ?? "/dashboard";
-      url.searchParams.delete("redirect");
-      return NextResponse.redirect(url);
-    }
-  }
-
-  // ── 6. All other routes: pass through ─────────────────────
-  return supabaseResponse;
+  // ── 3. All other routes: refresh Supabase session ─────────────
+  // This keeps access tokens fresh so getServerUser() in layouts
+  // always sees a valid, non-expired token.
+  // The actual Set-Cookie headers are written into supabaseResponse.
+  const { supabaseResponse } = await updateSession(request)
+  return supabaseResponse
 }
 
 // ─────────────────────────────────────────────────────────────
-// MATCHER — which paths to run middleware on
+// MATCHER — run on every path except Next.js internals and
+// static files that never need auth (images, fonts, sw.js, etc.)
 // ─────────────────────────────────────────────────────────────
 
 export const config = {
-  matcher: ["/cerebre-admin/:path*", "/api/admin/:path*"],
-};
+  matcher: [
+    /*
+     * Match all request paths EXCEPT:
+     *  - _next/static  (compiled JS/CSS bundles)
+     *  - _next/image   (image optimisation endpoint)
+     *  - Static files: .png .svg .jpg .ico .woff2 etc.
+     *
+     * This intentionally INCLUDES /api/* so that API route handlers
+     * benefit from refreshed session cookies in their request context.
+     */
+    '/((?!_next/static|_next/image|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|woff2?)$).*)',
+  ],
+}

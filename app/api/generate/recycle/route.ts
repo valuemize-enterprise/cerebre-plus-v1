@@ -227,7 +227,7 @@ export async function POST(request: NextRequest) {
   if (!content?.trim()) return new Response(JSON.stringify({ error: 'No content provided' }), { status: 400 })
 
   // Check coins
-  const isEnterprise = (await supabase.from('subscriptions').select('plan_tier').eq('user_id', userId).single())?.data?.plan_tier === 'enterprise'
+  const isEnterprise = false  // PHASE 1: enterprise tier removed
 
   if (!isEnterprise) {
     const { data: coinData } = await supabase.from('coin_balances').select('balance').eq('user_id', userId).single()

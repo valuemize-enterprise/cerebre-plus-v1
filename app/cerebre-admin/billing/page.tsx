@@ -29,29 +29,29 @@ export default function BillingPage() {
         <h1 style={{ fontFamily:"'Georgia',serif", fontSize:24, fontWeight:900, color:'#fff', display:'flex', alignItems:'center', gap:10 }}>
           <CreditCard size={22} style={{ color: GOLD }}/> Billing
         </h1>
-        <p style={{ fontSize:13.5, color:MUTED, marginTop:4 }}>Revenue overview and payment history</p>
+        <p style={{ fontSize:13.5, color:MUTED, marginTop:4 }}>Coin top-up revenue · pay-as-you-go economy</p>
       </div>
 
       <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))', gap:12, marginBottom:28 }}>
         <div style={{ background:'rgba(255,255,255,0.03)', border:`1px solid ${B}`, borderRadius:14, padding:'20px 18px' }}>
-          <div style={{ fontSize:12, fontWeight:700, color:MUTED, textTransform:'uppercase', letterSpacing:'1px', marginBottom:14 }}>MRR</div>
-          <div style={{ fontFamily:"'Georgia',serif", fontSize:36, fontWeight:900, color:GL, lineHeight:1 }}>{stats ? fmt(stats.mrr) : '—'}</div>
-          <p style={{ fontSize:12, color:MUTED, marginTop:6 }}>Monthly recurring revenue</p>
+          <div style={{ fontSize:12, fontWeight:700, color:MUTED, textTransform:'uppercase', letterSpacing:'1px', marginBottom:14 }}>Coin Revenue (YTD)</div>
+          <div style={{ fontFamily:"'Georgia',serif", fontSize:36, fontWeight:900, color:GL, lineHeight:1 }}>{stats ? fmt(stats.revenue_ytd) : '—'}</div>
+          <p style={{ fontSize:12, color:MUTED, marginTop:6 }}>Estimated ₦ from top-ups</p>
         </div>
         <div style={{ background:'rgba(255,255,255,0.03)', border:`1px solid ${B}`, borderRadius:14, padding:'20px 18px' }}>
-          <div style={{ fontSize:12, fontWeight:700, color:MUTED, textTransform:'uppercase', letterSpacing:'1px', marginBottom:14 }}>ARR</div>
-          <div style={{ fontFamily:"'Georgia',serif", fontSize:36, fontWeight:900, color:TEAL, lineHeight:1 }}>{stats ? fmt(stats.arr) : '—'}</div>
-          <p style={{ fontSize:12, color:MUTED, marginTop:6 }}>Annual run rate</p>
+          <div style={{ fontSize:12, fontWeight:700, color:MUTED, textTransform:'uppercase', letterSpacing:'1px', marginBottom:14 }}>Revenue (30d)</div>
+          <div style={{ fontFamily:"'Georgia',serif", fontSize:36, fontWeight:900, color:TEAL, lineHeight:1 }}>{stats ? fmt(stats.revenue_30d) : '—'}</div>
+          <p style={{ fontSize:12, color:MUTED, marginTop:6 }}>Last 30 days</p>
         </div>
         <div style={{ background:'rgba(255,255,255,0.03)', border:`1px solid ${B}`, borderRadius:14, padding:'20px 18px' }}>
-          <div style={{ fontSize:12, fontWeight:700, color:MUTED, textTransform:'uppercase', letterSpacing:'1px', marginBottom:14 }}>Subscribers</div>
-          <div style={{ fontFamily:"'Georgia',serif", fontSize:36, fontWeight:900, color:'#8BA8C8', lineHeight:1 }}>{stats?.total_subscribers ?? '—'}</div>
-          <p style={{ fontSize:12, color:MUTED, marginTop:6 }}>{stats?.starter_count ?? 0} Starter · {stats?.growth_count ?? 0} Growth</p>
+          <div style={{ fontSize:12, fontWeight:700, color:MUTED, textTransform:'uppercase', letterSpacing:'1px', marginBottom:14 }}>Coins Sold (YTD)</div>
+          <div style={{ fontFamily:"'Georgia',serif", fontSize:36, fontWeight:900, color:'#8BA8C8', lineHeight:1 }}>{stats?.coins_sold_ytd ?? '—'}</div>
+          <p style={{ fontSize:12, color:MUTED, marginTop:6 }}>{stats?.total_buyers ?? 0} buyers · {stats?.total_users_with_coins ?? 0} users with coins</p>
         </div>
         <div style={{ background:'rgba(255,255,255,0.03)', border:`1px solid ${B}`, borderRadius:14, padding:'20px 18px' }}>
-          <div style={{ fontSize:12, fontWeight:700, color:MUTED, textTransform:'uppercase', letterSpacing:'1px', marginBottom:14 }}>Revenue YTD</div>
-          <div style={{ fontFamily:"'Georgia',serif", fontSize:36, fontWeight:900, color:'#22C55E', lineHeight:1 }}>{stats ? fmt(stats.total_revenue_ytd) : '—'}</div>
-          <p style={{ fontSize:12, color:MUTED, marginTop:6 }}>Year to date</p>
+          <div style={{ fontSize:12, fontWeight:700, color:MUTED, textTransform:'uppercase', letterSpacing:'1px', marginBottom:14 }}>Coins In Circulation</div>
+          <div style={{ fontFamily:"'Georgia',serif", fontSize:36, fontWeight:900, color:'#22C55E', lineHeight:1 }}>{stats?.coins_held ?? '—'}</div>
+          <p style={{ fontSize:12, color:MUTED, marginTop:6 }}>Total unspent balance</p>
         </div>
       </div>
 
@@ -64,7 +64,7 @@ export default function BillingPage() {
             monthly.map((m: any, i: number) => (
               <div key={i} style={{ display:'flex', justifyContent:'space-between', padding:'10px 0', borderTop: i>0?`1px solid ${B}`:'none' }}>
                 <span style={{ fontSize:13, color:DIM }}>{m.month}</span>
-                <span style={{ fontSize:13, fontWeight:700, color:GL }}>{fmt(m.amount)}</span>
+                <span style={{ fontSize:13, fontWeight:700, color:GL }}>{fmt(m.revenue)} ({m.coins}c)</span>
               </div>
             ))
           )}

@@ -9,7 +9,7 @@ import {
   Lightbulb, User, CreditCard, Users2, LifeBuoy,
   ChevronLeft, ChevronRight, Bell, Menu, ChevronDown,
   LogOut, Settings, HelpCircle, MessageSquare,
-  Sparkles, Palette, BookOpen,
+  Sparkles, Palette, BookOpen, GraduationCap,
 } from 'lucide-react'
 import { twMerge } from 'tailwind-merge'
 import { Badge, planBadgeVariant, CoinDisplay } from '../ui/CardBadgeSkeleton'
@@ -51,6 +51,9 @@ const NAV_ITEMS: NavItemDef[] = [
   // Insights: Nigerian market intelligence + Cerebre Laws
   { label: 'Insights',    href: '/insights',   icon: Lightbulb, section: 'marketing' },
 
+  // ── Community ────────────────────────────────────────────────
+  { label: 'SME Club', href: '/sme-club', icon: GraduationCap, section: 'community' },
+
   // ── Account ─────────────────────────────────────────────────
   { label: 'Profile',   href: '/profile',  icon: User,       section: 'account' },
   { label: 'Billing',   href: '/billing',  icon: CreditCard, section: 'account' },
@@ -64,6 +67,7 @@ const NAV_ITEMS: NavItemDef[] = [
 const SECTION_LABELS: Record<string, string> = {
   main:      'Main',
   marketing: 'Marketing',
+  community: 'Community',
   account:   'Account',
   support:   'Support',
 }
