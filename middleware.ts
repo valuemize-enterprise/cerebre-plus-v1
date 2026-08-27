@@ -1,30 +1,41 @@
 // ═══════════════════════════════════════════════════════════════
 // /middleware.ts  — Cerebre Plus Edge Middleware
-// Runs on EVERY request (excluding static assets).
-//
-// Responsibilities:
-//   1. Refresh Supabase auth tokens on every request (CRITICAL)
-//      Without this, access tokens expire silently → random logouts.
-//   2. Protect /cerebre-admin/* and /api/admin/* (cookie-based)
-//
-// Route protection for /dashboard, /tools, /billing, etc. is
-// handled in each layout's Server Component (app/(dashboard)/layout.tsx),
-// which uses getServerUser() and redirects if unauthenticated.
-// This is the correct Supabase SSR pattern — the layout runs after
-// middleware has already refreshed the session cookies.
-//
-// NOTE: app/middleware.ts is dead code — Next.js only reads
-// middleware.ts at the project root (this file). See that file
-// for historical context.
+// FIX: MIDDLEWARE_INVOCATION_TIMEOUT
+//   - Public pages (login, signup, club, etc.) skip the Supabase
+//     call entirely — they don't need session refresh.
+//   - All other routes wrap updateSession in try/catch so a slow
+//     Supabase never produces a 504 — it falls back to NextResponse.next().
 // ═══════════════════════════════════════════════════════════════
 
 import { type NextRequest, NextResponse } from 'next/server'
 import { updateSession } from '@/lib/supabase/middleware'
 
+// ── Routes that never need a Supabase session refresh ──────────
+// These are public pages: the user is not logged in, or the page
+// doesn't touch server auth at all. Calling updateSession on them
+// adds 200-800 ms of cold Supabase latency for zero benefit.
+const SKIP_SESSION_PREFIXES = [
+  '/login',
+  '/signup',
+  '/forgot-password',
+  '/reset-password',
+  '/club',          // public marketing page
+  '/waitlist',
+  '/demo',
+  '/pricing',
+  '/privacy',
+  '/terms',
+  '/(auth)/',       // catch-all for any (auth) group pages
+]
+
+function shouldSkipSession(pathname: string): boolean {
+  return SKIP_SESSION_PREFIXES.some(prefix => pathname.startsWith(prefix))
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
-  // ── 1. Admin page protection (cookie-based, no Supabase needed) ──
+  // ── 1. Admin page protection (no Supabase needed) ────────────
   if (
     pathname.startsWith('/cerebre-admin') &&
     !pathname.startsWith('/cerebre-admin/login')
@@ -35,49 +46,43 @@ export async function middleware(request: NextRequest) {
       loginUrl.searchParams.set('next', pathname)
       return NextResponse.redirect(loginUrl)
     }
-    // Valid admin session — pass through (no Supabase needed for admin)
     return NextResponse.next()
   }
 
-  // ── 2. Admin API protection (cookie-based) ────────────────────
+  // ── 2. Admin API protection (no Supabase needed) ─────────────
   if (
     pathname.startsWith('/api/admin') &&
     pathname !== '/api/admin/auth'
   ) {
     const cookie = request.cookies.get('admin_session')
     if (!cookie?.value) {
-      return NextResponse.json(
-        { error: 'Admin session required' },
-        { status: 401 }
-      )
+      return NextResponse.json({ error: 'Admin session required' }, { status: 401 })
     }
     return NextResponse.next()
   }
 
-  // ── 3. All other routes: refresh Supabase session ─────────────
-  // This keeps access tokens fresh so getServerUser() in layouts
-  // always sees a valid, non-expired token.
-  // The actual Set-Cookie headers are written into supabaseResponse.
-  const { supabaseResponse } = await updateSession(request)
-  return supabaseResponse
-}
+  // ── 3. Public pages — skip Supabase entirely ─────────────────
+  // No session to refresh, no auth needed. Just pass through.
+  if (shouldSkipSession(pathname)) {
+    return NextResponse.next()
+  }
 
-// ─────────────────────────────────────────────────────────────
-// MATCHER — run on every path except Next.js internals and
-// static files that never need auth (images, fonts, sw.js, etc.)
-// ─────────────────────────────────────────────────────────────
+  // ── 4. All other routes — refresh Supabase session ───────────
+  // Wrap in try/catch: if Supabase is slow or unreachable, the
+  // site keeps working instead of throwing a 504.
+  try {
+    const { supabaseResponse } = await updateSession(request)
+    return supabaseResponse
+  } catch (err) {
+    // Supabase timed out or errored — degrade gracefully.
+    // The layout's getServerUser() will redirect to /login if needed.
+    console.error('[middleware] updateSession failed:', err)
+    return NextResponse.next()
+  }
+}
 
 export const config = {
   matcher: [
-    /*
-     * Match all request paths EXCEPT:
-     *  - _next/static  (compiled JS/CSS bundles)
-     *  - _next/image   (image optimisation endpoint)
-     *  - Static files: .png .svg .jpg .ico .woff2 etc.
-     *
-     * This intentionally INCLUDES /api/* so that API route handlers
-     * benefit from refreshed session cookies in their request context.
-     */
     '/((?!_next/static|_next/image|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|woff2?)$).*)',
   ],
 }
