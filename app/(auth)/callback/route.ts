@@ -99,6 +99,20 @@ export async function GET(request: NextRequest) {
           });
         }
 
+        // ── New-vs-returning check (FIXED) ─────────────────────────
+        // Must check by the CURRENT user's own id, and must run
+        // BEFORE the upsert below — otherwise the upsert creates the
+        // row first and this check always finds it, making every
+        // login look "new" (this was the bug: the old check used
+        // .neq("id", user.id), which by definition can never match
+        // this user's own profile).
+        const { data: existingProfileById } = await supabase
+          .from("profiles")
+          .select("id")
+          .eq("id", user.id)
+          .maybeSingle();
+        const isNewUser = existingProfileById === null;
+
         // ── Normal flow (no conflict) ─────────────────────────────
         // ✅ Upsert profile — prevents profile_missing loop
         const { data: profile, error: profileError } = await supabase
@@ -123,31 +137,24 @@ export async function GET(request: NextRequest) {
           // Don't block login over a profile error — still redirect
         }
 
-        // After successful user creation, provision their free plan
-        // provision_free_plan is a custom RPC not present in the generated rpc types
-        // cast to any to avoid TypeScript error about unknown function name
-        // NOTE: supabase.rpc() returns a thenable (PostgrestFilterBuilder), not a
-        // real Promise — it has no .catch()/.finally(). Destructure { error } instead.
-        const { error: provisionError } = await (supabase as any).rpc(
-          "provision_free_plan",
-          { p_user_id: user.id },
-        );
-
-        if (provisionError) {
-          // Safe to ignore on re-login (already provisioned) — just log it
-          console.error(
-            "[auth/callback] provision_free_plan failed:",
-            provisionError.message,
-          );
-        }
+        // Fire-and-forget — provision_free_plan is idempotent and non-critical.
+        // The DB trigger already handles new users; this is a safety-net for OAuth.
+        (supabase as any).rpc("provision_free_plan", { p_user_id: user.id })
+          .then(({ error: e }: any) => {
+            if (e) console.error("[auth/callback] provision_free_plan:", e.message)
+          })
+          .catch((e: unknown) => console.error("[auth/callback] provision_free_plan:", e))
 
         const profileData = Array.isArray(profile)
           ? profile[0]
           : (profile as { email?: string; full_name?: string } | null);
 
         // After provision_free_plan():
-        try {
-          await sendEmail({
+        // Fire-and-forget — don't block the redirect waiting for email delivery
+        // Only send welcome email for truly new users (no existing profile
+        // under their OWN id — see isNewUser above)
+        if (isNewUser) {
+          sendEmail({
             to: profileData?.email ?? user.email ?? "",
             template: "welcome",
             data: {
@@ -156,30 +163,22 @@ export async function GET(request: NextRequest) {
                 user.user_metadata?.full_name ||
                 "there",
             },
+          }).catch((emailErr: unknown) => {
+            console.error("[auth/callback] sendEmail failed:", emailErr);
           });
-        } catch (emailErr) {
-          console.error("[auth/callback] sendEmail failed:", emailErr);
         }
 
         // Record referral if ?ref= was in the URL
         const refCode = searchParams.get("ref");
         if (refCode && user) {
-          const { error: referralError } = await (supabase as any).rpc(
-            "record_referral",
-            {
-              p_referred_user_id: user.id,
-              p_referred_email: user.email,
-              p_referral_code: refCode,
-            },
-          );
-
-          if (referralError) {
-            // Non-fatal — referral fails silently to the user, but log it
-            console.error(
-              "[auth/callback] record_referral failed:",
-              referralError.message,
-            );
-          }
+          // Fire-and-forget
+          ;(supabase as any).rpc("record_referral", {
+            p_referred_user_id: user.id,
+            p_referred_email:   user.email,
+            p_referral_code:    refCode,
+          }).then(({ error: e }: any) => {
+            if (e) console.error("[auth/callback] record_referral:", e.message)
+          }).catch((e: unknown) => console.error("[auth/callback] record_referral:", e))
         }
 
         const destination = finalRedirect.startsWith("/")

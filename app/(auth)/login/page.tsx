@@ -319,8 +319,9 @@ export default function LoginPage() {
       return
     }
 
-    router.push(redirect)
-    router.refresh()
+    // Hard redirect — lets the browser send fresh auth cookies in one trip.
+    // router.push() + router.refresh() caused a double server-component render.
+    window.location.href = redirect
   }
 
   // ── Google OAuth ───────────────────────────────────────────
