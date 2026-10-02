@@ -25,6 +25,7 @@ import { Resend } from 'resend'
 import { WelcomeEmail } from '@/emails'
 import { render } from '@react-email/components'
 import Rating from '@/components/rating/rating'
+import { ReferralBanner } from '@/components/shared/ReferralBanner'
 
 // ─────────────────────────────────────────────────────────────
 // TYPES
@@ -851,6 +852,7 @@ export function DashboardClient({
   const firstName = profile?.business_name?.split(' ')[0] || user.email.split('@')[0]
   const greeting = getGreeting(firstName)
   const challenges = profile?.marketing_challenges as string[] || []
+  const referralUrl = `https://www.cerebreplus.com/signup?ref=${user.id.slice(0, 8).toUpperCase()}`;
 
   return (
     <div
@@ -905,6 +907,8 @@ export function DashboardClient({
             }}
           />
         </motion.div>
+
+        <ReferralBanner referralUrl={referralUrl} />
 
         {/* ── FREE TOOL WIDGET (one-time, post-onboarding) ──────
             Shown until the user runs their free tool or dismisses it.
