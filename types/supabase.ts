@@ -209,6 +209,38 @@ export interface Database {
         >;
         Update: Partial<Database["public"]["Tables"]["referrals"]["Row"]>;
       };
+      feedback: {
+  Row: {
+    id: string;
+    user_id: string | null;
+    product: string;
+    rating: number;
+    comment: string;
+    created_at: string;
+  };
+  Insert: Omit<
+    Database["public"]["Tables"]["feedback"]["Row"],
+    "id" | "created_at" | "user_id" | "comment"
+  > & {
+    user_id?: string | null; // nullable, defaults to null
+    comment?: string;        // defaults to ''
+  };
+  Update: Partial<Database["public"]["Tables"]["feedback"]["Row"]>;
+};
+
+feedback_reactions: {
+  Row: {
+    feedback_id: string;
+    user_id: string;
+    emoji: string;
+    created_at: string;
+  };
+  Insert: Omit<
+    Database["public"]["Tables"]["feedback_reactions"]["Row"],
+    "created_at"
+  >;
+  Update: Partial<Database["public"]["Tables"]["feedback_reactions"]["Row"]>;
+};
       milestones: {
         Row: {
           id: string;

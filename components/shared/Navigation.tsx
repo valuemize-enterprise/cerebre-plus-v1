@@ -10,6 +10,7 @@ import {
   ChevronLeft, ChevronRight, Bell, Menu, ChevronDown,
   LogOut, Settings, HelpCircle, MessageSquare,
   Sparkles, Palette, BookOpen, GraduationCap,
+  MessageSquareHeart,
 } from 'lucide-react'
 import { twMerge } from 'tailwind-merge'
 import { Badge, planBadgeVariant, CoinDisplay } from '../ui/CardBadgeSkeleton'
@@ -61,7 +62,9 @@ const NAV_ITEMS: NavItemDef[] = [
   { label: 'Settings',  href: '/settings', icon: Settings,   section: 'account' },
 
   // ── Support ─────────────────────────────────────────────────
-  { label: 'Help', href: '/help', icon: LifeBuoy, section: 'support' },
+  // ── Support ─────────────────────────────────────────────────
+{ label: 'Feedback', href: '/feedback', icon: MessageSquareHeart, section: 'support' },
+{ label: 'Help', href: '/help', icon: LifeBuoy, section: 'support' },
 ]
 
 const SECTION_LABELS: Record<string, string> = {

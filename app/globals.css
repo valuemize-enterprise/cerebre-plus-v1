@@ -1304,3 +1304,9 @@
     transform: translateY(0);
   }
 }
+
+@keyframes float-up {
+  0%   { opacity: 1; transform: translate(-50%, 0) scale(0.6); }
+  100% { opacity: 0; transform: translate(-50%, -140px) scale(1.8); }
+}
+.animate-float-up { animation: float-up 0.9s ease-out forwards; }

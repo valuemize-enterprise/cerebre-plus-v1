@@ -24,6 +24,7 @@ import { FreeToolWidget } from '@/components/dashboard/FreeToolWidget'
 import { Resend } from 'resend'
 import { WelcomeEmail } from '@/emails'
 import { render } from '@react-email/components'
+import Rating from '@/components/rating/rating'
 
 // ─────────────────────────────────────────────────────────────
 // TYPES
@@ -496,7 +497,7 @@ function RecentGenerations({
   const { toast } = useToast()
 
   const copyToClipboard = useCallback(async (text: string) => {
-    try { await navigator.clipboard?.writeText(text) } catch {}
+    try { await navigator.clipboard?.writeText(text) } catch { }
     toast({ type: 'success', title: 'Copied!', description: 'Output copied to clipboard.' })
   }, [toast])
 
@@ -813,6 +814,7 @@ function JourneyStreak({ daysSinceJoin }: { daysSinceJoin: number }) {
   return (
     <div className="flex items-center gap-2">
       <Flame className="h-4 w-4 text-[#E09818]" />
+
       <span className="text-xs text-white/60">
         Day {day} of your Cerebre Plus journey
       </span>
@@ -861,30 +863,47 @@ export function DashboardClient({
         <motion.div
           initial={{ opacity: 0, y: -8 }}
           animate={{ opacity: 1, y: 0 }}
-          className="space-y-2"
+          className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 rounded-xl border border-white/10 bg-white/5 px-6 py-5"
         >
-          <div className="flex items-center gap-3 flex-wrap">
-            <h1 className="text-xl font-black text-white">
-              {greeting.text} {greeting.emoji}
-            </h1>
-            {isFoundingMember && <FoundingMemberBadge />}
-          </div>
+          <div className='space-y-2'>
+            <div className="flex items-center gap-3 flex-wrap">
+              <h1 className="text-xl font-black text-white">
+                {greeting.text} {greeting.emoji}
+              </h1>
+              {isFoundingMember && <FoundingMemberBadge />}
+            </div>
 
-          <div className="flex flex-wrap items-center gap-2 text-xs text-white/40">
-            <span>{profile?.business_name || 'Your Business'}</span>
-            <span className="text-white/20">·</span>
-            <span className="capitalize">{PLAN_LABELS[subscription.planTier] || 'Free'} Member</span>
-            {subscription.daysToRenewal !== null && (
-              <>
-                <span className="text-white/20">·</span>
-                <span>{subscription.daysToRenewal} days to renewal</span>
-              </>
+            <div className="flex flex-wrap items-center gap-2 text-xs text-white/40">
+              <span>{profile?.business_name || 'Your Business'}</span>
+              <span className="text-white/20">·</span>
+              <span className="capitalize">{PLAN_LABELS[subscription.planTier] || 'Free'} Member</span>
+              {subscription.daysToRenewal !== null && (
+                <>
+                  <span className="text-white/20">·</span>
+                  <span>{subscription.daysToRenewal} days to renewal</span>
+                </>
+              )}
+            </div>
+
+            {isEarlyMember && (
+              <JourneyStreak daysSinceJoin={daysSinceJoin} />
             )}
           </div>
+          {/* rating stars */}
+          <Rating
+            onSubmit={async ({ rating, comment }) => {
+              const res = await fetch("/api/feedback", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ product: "cerebre-plus", rating, comment }),
+              });
 
-          {isEarlyMember && (
-            <JourneyStreak daysSinceJoin={daysSinceJoin} />
-          )}
+              if (!res.ok) {
+                const data = await res.json().catch(() => null);
+                throw new Error(data?.error ?? "Failed to submit feedback");
+              }
+            }}
+          />
         </motion.div>
 
         {/* ── FREE TOOL WIDGET (one-time, post-onboarding) ──────
@@ -924,6 +943,6 @@ export function DashboardClient({
         <ProfileCompleteness profile={profile} router={router} />
 
       </div>
-    </div>
+    </div >
   )
 }
